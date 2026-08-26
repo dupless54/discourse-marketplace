@@ -39,5 +39,44 @@ module Marketplace
 
       listing.seller_id == current_user.id
     end
+
+    def can_create_marketplace_transaction?(listing)
+      return false if listing.blank?
+      return false if !authenticated?
+      return false if is_silenced?
+      return false if current_user.suspended?
+      return false if !listing.active?
+      return false if !listing.category&.enabled?
+      return false if current_user.id == listing.seller_id
+
+      true
+    end
+
+    def can_see_marketplace_transaction?(transaction)
+      return false if transaction.blank?
+      return true if is_staff?
+      return false if !authenticated?
+
+      current_user.id == transaction.buyer_id || current_user.id == transaction.seller_id
+    end
+
+    def can_confirm_marketplace_transaction?(transaction)
+      return false if transaction.blank?
+      return false if !authenticated?
+      return false if is_silenced?
+      return false if current_user.suspended?
+
+      current_user.id == transaction.buyer_id || current_user.id == transaction.seller_id
+    end
+
+    def can_cancel_marketplace_transaction?(transaction)
+      return false if transaction.blank?
+      return true if is_staff?
+      return false if !authenticated?
+      return false if is_silenced?
+      return false if current_user.suspended?
+
+      current_user.id == transaction.buyer_id || current_user.id == transaction.seller_id
+    end
   end
 end
