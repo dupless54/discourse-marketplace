@@ -221,7 +221,8 @@ describe Marketplace::Transactions::Create do
 
   describe "input" do
     it "gives a model-not-found result for a missing listing" do
-      result = call_service(guardian: buyer.guardian, listing_id: -1)
+      missing_listing_id = Marketplace::Listing.maximum(:id).to_i + 1
+      result = call_service(guardian: buyer.guardian, listing_id: missing_listing_id)
 
       expect(result).to be_failure
       expect(result).to fail_to_find_a_model(:listing)
