@@ -3,6 +3,7 @@
 Marketplace::Engine.routes.draw do
   get "categories" => "categories#index"
 
+  get "listings" => "listings#index"
   post "listings" => "listings#create"
   get "listings/:id" => "listings#show", constraints: { id: /\d+/ }
   put "listings/:id" => "listings#update", constraints: { id: /\d+/ }
