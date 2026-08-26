@@ -1,0 +1,4 @@
+marketplace:
+  marketplace_enabled:
+    client: true
+    default: false

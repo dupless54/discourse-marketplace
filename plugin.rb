@@ -1,0 +1,17 @@
+# frozen_string_literal: true
+
+# name: discourse-marketplace
+# about: Native marketplace for listings and buyer/seller transactions
+# version: 0.0.1
+# authors: Discourse Marketplace
+# url: https://github.com/discourse/discourse-marketplace
+
+enabled_site_setting :marketplace_enabled
+
+module ::Marketplace
+  PLUGIN_NAME = "discourse-marketplace"
+end
+
+require_relative "lib/marketplace/engine"
+
+after_initialize { Discourse::Application.routes.append { mount ::Marketplace::Engine, at: "/marketplace" } }
