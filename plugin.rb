@@ -13,5 +13,10 @@ module ::Marketplace
 end
 
 require_relative "lib/marketplace/engine"
+require_relative "lib/marketplace/guardian_extension"
 
-after_initialize { Discourse::Application.routes.append { mount ::Marketplace::Engine, at: "/marketplace" } }
+after_initialize do
+  Discourse::Application.routes.append { mount ::Marketplace::Engine, at: "/marketplace" }
+
+  reloadable_patch { ::Guardian.prepend(Marketplace::GuardianExtension) }
+end

@@ -2,3 +2,13 @@ marketplace:
   marketplace_enabled:
     client: true
     default: false
+  marketplace_min_trust_level:
+    client: true
+    default: 1
+    min: 0
+    max: 4
+  marketplace_allowed_currencies:
+    client: true
+    default: "TRY|EUR|USD|GBP"
+    type: list
+    list_type: compact
