@@ -17,3 +17,16 @@ Fabricator(:marketplace_listing, class_name: "Marketplace::Listing") do
   currency "USD"
   status Marketplace::Listing.statuses[:draft]
 end
+
+Fabricator(:marketplace_transaction, class_name: "Marketplace::Transaction") do
+  listing do
+    Fabricate(
+      :marketplace_listing,
+      status: Marketplace::Listing.statuses[:reserved],
+    )
+  end
+
+  buyer { Fabricate(:user) }
+  seller { |attrs| attrs[:listing].seller }
+  status Marketplace::Transaction.statuses[:pending]
+end
