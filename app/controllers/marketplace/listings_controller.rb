@@ -5,6 +5,19 @@ module Marketplace
     requires_plugin Marketplace::PLUGIN_NAME
     requires_login only: %i[create update update_status]
 
+    def index
+      result = Marketplace::ListingQuery.new(params: params).results
+
+      render_json_dump(
+        listings: serialize_data(result[:records], Marketplace::ListingBrowseSerializer),
+        pagination: {
+          page: result[:page],
+          per_page: result[:per_page],
+          has_more: result[:has_more],
+        },
+      )
+    end
+
     def create
       Marketplace::Listings::Create.call(service_params) do |result|
         on_success do |listing:|
