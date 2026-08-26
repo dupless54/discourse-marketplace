@@ -309,6 +309,188 @@ describe Marketplace::Transactions::Confirm do
     end
   end
 
+  describe "completion event" do
+    def build_completed_transaction(listing: build_listing(status: :sold))
+      now = Time.current
+      build_transaction(
+        status: :completed,
+        listing: listing,
+        buyer_confirmed_at: now,
+        seller_confirmed_at: now,
+        completed_at: now,
+      )
+    end
+
+    it "emits zero events for a first confirmation" do
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      listing = build_listing
+      transaction = build_transaction(listing: listing)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      expect(events).to be_empty
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "emits exactly one event, with the scalar transaction id as payload, for the final confirmation" do
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      listing = build_listing
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      expect(events).to eq([transaction.id])
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "never passes the ActiveRecord transaction object as the payload" do
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      listing = build_listing
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(events.length).to eq(1)
+      expect(events.first).to be_a(Integer)
+      expect(events.first).not_to be_a(Marketplace::Transaction)
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "emits zero additional events on completed replay" do
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      transaction = build_completed_transaction
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      expect(events).to be_empty
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "emits zero events for a same-side pending replay" do
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      listing = build_listing
+      transaction = build_transaction(listing: listing)
+
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(events).to be_empty
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "emits zero events for a confirm attempt on a cancelled transaction" do
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      transaction =
+        build_transaction(status: :cancelled, cancelled_at: Time.current, cancelled_by_id: seller.id)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_failure
+      expect(events).to be_empty
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "emits zero events when the final reserve->sold CAS fails and the transaction rolls back" do
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      listing = build_listing
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      allow(Marketplace::Listing).to receive(:where).and_call_original
+      allow(Marketplace::Listing).to receive(:where).with(
+        id: listing.id,
+        status: Marketplace::Listing.statuses[:reserved],
+      ).and_return(Marketplace::Listing.none)
+
+      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
+        Marketplace::TransactionInvariantViolation,
+      )
+
+      expect(events).to be_empty
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "fires only once the transaction is durably committed and observable through TradeContract" do
+      observed = nil
+      handler =
+        Proc.new do |transaction_id|
+          observed = Marketplace::TradeContract.completed_transaction_info(transaction_id)
+        end
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      listing = build_listing
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(observed).to be_a(Marketplace::TradeContract::TransactionInfo)
+      expect(observed.transaction_id).to eq(transaction.id)
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "does not turn a successful confirmation into a failure when a listener raises" do
+      handler = Proc.new { raise "reputation listener failure" }
+      DiscourseEvent.on(:marketplace_transaction_completed, &handler)
+
+      listing = build_listing
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      result = nil
+      expect do
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      end.not_to raise_error
+
+      expect(result).to be_success
+      expect(result.transaction.status).to eq("completed")
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_completed, &handler)
+    end
+
+    it "passes continue_on_error: true to DiscourseEvent.trigger" do
+      listing = build_listing
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      expect(DiscourseEvent).to receive(:trigger).with(
+        :marketplace_transaction_completed,
+        transaction.id,
+        continue_on_error: true,
+      )
+
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+    end
+  end
+
   describe "input" do
     it "gives a model-not-found result for a missing transaction" do
       missing_transaction_id = Marketplace::Transaction.maximum(:id).to_i + 1

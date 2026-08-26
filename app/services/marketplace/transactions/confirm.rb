@@ -144,6 +144,16 @@ module Marketplace
     # single save!, never as an intermediate pending-with-both-timestamps
     # row. The listing CAS is a separate, subsequent persistence step, as
     # required.
+    #
+    # The completion event is registered here, last, only once the CAS has
+    # proven exactly one row changed -- never earlier, so a subsequent
+    # invariant-violation raise (which aborts the enclosing DB transaction)
+    # has nothing to unwind: DB.after_commit ties the callback to that same
+    # transaction's real outcome, firing once after it truly commits and
+    # never if it rolls back (see docs/MARKETPLACE_ARCHITECTURE.md §11).
+    # Only the scalar id is captured -- never transaction_record, listing,
+    # or guardian -- and continue_on_error: true keeps a failing listener
+    # from turning this already-committed completion into a failed result.
     def complete_transaction_and_listing(transaction_record:, listing:, actor_is_buyer:)
       now = Time.current
 
@@ -162,6 +172,15 @@ module Marketplace
           .update_all(status: Marketplace::Listing.statuses[:sold], closed_at: now, updated_at: now)
 
       raise Marketplace::TransactionInvariantViolation if affected_rows != 1
+
+      transaction_id = transaction_record.id
+      DB.after_commit do
+        DiscourseEvent.trigger(
+          :marketplace_transaction_completed,
+          transaction_id,
+          continue_on_error: true,
+        )
+      end
     end
   end
 end

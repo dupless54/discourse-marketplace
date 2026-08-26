@@ -3,9 +3,10 @@
 Status: approved, reflects the merged implementation as of `cc4fd43` on `main`. Sections
 §2, §3, §4, §6, §7, §9, and §11 were corrected in Phase 2A after Transactions stabilized;
 earlier drafts of those sections described a seller-initiated, dispute-capable design that
-was never built. This document is authoritative; where it and the code ever disagree,
-treat that as a bug in the document and fix the document, not the code, unless a real
-behavior change is intended.
+was never built. Phase 2B (this revision) implemented the transaction completion event; §4,
+§7, §9, §11, and §12 were updated accordingly. This document is authoritative; where it and
+the code ever disagree, treat that as a bug in the document and fix the document, not the
+code, unless a real behavior change is intended.
 
 ## 1. File / component layout
 
@@ -157,7 +158,7 @@ state impossible, not a Ruby-level table lookup.
 
    pending ──── the OTHER participant then confirms ────►  completed
                 (both confirmed_at + completed_at set together, single save;
-                 listing: reserved -> sold)
+                 listing: reserved -> sold; completion event fires after commit — §7)
 
    pending ──── buyer, seller, or staff cancels ────►  cancelled
                 (listing: reserved -> active)
@@ -201,8 +202,9 @@ Discourse `Service::Base` objects (`params` -> `model` -> `policy` -> `transacti
 end` containing `step`s) — confirmed against the installed core (`lib/service/base/
 steps_helpers.rb`). `transaction do ... end` wraps only its own nested steps in
 `ActiveRecord::Base.transaction { }`; a step placed after that block in a service's
-top-level DSL only runs once the block returns, i.e., after commit. No service currently
-declares such a post-commit step (see §7's "no event yet" note).
+top-level DSL only runs once the block returns, i.e., after commit. `Confirm` does not use
+this pattern for its completion event — see §7 for why, and for the `DB.after_commit`
+mechanism it uses instead.
 
 - **`Transactions::Create`**: locks the listing; if a pending transaction already exists
   for the current buyer, replays it; if one exists for a *different* buyer (or a DB
@@ -214,6 +216,9 @@ declares such a post-commit step (see §7's "no event yet" note).
   status (cancelled -> reject, completed -> replay, pending -> determine which participant
   is acting and whether they or the other side already confirmed) to decide between a
   first-confirmation save, a final-confirmation save-plus-listing-CAS, or a no-op replay.
+  The final-confirmation branch (`complete_transaction_and_listing`) additionally registers
+  the completion event, as its very last step, only once the listing CAS has been verified
+  to affect exactly one row — see §7.
 - **`Transactions::Cancel`**: locks the transaction and listing; branches similarly
   (cancelled -> replay, completed -> reject, pending -> cancel-and-release).
 
@@ -335,14 +340,50 @@ to` a Marketplace model, share Marketplace's service context, or otherwise impor
 writes, or references any table owned by Trade Reputation. Full contract text lives in
 `docs/TRADE_REPUTATION_CONTRACT.md` once Trade Reputation exists to consume it.
 
-**Event delivery is optional, not authoritative.** A `:marketplace_transaction_completed`
-completion event is planned (Phase 2B — see §11) but does not exist yet: `Transactions::
-Confirm` triggers nothing today. When it is added, it will be useful only for optional
-things — notifications, cache invalidation, async processing — never for correctness.
-Feedback eligibility must always be revalidated through `TradeContract.completed_
-transaction_info` at submission time, specifically so that transactions completed before
-Trade Reputation was installed, while it was disabled, or before any listener was loaded
-remain reviewable without requiring an event to have ever fired for them.
+**Completion event (Phase 2B, implemented).** `:marketplace_transaction_completed` fires
+exactly once per real `pending -> completed` transition, and zero times for transaction
+creation, first confirmation, a same-side duplicate confirmation while pending, completed
+replay, a confirm attempt on a cancelled transaction, cancellation, cancelled replay, or a
+failed completion that rolls back (including a listing CAS invariant failure). The payload
+is a single scalar `Integer` — the `transaction_id` — never a `Marketplace::Transaction`,
+`Marketplace::Listing`, or `TradeContract::TransactionInfo`; a consumer that needs more
+calls `TradeContract.completed_transaction_info(transaction_id)`.
+
+Implementation, inside `Transactions::Confirm#complete_transaction_and_listing`, as the last
+statement, only after the listing CAS is verified to have affected exactly one row:
+
+```ruby
+transaction_id = transaction_record.id
+DB.after_commit do
+  DiscourseEvent.trigger(:marketplace_transaction_completed, transaction_id, continue_on_error: true)
+end
+```
+
+`DB.after_commit` (`lib/mini_sql_multisite_connection.rb` in core) was chosen over a
+top-level post-`transaction do...end` `Service::Base` step because its safety is proven by
+the framework itself rather than by an assumption about `Confirm`'s call graph: core's own
+spec suite (`spec/lib/mini_sql_multisite_connection_spec.rb`) proves it fires only after the
+*true outermost* transaction commits (correct even under future `requires_new` nesting, e.g.
+if `Confirm` were ever called from inside another service's transaction), never fires if
+that transaction rolls back, and runs immediately if no transaction is open at all. A
+top-level DSL step, by contrast, would only be safe for as long as `Confirm` happens to
+remain the outermost transaction for every caller — an assumption a future refactor (e.g. a
+bulk-confirm admin action wrapping several `Confirm` calls in one transaction) could
+silently violate. `DB.after_commit` itself provides no exception isolation for its callback
+(`AfterCommitWrapper#committed!` has no rescue), so `continue_on_error: true` on the
+`DiscourseEvent.trigger` call remains mandatory regardless of delivery mechanism — without
+it, a raising listener would propagate back into the request and could turn an
+already-committed, successful confirmation into a client-visible failure.
+
+**Delivery is best-effort, not durable, and never authoritative.** `DB.after_commit` gives
+ordering and rollback-safety guarantees, not delivery guarantees: if the process crashes
+after Postgres commits but before the Ruby callback runs, the event is lost silently, with
+no retry and no outbox. This is why feedback eligibility must always be revalidated through
+`TradeContract.completed_transaction_info` at submission time, specifically so that
+transactions completed before Trade Reputation was installed, while it was disabled, before
+any listener was loaded, or during a lost-event window remain reviewable without requiring
+an event to have ever fired for them. The event exists only for optional uses — notifications,
+cache invalidation, async processing — never for correctness.
 
 ## 8. Notifications
 
@@ -369,6 +410,14 @@ Reflects the specs that actually exist under `spec/`:
   happy path per transition; idempotent replay behavior (completed replay, cancelled
   replay, first-confirmation-then-same-actor-again); rejecting confirm-on-cancelled and
   cancel-on-completed; the `listing_unavailable` contention path in `Create`.
+  `confirm_spec.rb`'s `"completion event"` group (Phase 2B) additionally proves: zero events
+  on first confirmation, same-side pending replay, completed replay, a cancelled-transaction
+  confirm attempt, and a forced listing-CAS failure/rollback; exactly one event, with the
+  exact scalar `transaction.id` payload (never the AR object), on the real final
+  confirmation; the listener observes already-committed state via
+  `TradeContract.completed_transaction_info`; a raising listener does not turn a successful
+  `Confirm` result into a failure; and `continue_on_error: true` is the exact argument
+  passed to `DiscourseEvent.trigger`.
 - **Requests** (`spec/requests/marketplace/transactions_controller_spec.rb`): anonymous ->
   401/403; non-participant -> 404; mass-assignment attempts on `seller_id`/`status`/
   `completed_at` have zero effect.
@@ -381,8 +430,6 @@ Reflects the specs that actually exist under `spec/`:
   of the underlying `Transaction`; exactly one public singleton method exists; `VERSION ==
   1`.
 - **Query** (`spec/lib/marketplace/listing_query_spec.rb`): filter/sort correctness.
-
-No test currently exercises a completion event, because none exists yet (§7, §11).
 
 ## 10. Frontend
 
@@ -399,19 +446,15 @@ document.
   A future "my transactions" endpoint (§6) or a Trade Reputation scan over completed
   transactions (should one ever be added — `TradeContract` itself is point-lookup-only and
   doesn't need this) will need a migration adding at least `(buyer_id, status)` and
-  `(seller_id, status)` before shipping, per CLAUDE.md's N+1/indexing guidance. Flagged, not
-  fixed, in this pass — Phase 2A only touches `TradeContract` and this document.
-- **Completion event not yet implemented (Phase 2B, deliberately deferred).** Phase 1/2A
-  review found that `DiscourseEvent.trigger` is synchronous and, by default
-  (`continue_on_error: false`), re-raises a listener's exception into the triggering
-  request — so firing it naively from inside `Transactions::Confirm` risks turning an
-  already-committed, successful completion into a client-visible failure. Two options were
-  identified: (a) a step placed after `Confirm`'s `transaction do...end` block (verified:
-  such a step only runs post-commit, since `Confirm` is the outermost transaction for its
-  request) combined with `continue_on_error: true`; (b) `DB.after_commit` (an established
-  core pattern, e.g. `app/services/post_action_notifier.rb`). Phase 2A does not implement
-  either — `DB.after_commit`'s rollback-safety and outermost-transaction-safety semantics
-  are to be verified before choosing between them and touching `Confirm`.
+  `(seller_id, status)` before shipping, per CLAUDE.md's N+1/indexing guidance. Still
+  flagged, not fixed — Phase 2B only touches `Confirm`, its spec, and this document.
+- **Completion event delivery is best-effort (Phase 2B).** `DB.after_commit` proves
+  ordering (fires only after the true outermost commit) and rollback-safety (never fires on
+  rollback, per core's own `mini_sql_multisite_connection_spec.rb`), but not delivery
+  durability — a process crash between DB commit and callback execution silently loses the
+  event, with no outbox or retry. This is an accepted, permanent property of the design, not
+  a gap to close later: see §7 for why `TradeContract` remains the correctness boundary
+  regardless.
 - Greenfield: no data migration risk, but the two enums (`Listing#status`, `Transaction#
   status`) and `TradeContract::VERSION` are permanent once Trade Reputation exists as a
   consumer. Use integers with gaps, never renumber.
@@ -424,16 +467,24 @@ document.
 
 ## 12. Required core-version verification before further implementation
 
-Confirmed during Phase 1/2A review, against the installed core:
+Confirmed during Phase 1/2A/2B review, against the installed core:
 
 1. `Service::Base` DSL — confirmed: `params do ... end`, `model`, `policy`, `step`,
    `transaction do ... end` (`lib/service/base/steps_helpers.rb`), as already used by every
    `Transactions::*`/`Listings::*` service.
 2. `DiscourseEvent.trigger`/`.on`/`.off` (`lib/discourse_event.rb`) — confirmed synchronous,
-   in-process, `continue_on_error: false` by default (see §11).
-3. `DB.after_commit` — confirmed as an established, currently-used core pattern; its exact
-   safety semantics relative to `Confirm`'s outermost DB transaction are the specific
-   open question for Phase 2B (§11), not whether the API exists.
+   in-process, `continue_on_error: false` by default; with `continue_on_error: true`, a
+   raising listener is logged (`Discourse.warn_exception`) and does not block later
+   listeners for the same event.
+3. `DB.after_commit` (`lib/mini_sql_multisite_connection.rb`) — confirmed against its own
+   core spec suite: runs immediately outside any transaction; deferred and fired only after
+   a real commit; suppressed entirely on rollback; waits for the true outermost commit under
+   nested/`requires_new` transactions rather than firing at an inner savepoint release; and
+   provides no exception isolation of its own (the mandatory mitigation is
+   `continue_on_error: true` on the `DiscourseEvent.trigger` call inside the block, not
+   anything `DB.after_commit` does for us). Discourse's own test harness
+   (`spec/support/test_setup.rb`'s `DB.test_transaction = ...`) makes this fully observable
+   from ordinary service specs, not just request/integration specs.
 4. Cross-plugin soft-dependency convention — confirmed: no declarative "requires plugin X"
    manifest exists anywhere in core; the established idiom is a runtime `defined?(::Some
    Namespace)` check (only real example found: a spec in `discourse-github` checking
