@@ -42,6 +42,11 @@ Namespacing: every Ruby class under `Marketplace::`, every table prefixed `marke
 every route under `/marketplace`, every setting prefixed `marketplace_`. Zero core monkey
 patches; only `Guardian.prepend` inside a `reloadable_patch`.
 
+Every file under `lib/marketplace/` is Zeitwerk-autoloaded: `Marketplace::Engine` registers
+`config.autoload_paths << File.join(config.root, "lib")`. A new `lib/marketplace/*.rb` file
+only needs to follow standard Zeitwerk path/constant naming — do not add a matching
+`require_relative` in `plugin.rb` for it.
+
 There is no `transaction_state_machine.rb` or `listing_status_sync.rb` — the state
 transitions are implemented directly inside each `Transactions::*` service (see §3, §4),
 not extracted into a separate frozen-hash state-machine object or a standalone listing-sync
