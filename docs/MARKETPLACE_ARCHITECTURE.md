@@ -1,7 +1,11 @@
 # Marketplace V1 Architecture (Approved)
 
-Status: approved for implementation. This is the authoritative design; implementation must
-follow it. Corrections from review are incorporated inline (see §2, §7, §9, §12).
+Status: approved, reflects the merged implementation as of `cc4fd43` on `main`. Sections
+§2, §3, §4, §6, §7, §9, and §11 were corrected in Phase 2A after Transactions stabilized;
+earlier drafts of those sections described a seller-initiated, dispute-capable design that
+was never built. This document is authoritative; where it and the code ever disagree,
+treat that as a bug in the document and fix the document, not the code, unless a real
+behavior change is intended.
 
 ## 1. File / component layout
 
@@ -9,9 +13,8 @@ follow it. Corrections from review are incorporated inline (see §2, §7, §9, �
 plugin.rb                                  metadata, enabled_site_setting, engine require, after_initialize
 lib/marketplace/engine.rb                  isolated Rails engine, PLUGIN_NAME
 lib/marketplace/guardian_extension.rb      all can_*? predicates
-lib/marketplace/transaction_state_machine.rb   single source of truth for transitions
-lib/marketplace/listing_status_sync.rb     listing status as a consequence of transaction status
 lib/marketplace/listing_query.rb           browse/filter/paginate query object
+lib/marketplace/transaction_invariant_violation.rb   raised on a failed CAS/shape invariant
 lib/marketplace/trade_contract.rb          PUBLIC surface for Trade Reputation
 config/routes.rb                           engine routes
 config/settings.yml
@@ -25,18 +28,24 @@ app/models/marketplace/transaction.rb
 app/controllers/marketplace/{categories,listings,transactions}_controller.rb
 app/serializers/marketplace/{category,listing,listing_detail,transaction}_serializer.rb
 app/services/marketplace/listings/{create,update,transition_status}.rb
-app/services/marketplace/transactions/{create,confirm,reject,cancel,dispute}.rb
-app/jobs/regular/marketplace/notify_transaction_actors.rb
-assets/javascripts/discourse/**            routes, components, api-initializer
-assets/stylesheets/common/marketplace.scss
+app/services/marketplace/transactions/{create,confirm,cancel}.rb
+assets/javascripts/discourse/**            not yet implemented (see §10)
+assets/stylesheets/common/marketplace.scss not yet implemented
 spec/**
 docs/MARKETPLACE_ARCHITECTURE.md           this file
-docs/TRADE_REPUTATION_CONTRACT.md          write once transactions stabilize
+docs/TRADE_REPUTATION_CONTRACT.md          write once the contract's consumer (Trade
+                                            Reputation) is ready to integrate against it
 ```
 
 Namespacing: every Ruby class under `Marketplace::`, every table prefixed `marketplace_`,
 every route under `/marketplace`, every setting prefixed `marketplace_`. Zero core monkey
 patches; only `Guardian.prepend` inside a `reloadable_patch`.
+
+There is no `transaction_state_machine.rb` or `listing_status_sync.rb` — the state
+transitions are implemented directly inside each `Transactions::*` service (see §3, §4),
+not extracted into a separate frozen-hash state-machine object or a standalone listing-sync
+class. `Transactions::Reject` and `Transactions::Dispute` do not exist; there is no dispute
+concept in this implementation (see §3).
 
 ## 2. Data model
 
@@ -56,9 +65,9 @@ system, no color/badge admin UI in V1.
 | `created_at` / `updated_at` | timestamptz NOT NULL | |
 
 Indexes: unique on `slug`; `(enabled, position)` for the browse filter list. Managed via
-plain site-admin CRUD (reuse existing admin route/plugin-admin patterns); no taxonomy
-hierarchy, no permission matrix. `marketplace_listings.category_id` FK's to this table,
-`ON DELETE RESTRICT` (disable, don't delete, a category with listings).
+plain site-admin CRUD; no taxonomy hierarchy, no permission matrix. `marketplace_listings.
+category_id` FK's to this table, `ON DELETE RESTRICT` (disable, don't delete, a category
+with listings).
 
 ### `marketplace_listings`
 
@@ -73,318 +82,364 @@ hierarchy, no permission matrix. `marketplace_listings.category_id` FK's to this
 | `price_cents` | bigint NOT NULL | minor units only, never float/decimal-from-client |
 | `currency` | varchar(3) NOT NULL | ISO 4217, validated against a setting-driven allowlist |
 | `status` | integer NOT NULL DEFAULT 0 | |
-| `published_at` | timestamptz NULL | first transition to active |
-| `closed_at` | timestamptz NULL | sold/archived |
 | `created_at` / `updated_at` | timestamptz NOT NULL | |
 
 Status enum (integers with gaps, never rename/renumber): `draft=0, active=10, reserved=20,
 sold=30, archived=40`.
 
-Images/attachments: markdown uploads in `raw`, linked with
-`UploadReference.ensure_exist!(upload_ids: extracted, target: listing)` — pending core
-API verification (§12); no separate join table.
-
-Indexes:
-- `(status, category_id, created_at DESC)` — main browse
-- partial `(category_id, created_at DESC) WHERE status = 10` — hot path stays small as
-  sold/archived rows accumulate
-- `(seller_id, status, created_at DESC)` — "my listings"
-- `(status, currency, price_cents)` — price filter/sort
-- GIN on `to_tsvector('simple', title || ' ' || coalesce(raw,''))` — V1 search; upgrade
-  path is a `marketplace_listing_search_data` table if relevance tuning is ever needed
-- CHECK `price_cents >= 0`, CHECK `char_length(title) BETWEEN 3 AND 255`
-
 ### `marketplace_transactions`
+
+Real, merged schema (`db/migrate/20260826034000_create_marketplace_transactions.rb`):
 
 | column | type | notes |
 |---|---|---|
 | `id` | bigserial | |
-| `listing_id` | integer NOT NULL | |
-| `seller_id` | integer NOT NULL | denormalized at creation so the reputation record survives listing edits |
-| `buyer_id` | integer NOT NULL | |
+| `listing_id` | bigint NOT NULL | FK -> `marketplace_listings.id`, `ON DELETE RESTRICT` |
+| `buyer_id` | integer NOT NULL | always `current_user.id` at creation, never client input |
+| `seller_id` | integer NOT NULL | captured from `listing.seller_id` at creation |
 | `status` | integer NOT NULL DEFAULT 0 | |
-| `initiated_by_id` | integer NOT NULL | V1 always seller; future-proofs buyer-initiated |
-| `seller_confirmed_at` | timestamptz NULL | |
 | `buyer_confirmed_at` | timestamptz NULL | |
+| `seller_confirmed_at` | timestamptz NULL | |
 | `completed_at` | timestamptz NULL | |
-| `cancelled_at` / `cancelled_by_id` | timestamptz / integer NULL | |
-| `disputed_at` / `disputed_by_id` | timestamptz / integer NULL | |
-| `reason` | varchar(500) NULL | cancel/reject/dispute free text |
+| `cancelled_at` | timestamptz NULL | |
+| `cancelled_by_id` | integer NULL | participant or staff who cancelled |
 | `created_at` / `updated_at` | timestamptz NOT NULL | |
 
-Status enum: `pending_confirmation=0, completed=10, cancelled=20, disputed=30`.
+Status enum: `pending=0, completed=10, cancelled=20`. There is no `disputed` status and no
+`initiated_by_id`, `reason`, `disputed_at`, or `disputed_by_id` column — none of these were
+built; do not design against them.
 
-Integrity constraints — load-bearing:
-- `CHECK (seller_id <> buyer_id)` — self-transaction blocked at the DB, not just in Ruby
-- **`CREATE UNIQUE INDEX ... ON marketplace_transactions (listing_id) WHERE status IN
-  (0, 10, 30)`** — at most one open-or-settled-or-disputed transaction per listing.
-  `pending_confirmation`, `completed`, and `disputed` all block a new transaction on the
-  same listing; only `cancelled` frees the listing for a future sale. This closes a gap
-  in the original design: a disputed transaction must not be circumventable by starting a
-  second transaction on the same listing while the dispute is unresolved.
-- `CHECK (status <> 10 OR (completed_at IS NOT NULL AND seller_confirmed_at IS NOT NULL
-  AND buyer_confirmed_at IS NOT NULL))` — a completed row is structurally provable
-- FK on `listing_id` with `ON DELETE RESTRICT`; listings with transactions are archived,
-  never destroyed
+Integrity constraints — load-bearing, all enforced at the database, not just in Ruby:
+- `marketplace_transactions_buyer_seller_check`: `CHECK (buyer_id <> seller_id)` — a
+  self-transaction is rejected by the database even if model validation is bypassed.
+- `marketplace_transactions_status_check`: `CHECK (status IN (0, 10, 20))`.
+- `idx_marketplace_transactions_listing_open`: **`UNIQUE (listing_id) WHERE status <> 20`**
+  — at most one non-cancelled (pending or completed) transaction per listing at a time.
+  Cancelling is the only way to free a listing for a new transaction; a completed
+  transaction permanently blocks a second one on the same listing (the listing itself also
+  moves to `sold`, so this is redundant-but-defense-in-depth with the listing status).
+- `marketplace_transactions_status_shape_check`: a single CHECK enforcing that each status
+  can only ever be persisted with its complete, correct set of fields:
+  - `pending`: `completed_at`, `cancelled_at`, `cancelled_by_id` all NULL; not both
+    confirmation timestamps present at once (that combination only exists transiently in
+    memory during the final `confirm`, in the same `save!` that also flips `status` and
+    sets `completed_at` — see §4).
+  - `completed`: `completed_at`, `buyer_confirmed_at`, and `seller_confirmed_at` all
+    present; `cancelled_at`/`cancelled_by_id` NULL.
+  - `cancelled`: `cancelled_at` and `cancelled_by_id` present; `completed_at` NULL. Prior
+    confirmation timestamps (0 or 1 of them) are left untouched as audit history.
 
-Indexes: `(buyer_id, status, created_at DESC)`, `(seller_id, status, created_at DESC)`,
-`(status, completed_at DESC)` (reputation scans), `(listing_id)`.
+Indexes actually present: only the partial unique index above (plus the implicit primary
+key on `id`). **There is no index on `buyer_id`, `seller_id`, or `completed_at` alone.**
+Earlier drafts of this document assumed `(buyer_id, status, created_at DESC)`,
+`(seller_id, status, created_at DESC)`, and `(status, completed_at DESC)` — none of these
+were migrated. Any future "my transactions" listing endpoint (§6) or a Trade Reputation
+scan over completed transactions will need one of these added first; tracked in §11.
 
 No feedback table here. Trade Feedback is owned by the reputation plugin and keys off
-`transaction_id`.
+`transaction_id` via `Marketplace::TradeContract` (§7) only — never a direct reference to
+this table.
 
-## 3. State machines
+## 3. Transaction lifecycle (authoritative — matches `Marketplace::Transaction` +
+`Transactions::{Create,Confirm,Cancel}`)
 
-### Transaction (authoritative)
+There is no separate state-machine object; the transition rules live directly in the three
+services below, and the DB shape CHECK (§2) is what actually makes an invalid persisted
+state impossible, not a Ruby-level table lookup.
 
-`lib/marketplace/transaction_state_machine.rb` holds one frozen hash:
-`{from_status => {event => {to:, actor_roles:, timestamps:}}}`.
+```
+                 buyer creates
+   (none)  ─────────────────────────►  pending
+                                       (listing: active -> reserved)
 
-| from | event | actor | to |
-|---|---|---|---|
-| — | `create` | seller | `pending_confirmation` (sets `seller_confirmed_at`) |
-| pending | `confirm` | buyer | `completed` (sets `buyer_confirmed_at`, `completed_at`) |
-| pending | `reject` | buyer | `cancelled` |
-| pending | `cancel` | seller, staff | `cancelled` |
-| pending | `dispute` | buyer, seller, staff | `disputed` |
-| completed | `dispute` | buyer, seller, staff | `disputed` |
-| disputed | `cancel` / `complete` | staff only | `cancelled` / `completed` |
-| cancelled | — | — | terminal |
+   pending ──── either participant confirms first ────►  pending
+                (that participant's *_confirmed_at set; status unchanged)
 
-Everything else raises `Marketplace::InvalidTransition` -> HTTP 422. Nothing outside this
-file may write `status`; the model enforces this with a private writer.
+   pending ──── the OTHER participant then confirms ────►  completed
+                (both confirmed_at + completed_at set together, single save;
+                 listing: reserved -> sold)
 
-### Listing (derived)
+   pending ──── buyer, seller, or staff cancels ────►  cancelled
+                (listing: reserved -> active)
 
-Listing status is never a source of truth; it is a projection of transaction status,
-applied inside the same DB transaction by `Marketplace::ListingStatusSync.apply(transaction)`:
+   completed, cancelled: terminal — no further transitions from either.
+```
 
-- transaction created -> listing `active` -> `reserved`
-- transaction completed -> listing `reserved` -> `sold`, set `closed_at`
-- transaction cancelled -> listing `reserved` -> `active` (only if no other
-  open/settled/disputed transaction exists — consistent with the widened unique index)
-- transaction disputed -> listing stays where it is
-
-Seller-driven listing transitions (`draft->active`, `active->archived`, `sold->archived`)
-go through `Listings::TransitionStatus` with its own allowed-transition map, refused while
-an open (pending/completed/disputed, per §2) transaction exists.
+Key rules:
+- **Buyer-initiated.** `Transactions::Create` is called by the buyer, never the seller;
+  the seller is derived from `listing.seller`, never from client input. A seller cannot
+  create a transaction against their own listing (`Guardian#can_create_marketplace_
+  transaction?` rejects it).
+- **Symmetric dual confirmation.** Either the buyer or the seller may confirm first;
+  whichever one does not change `status`. Only the second, *opposite*, confirmation
+  transitions `pending -> completed`, and it does so by setting both confirmation
+  timestamps, `status`, and `completed_at` together in one `save!` — there is never an
+  intermediate persisted row with both timestamps set but still `pending`.
+- **Replay is idempotent, not an error.** Confirming an already-completed transaction (by
+  either participant) re-returns the existing record with a 200, not a 422. Confirming a
+  second time after already having confirmed once (before the other side has) is also a
+  no-op success. Cancelling an already-cancelled transaction is likewise a safe replay.
+  Confirming a cancelled transaction, or cancelling a completed one, is rejected
+  (`transaction_not_confirmable` / `transaction_not_cancellable`, HTTP 422) — cancelled and
+  completed are each terminal from the other's perspective.
+- **Cancellation.** Either participant may cancel while `pending`; staff may also cancel as
+  a moderation override. Nobody — including staff — may cancel a `completed` transaction;
+  completion is final.
+- **Concurrency.** `Confirm` and `Cancel` row-lock (`FOR UPDATE`) both the transaction and
+  its listing before reading status, inside one DB transaction, so two concurrent
+  confirmations or a confirm racing a cancel resolve deterministically. `Create` locks the
+  listing and additionally has a DB unique-index backstop (`ActiveRecord::RecordNotUnique`
+  rescued and mapped to a stable `listing_unavailable` marker) in case two buyers race past
+  the lock.
+- **No dispute state.** There is no `disputed` status, no dispute transition, and no
+  `Transactions::Dispute` service. If arbitration is ever needed it is a genuinely new
+  feature, not something already partially built here.
 
 ## 4. Services
 
-Discourse `Service::Base` objects (params contract -> model -> policy -> transaction with
-steps) — exact DSL name pending core verification, §12. Invoked from controllers via
-`with_service`.
+Discourse `Service::Base` objects (`params` -> `model` -> `policy` -> `transaction do ...
+end` containing `step`s) — confirmed against the installed core (`lib/service/base/
+steps_helpers.rb`). `transaction do ... end` wraps only its own nested steps in
+`ActiveRecord::Base.transaction { }`; a step placed after that block in a service's
+top-level DSL only runs once the block returns, i.e., after commit. No service currently
+declares such a post-commit step (see §7's "no event yet" note).
 
-`Transactions::Confirm` is the reference implementation of the concurrency rules; others
-mirror it:
+- **`Transactions::Create`**: locks the listing; if a pending transaction already exists
+  for the current buyer, replays it; if one exists for a *different* buyer (or a DB
+  unique-index collision occurs), fails with a stable `listing_unavailable` marker rather
+  than a raw 500; otherwise authorizes, builds, saves the transaction, and CAS's the
+  listing `active -> reserved`, only exposing the new record as the service's public result
+  once both the save and the CAS have succeeded.
+- **`Transactions::Confirm`**: locks the transaction and listing; branches on current
+  status (cancelled -> reject, completed -> replay, pending -> determine which participant
+  is acting and whether they or the other side already confirmed) to decide between a
+  first-confirmation save, a final-confirmation save-plus-listing-CAS, or a no-op replay.
+- **`Transactions::Cancel`**: locks the transaction and listing; branches similarly
+  (cancelled -> replay, completed -> reject, pending -> cancel-and-release).
 
-1. `model :transaction` -> row-locked (`FOR UPDATE`) fetch inside the DB transaction,
-   before any read of `status`.
-2. **Idempotency short-circuit:** if already in the target state and the acting user is
-   the one recorded for it, return success with the existing record — a replayed confirm
-   is a 200, not a 422 and not a second completion.
-3. `policy :actor_may_perform` -> delegates to Guardian, which delegates role
-   determination to the record (`transaction.role_for(user)`), never to params.
-4. `policy :transition_allowed` -> state machine lookup.
-5. `step :transition` -> compare-and-swap `UPDATE ... WHERE id = ? AND status =
-   <expected>`; zero affected rows aborts the whole thing.
-6. `step :sync_listing` -> `ListingStatusSync`, same DB transaction.
-7. `step :publish_events` -> enqueue notification job + `DiscourseEvent.trigger` after
-   commit, so nothing fires for a rolled-back transition.
+All three raise `Marketplace::TransactionInvariantViolation` (mapped to HTTP 409) if an
+internal CAS ever affects zero rows — a defensive backstop behind the row locks, not the
+primary concurrency mechanism.
 
-Rescue `ActiveRecord::RecordNotUnique` on `Transactions::Create` and map it to a 409
-("this listing already has an active or disputed sale"), not a 500.
+Params contracts are the mass-assignment boundary: `Transactions::Create` accepts only
+`listing_id`; `Transactions::Confirm` and `Transactions::Cancel` accept only
+`transaction_id` (from the route, not the body). There is no `buyer_username` or `reason`
+parameter — the buyer is always `guardian.user`, and there is no free-text reason field on
+the model.
 
 ## 5. Authorization / security
 
 All predicates in `Marketplace::GuardianExtension`, prepended to `Guardian`:
 
 - `can_create_marketplace_listing?` — logged in, not silenced/suspended, TL >=
-  `marketplace_min_trust_level`
+  `marketplace_min_trust_level`.
 - `can_see_marketplace_listing?(l)` — `draft` visible to seller + staff only; others
-  visible if `l.category.enabled?`
-- `can_edit_marketplace_listing?(l)` — seller (while `draft`/`active`/`reserved`) or
-  staff; price/category edits refused once a transaction is open
-- `can_create_marketplace_transaction?(l)` — seller of `l`, `l.active?`, buyer is a real
-  non-staged non-suspended user, `buyer != seller`
-- `can_confirm/reject/cancel/dispute_marketplace_transaction?(t)` — role derived from
-  `t.buyer_id`/`t.seller_id` vs `current_user.id`
+  visible if `l.category.enabled?`.
+- `can_edit_marketplace_listing?(l)` — seller (while `draft`/`active`) or staff.
+- `can_create_marketplace_transaction?(l)` — authenticated, not silenced/suspended, `l`
+  must be `active` with an enabled category, and the acting user must not be `l.seller`.
+- `can_see_marketplace_transaction?(t)` — staff, or either participant.
+- `can_confirm_marketplace_transaction?(t)` — authenticated, not silenced/suspended, and
+  either participant; not staff-overridable (staff cannot confirm on someone's behalf).
+- `can_cancel_marketplace_transaction?(t)` — either participant, or staff (moderation
+  override). None of these predicates depend on the transaction's current status — the
+  services themselves reject invalid-state actions (§3), Guardian only answers "is this
+  actor allowed to attempt this kind of action at all."
+
+There is no `can_reject_marketplace_transaction?` or `can_dispute_marketplace_transaction?`
+— those actions don't exist.
 
 Security posture:
-- **Mass assignment:** service `params` contracts whitelist only `title, raw,
-  category_id, price_cents, currency` (listing) and `listing_id, buyer_username, reason`
-  (transaction). `seller_id`, `status`, and every `*_at` are structurally unreachable
-  from params.
+- **Mass assignment:** see §4 — params contracts whitelist exactly `listing_id` /
+  `transaction_id`; `seller_id`, `buyer_id`, `status`, and every `*_at` are structurally
+  unreachable from client params.
 - **IDOR:** every `find` scoped through Guardian before serialization; 404 (not 403) for
-  records the user cannot see.
-- **Buyer identification** by `username`, resolved server-side to a `User`, rejecting
-  staged/inactive/bot accounts.
-- **Rate limits:** `RateLimiter` on listing create (per hour) and transaction create (per
-  hour), plus a short-window limiter on confirm/reject to blunt replay storms.
-- **No private data:** serializers emit `BasicUserSerializer` fields only; never emails,
-  IPs, or trust-level internals. Reasons/dispute text visible to participants + staff only.
+  records the user cannot see or act on where the controller uses `on_model_not_found`
+  and `on_failed_policy { raise Discourse::NotFound }`.
+- **No private data:** `TransactionSerializer` emits ids and timestamps only — no emails,
+  IPs, or trust-level internals.
 - Site setting `marketplace_enabled` defaults **false**.
 
 ## 6. API / serializer boundary
 
-Engine mounted at `/marketplace`, all responses `.json`.
+Engine mounted at `/marketplace`, all responses `.json`. Routes actually defined
+(`config/routes.rb`):
 
 ```
 GET    /marketplace/categories
-GET    /marketplace/listings            filters: category_id, status, currency,
-                                        min_price, max_price, q, seller,
-                                        order (created|price), page, limit(<=50)
+
+GET    /marketplace/listings            filters per ListingQuery (see lib/marketplace/listing_query.rb)
 POST   /marketplace/listings
 GET    /marketplace/listings/:id
 PUT    /marketplace/listings/:id
-PUT    /marketplace/listings/:id/status         { status: "active" | "archived" }
-GET    /marketplace/transactions        scope: mine|selling|buying, status, page
-POST   /marketplace/transactions        { listing_id, buyer_username }
+PUT    /marketplace/listings/:id/status
+
+POST   /marketplace/transactions        { listing_id }
 GET    /marketplace/transactions/:id
 POST   /marketplace/transactions/:id/confirm
-POST   /marketplace/transactions/:id/reject
 POST   /marketplace/transactions/:id/cancel
-POST   /marketplace/transactions/:id/dispute
 ```
 
-Serializers:
-- `CategorySerializer`: `id, name, slug, position`.
-- `ListingSerializer` (index): `id, title, excerpt, category_id, price_cents, currency,
-  status, thumbnail_url, created_at, seller` (BasicUser).
-- `ListingDetailSerializer`: adds `cooked, can_edit, can_start_transaction,
-  active_transaction_id`.
-- `TransactionSerializer`: `id, listing_id, listing_title, seller, buyer, status,
-  seller_confirmed_at, buyer_confirmed_at, completed_at, cancelled_at, disputed_at`, plus
-  scope-derived `can_confirm, can_reject, can_cancel, can_dispute` and `viewer_role`
-  (`"seller"|"buyer"|"staff"`).
+There is no `POST .../reject`, `POST .../dispute`, or `GET /marketplace/transactions`
+index/list route yet — a "my transactions" listing endpoint is a plausible future addition
+(would need the indexes noted in §2/§11 first) but is not built.
 
-N+1 control: `ListingQuery` always `includes(:seller, :category)` and preloads the
-primary upload; transaction lists `includes(:seller, :buyer, :listing)`. Permission
-booleans come from an already-loaded scope, never a per-row query. Pagination is offset +
-`has_more` with a capped `limit`; keyset pagination is a documented follow-up if deep
-paging becomes real.
+`TransactionSerializer` (`app/serializers/marketplace/transaction_serializer.rb`) emits:
+`id, listing_id, buyer_id, seller_id, status, buyer_confirmed_at, seller_confirmed_at,
+completed_at, cancelled_at, cancelled_by_id, created_at, updated_at`. It does not currently
+emit nested `seller`/`buyer`/`listing` objects, `viewer_role`, or `can_confirm`/`can_cancel`
+booleans — those are plausible future serializer additions, not present today.
 
 ## 7. Trade Reputation contract (the small public surface)
 
-Two channels, both stable, neither exposing ActiveRecord:
-
-**a) In-process module** `Marketplace::TradeContract` — `CONTRACT_VERSION = 1`, returns
-an immutable value object:
+**`Marketplace::TradeContract`** (`lib/marketplace/trade_contract.rb`), `VERSION = 1`,
+exposes exactly one public lookup and one immutable value type:
 
 ```ruby
-TransactionInfo = Data.define(:id, :listing_id, :seller_id, :buyer_id, :status, :completed_at)
+TransactionInfo = Data.define(:transaction_id, :buyer_id, :seller_id, :completed_at)
 
-TradeContract.find_transaction(id)                                  # -> TransactionInfo | nil
-TradeContract.completed?(id)                                        # -> boolean
-TradeContract.can_review?(reviewer_id:, reviewee_id:, transaction_id:)
-TradeContract.completed_transaction_ids_for(user_id:, limit:, before_id:)
+TradeContract.completed_transaction_info(transaction_id)   # -> TransactionInfo | nil
 ```
 
-**Eligibility is defined exclusively here, explicitly, for V1:**
+The method name intentionally encodes eligibility, and is the *only* public lookup — there
+is deliberately no generic `find_transaction`, `transaction_info`, or `completed?` API.
+This makes "Reputation accidentally treats a pending/cancelled trade as feedback-eligible"
+a naming-impossible bug class rather than a rule someone has to remember:
 
-| transaction status | eligible for new feedback? |
+| transaction status | `completed_transaction_info` result |
 |---|---|
-| `completed` | yes |
-| `pending_confirmation` | no |
-| `cancelled` | no |
-| `disputed` | no |
+| unknown id | `nil` |
+| `pending` | `nil` |
+| `cancelled` | `nil` |
+| `completed` | populated `TransactionInfo` |
 
-`can_review?` additionally requires: transaction exists, reviewer and reviewee are the
-two distinct participants, reviewer is the counterpart of reviewee. This table is the
-only place review eligibility is decided; the reputation plugin never re-derives it, and
-a status added later must update this table explicitly rather than falling through to a
-default.
+Input handling: only an actual `Integer` (not a numeric string, not `nil`, not a float) is
+accepted; anything else, and any non-positive integer, returns `nil` without raising. The
+contract never leaks an `ActiveRecord::RecordNotFound` or any other Marketplace-internal
+exception across the plugin boundary.
 
-**b) DiscourseEvents** with a frozen payload (a `TransactionInfo`, not the AR record):
-`marketplace_transaction_created`, `_completed`, `_cancelled`, `_disputed`.
+`TransactionInfo` intentionally omits `listing_id` (no current feedback-eligibility rule
+needs it) and `status` (the method name already encodes "completed"; a redundant status
+field would just invite a second, unnecessary check). It never carries confirmation
+timestamps, cancellation metadata, a `User`, a `Listing`, or the `Marketplace::Transaction`
+AR object itself — only four scalar/time fields, freshly queried and copied on every call,
+so a caller mutating a `Transaction` they hold elsewhere in memory cannot affect a
+previously returned `TransactionInfo`, and a caller holding a `TransactionInfo` has no way
+to write back to Marketplace state (it is a `Data` object: no setters, no `save`/`update`).
 
-**Hard boundary:** Marketplace exposes eligibility/state only through `TradeContract` and
-these events. It never reads, writes, modifies, or deletes any table owned by the Trade
-Reputation plugin (feedback rows included) — reputation data lifecycle is entirely
-outside Marketplace's responsibility, including on listing/transaction deletion paths.
-Reputation may reference `transaction_id` and call `TradeContract` methods; it may not
-query `marketplace_transactions`/`marketplace_listings` directly or import
-`Marketplace::Transaction`/`Marketplace::Listing`. Documented in full in
-`docs/TRADE_REPUTATION_CONTRACT.md` once transactions stabilize.
+**Hard boundary**, unchanged from Phase 1 and still the load-bearing rule for everything
+above: Trade Reputation may call `TradeContract` methods and reference `transaction_id`, and
+nothing else. It may not query `marketplace_transactions`/`marketplace_listings`, `belongs_
+to` a Marketplace model, share Marketplace's service context, or otherwise import
+`Marketplace::Transaction`/`Marketplace::Listing`. Marketplace, symmetrically, never reads,
+writes, or references any table owned by Trade Reputation. Full contract text lives in
+`docs/TRADE_REPUTATION_CONTRACT.md` once Trade Reputation exists to consume it.
+
+**Event delivery is optional, not authoritative.** A `:marketplace_transaction_completed`
+completion event is planned (Phase 2B — see §11) but does not exist yet: `Transactions::
+Confirm` triggers nothing today. When it is added, it will be useful only for optional
+things — notifications, cache invalidation, async processing — never for correctness.
+Feedback eligibility must always be revalidated through `TradeContract.completed_
+transaction_info` at submission time, specifically so that transactions completed before
+Trade Reputation was installed, while it was disabled, or before any listener was loaded
+remain reviewable without requiring an event to have ever fired for them.
 
 ## 8. Notifications
 
-One job, `Jobs::Marketplace::NotifyTransactionActors`, enqueued after commit, for:
-confirmation requested (-> buyer), buyer confirmed (-> seller), buyer rejected /
-cancelled / disputed (-> counterpart), completed (-> both). Exact registration mechanism
-pending core verification, §12.
+Not yet implemented. A future `Jobs::Marketplace::NotifyTransactionActors`, enqueued after
+commit, is a plausible design for: first confirmation received (-> the other participant),
+completion (-> both). Exact registration mechanism still pending core verification; no
+`app/jobs` directory exists in this plugin yet.
 
 ## 9. Tests
 
-- **Model:** enum integrity; `seller_id <> buyer_id` CHECK; the partial unique index
-  covering `pending_confirmation`/`completed`/`disputed` (insert a second transaction
-  while the first is in any of those three states -> `RecordNotUnique`; insert after
-  `cancelled` -> succeeds); completed-row CHECK; `marketplace_categories` slug uniqueness.
-- **State machine:** table-driven — every (from, event, actor role) pair, asserting
-  allowed -> new status + timestamps, disallowed -> `InvalidTransition`.
-- **Services:** happy path per transition; idempotent replay of `confirm` returns the
-  same record and does not re-fire notifications; concurrency spec — two threads
-  confirming the same transaction, exactly one wins; `Transactions::Create` against a
-  listing with an existing disputed transaction is rejected (409).
-- **Request specs:** anonymous -> 403; non-participant confirm -> 403/404; seller
-  confirming their own sale -> 422; posting `seller_id`/`status`/`completed_at` in params
-  has zero effect; listing in a disabled category -> 404; rate limiter trips.
-- **Contract spec:** `can_review?` matrix over all four transaction statuses x
-  (participant/non-participant/self-review); confirms `disputed` and `cancelled` are
-  never eligible; events fire once with the right payload; `TradeContract` never returns
-  an AR object; verify no code path in Marketplace touches a reputation-owned table.
-- **Query spec:** filter/sort correctness plus an N+1 assertion on the index endpoints.
-- **System spec (2, minimal):** create + publish a listing; seller starts sale -> buyer
-  confirms -> listing shows sold.
-- Fabricators in `spec/fabricators/marketplace_fabricator.rb`.
+Reflects the specs that actually exist under `spec/`:
+
+- **Model** (`spec/models/marketplace/transaction_spec.rb`): enum exactness
+  (`pending=0/completed=10/cancelled=20`); `buyer_id <> seller_id` at both the model and
+  DB-CHECK level; the full status-shape CHECK for all three statuses (each required field
+  present/absent combination); the partial unique index on `listing_id` (second non-
+  cancelled transaction on the same listing -> `RecordNotUnique`; allowed again once the
+  first is cancelled).
+- **Guardian** (`spec/lib/marketplace/guardian_extension_spec.rb`): every `can_*?`
+  predicate x (anonymous / non-participant / participant / staff), including that
+  eligibility to confirm/cancel does not depend on current transaction status (that's the
+  services' job, not Guardian's).
+- **Services** (`spec/services/marketplace/transactions/{create,confirm,cancel}_spec.rb`):
+  happy path per transition; idempotent replay behavior (completed replay, cancelled
+  replay, first-confirmation-then-same-actor-again); rejecting confirm-on-cancelled and
+  cancel-on-completed; the `listing_unavailable` contention path in `Create`.
+- **Requests** (`spec/requests/marketplace/transactions_controller_spec.rb`): anonymous ->
+  401/403; non-participant -> 404; mass-assignment attempts on `seller_id`/`status`/
+  `completed_at` have zero effect.
+- **TradeContract** (`spec/lib/marketplace/trade_contract_spec.rb`, added Phase 2A): the
+  full input matrix (nil, zero, negative, non-integer string, numeric string, unknown
+  positive id, pending, cancelled) all -> `nil`; a completed transaction returns exact
+  `transaction_id`/`buyer_id`/`seller_id`/`completed_at`; no `listing_id`/`status` exposed;
+  no AR object or AR-like mutability (`save`/`save!`/`update`/`update!` absent, no field
+  setters); a `TransactionInfo` already returned is unaffected by later in-memory mutation
+  of the underlying `Transaction`; exactly one public singleton method exists; `VERSION ==
+  1`.
+- **Query** (`spec/lib/marketplace/listing_query_spec.rb`): filter/sort correctness.
+
+No test currently exercises a completion event, because none exists yet (§7, §11).
 
 ## 10. Frontend
 
-`assets/javascripts/discourse/`:
-- Routes: `marketplace` (parent), `listings/index`, `listings/new`, `listings/show`,
-  `listings/edit`, `transactions/index`, `transactions/show`.
-- Glimmer components under `components/marketplace/`: `listing-card`, `listing-list`,
-  `listing-filters`, `listing-form`, `transaction-panel`, `transaction-actions`,
-  `start-sale-modal` (username chooser via core `user-chooser`).
-- Data via `discourse/lib/ajax` + `@tracked` state; skip the store/adapter layer for V1.
-- `api-initializers/marketplace.js` adds a sidebar link and a user-menu badge for
-  pending confirmations — additive plugin APIs only, no core template overrides, no
-  widget patching.
-- Never render `raw`; render server-`cooked` HTML only. Price displayed via
-  `Intl.NumberFormat(currency)` from `price_cents`.
-- Action buttons enabled from serializer `can_*` booleans; every action re-authorized
-  server-side regardless.
+Not yet implemented — no `assets/javascripts/discourse/` directory exists. The routes,
+Glimmer components, and `api-initializers/marketplace.js` sketched in earlier drafts of
+this document remain a reasonable target shape for that future work but should be verified
+against current core frontend conventions when it's actually started, not assumed from this
+document.
 
 ## 11. Risks and compatibility
 
-- Greenfield: no data migration risk, but the two enums and the contract are permanent.
-  Use integers with gaps, add `CONTRACT_VERSION`, never renumber.
+- **Missing supporting indexes (new, Phase 2A).** `marketplace_transactions` has only the
+  one partial unique index (§2) — no index on `buyer_id`, `seller_id`, or `completed_at`.
+  A future "my transactions" endpoint (§6) or a Trade Reputation scan over completed
+  transactions (should one ever be added — `TradeContract` itself is point-lookup-only and
+  doesn't need this) will need a migration adding at least `(buyer_id, status)` and
+  `(seller_id, status)` before shipping, per CLAUDE.md's N+1/indexing guidance. Flagged, not
+  fixed, in this pass — Phase 2A only touches `TradeContract` and this document.
+- **Completion event not yet implemented (Phase 2B, deliberately deferred).** Phase 1/2A
+  review found that `DiscourseEvent.trigger` is synchronous and, by default
+  (`continue_on_error: false`), re-raises a listener's exception into the triggering
+  request — so firing it naively from inside `Transactions::Confirm` risks turning an
+  already-committed, successful completion into a client-visible failure. Two options were
+  identified: (a) a step placed after `Confirm`'s `transaction do...end` block (verified:
+  such a step only runs post-commit, since `Confirm` is the outermost transaction for its
+  request) combined with `continue_on_error: true`; (b) `DB.after_commit` (an established
+  core pattern, e.g. `app/services/post_action_notifier.rb`). Phase 2A does not implement
+  either — `DB.after_commit`'s rollback-safety and outermost-transaction-safety semantics
+  are to be verified before choosing between them and touching `Confirm`.
+- Greenfield: no data migration risk, but the two enums (`Listing#status`, `Transaction#
+  status`) and `TradeContract::VERSION` are permanent once Trade Reputation exists as a
+  consumer. Use integers with gaps, never renumber.
 - Marketplace categories are a separate, deliberately minimal table — no nesting,
-  permissions, or admin complexity in V1; a richer taxonomy is a documented future option,
-  not a default to build toward now.
+  permissions, or admin complexity in V1.
 - Listing deletion: `ON DELETE RESTRICT` from transactions; category deletion is
-  disallowed once listings reference it — disable a category instead. Handle account
-  deletion by archiving listings, never deleting transactions (reputation history must
-  survive account changes).
-- Deep pagination with offset degrades past a few thousand pages; acceptable at V1 scale,
-  flagged for keyset upgrade.
-- Dispute path is deliberately thin (a flag + staff resolve); the state machine already
-  has the `disputed` node so richer arbitration later needs no migration.
+  disallowed once listings reference it — disable a category instead.
+- No dispute path exists (§3). If arbitration is ever required, it is new design work, not
+  an extension of anything half-built here.
 
-## 12. Required core-version verification before implementation
+## 12. Required core-version verification before further implementation
 
-Do not assume unsupported API names. Verify against the installed/target Discourse core
-version before writing code:
+Confirmed during Phase 1/2A review, against the installed core:
 
-1. `Service::Base` DSL — confirm `params do ... end` vs `contract do ... end`, and the
-   exact `policy`/`step`/`model` block names in that core version.
-2. Notification registration API — confirm whether plugin-registrable notification types
-   and `register_notification_consolidation_plan` exist as designed in §8; if not, the
-   documented fallback is `SystemMessage`/`PostCreator` private messages.
-3. `UploadReference` / upload-attachment API — confirm `ensure_exist!` signature and
-   availability as used in §2.
-4. Plugin route/engine mounting conventions — confirm the isolated-engine + `plugin.rb`
-   `add_admin_route`/asset-registration patterns current in that core version.
+1. `Service::Base` DSL — confirmed: `params do ... end`, `model`, `policy`, `step`,
+   `transaction do ... end` (`lib/service/base/steps_helpers.rb`), as already used by every
+   `Transactions::*`/`Listings::*` service.
+2. `DiscourseEvent.trigger`/`.on`/`.off` (`lib/discourse_event.rb`) — confirmed synchronous,
+   in-process, `continue_on_error: false` by default (see §11).
+3. `DB.after_commit` — confirmed as an established, currently-used core pattern; its exact
+   safety semantics relative to `Confirm`'s outermost DB transaction are the specific
+   open question for Phase 2B (§11), not whether the API exists.
+4. Cross-plugin soft-dependency convention — confirmed: no declarative "requires plugin X"
+   manifest exists anywhere in core; the established idiom is a runtime `defined?(::Some
+   Namespace)` check (only real example found: a spec in `discourse-github` checking
+   `defined?(::Chat)`). Trade Reputation, when it exists, should guard on `defined?(::
+   Marketplace::TradeContract)` plus a `TradeContract::VERSION` check, not a manifest field.
 
-None of §1–§11 should be implemented against an assumed API name for these four items;
-confirm first, then proceed.
+Still unverified, and not yet needed (no code in this plugin depends on them yet):
+notification registration API (§8) and `UploadReference`/upload-attachment API for listing
+images — confirm before starting §8/§10 work, not before this document's own accuracy.
