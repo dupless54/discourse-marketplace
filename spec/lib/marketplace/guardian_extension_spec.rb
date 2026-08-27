@@ -20,7 +20,7 @@ describe Marketplace::GuardianExtension do
   def build_transaction(
     listing: build_listing(status: :reserved),
     buyer: self.buyer,
-    seller: self.seller,
+    seller: self.seller
   )
     Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
   end
