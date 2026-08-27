@@ -100,6 +100,12 @@ describe Marketplace::TradeContract do
         expect(info.transaction_id).to eq(transaction.id)
       end
 
+      it "returns the exact listing_id" do
+        transaction = build_completed
+        info = described_class.completed_transaction_info(transaction.id)
+        expect(info.listing_id).to eq(listing.id)
+      end
+
       it "returns the exact buyer_id" do
         transaction = build_completed
         info = described_class.completed_transaction_info(transaction.id)
@@ -116,12 +122,6 @@ describe Marketplace::TradeContract do
         transaction = build_completed
         info = described_class.completed_transaction_info(transaction.id)
         expect(info.completed_at).to eq(transaction.completed_at)
-      end
-
-      it "does not expose listing_id" do
-        transaction = build_completed
-        info = described_class.completed_transaction_info(transaction.id)
-        expect(info).not_to respond_to(:listing_id)
       end
 
       it "does not expose status" do
@@ -164,6 +164,7 @@ describe Marketplace::TradeContract do
         transaction = build_completed
         info = described_class.completed_transaction_info(transaction.id)
         expect(info).not_to respond_to(:transaction_id=)
+        expect(info).not_to respond_to(:listing_id=)
         expect(info).not_to respond_to(:buyer_id=)
         expect(info).not_to respond_to(:seller_id=)
         expect(info).not_to respond_to(:completed_at=)
