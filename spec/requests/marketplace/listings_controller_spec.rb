@@ -283,6 +283,24 @@ describe Marketplace::ListingsController do
       expect(response.status).to eq(404)
     end
 
+    it "returns 404 for a cancelled transaction so a new purchase can start" do
+      listing = build_listing(status: :active)
+      Fabricate(
+        :marketplace_transaction,
+        listing: listing,
+        buyer: buyer,
+        seller: seller,
+        status: Marketplace::Transaction.statuses[:cancelled],
+        cancelled_at: Time.current,
+        cancelled_by_id: buyer.id,
+      )
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transaction.json"
+
+      expect(response.status).to eq(404)
+    end
+
     it "never returns another user's transaction on the same listing (non-enumerable)" do
       listing = build_listing
       Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
