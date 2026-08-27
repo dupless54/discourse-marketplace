@@ -1,0 +1,92 @@
+tr_TR:
+  js:
+    notifications:
+      alt:
+        marketplace:
+          transaction_started: "pazar yeri"
+          transaction_confirmed: "pazar yeri"
+          transaction_completed: "pazar yeri"
+          transaction_cancelled: "pazar yeri"
+
+    marketplace:
+      title: "Pazar Yeri"
+      new_listing: "Yeni İlan"
+      my_listings: "İlanlarım"
+
+      admin:
+        title: "Pazar Yeri"
+        categories:
+          short_title: "Kategoriler"
+          title: "Pazar Yeri Kategorileri"
+          description: "Pazar yeri ilanlarında kullanılan kategorileri oluşturun, sıralayın, etkinleştirin veya devre dışı bırakın."
+          new_title: "Yeni kategori"
+          name: "Ad"
+          slug: "Slug"
+          position: "Sıra"
+          enabled: "Etkin"
+          create: "Kategori oluştur"
+          save: "Kaydet"
+          empty: "Henüz herhangi bir pazar yeri kategorisi oluşturulmadı."
+          error: "Kategori kaydedilemedi. Değerleri kontrol edip tekrar deneyin."
+
+      notifications:
+        transaction_started: "<p><span>%{username}</span>, %{description} ilanını satın almak istiyor</p>"
+        transaction_started_title: "Pazar Yeri işlemi başlatıldı"
+        transaction_confirmed: "<p><span>%{username}</span>, %{description} için takası onayladı</p>"
+        transaction_confirmed_title: "Pazar Yeri onayı alındı"
+        transaction_completed: "<p>%{description} için pazar yeri takasınız tamamlandı</p>"
+        transaction_completed_title: "Pazar Yeri işlemi tamamlandı"
+        transaction_cancelled: "<p><span>%{username}</span>, %{description} için takası iptal etti</p>"
+        transaction_cancelled_title: "Pazar Yeri işlemi iptal edildi"
+
+      mine:
+        title: "İlanlarım"
+        empty: "Henüz herhangi bir ilan oluşturmadınız."
+        load_more: "Daha fazla yükle"
+
+      browse:
+        sort_newest: "En yeni"
+        sort_price_asc: "Fiyat: Düşükten yükseğe"
+        sort_price_desc: "Fiyat: Yüksekten düşüğe"
+        search_placeholder: "İlanlarda ara"
+        category_all: "Tüm kategoriler"
+        search_button: "Ara"
+        load_more: "Daha fazla yükle"
+        empty: "İlan bulunamadı."
+
+      form:
+        new_title: "Yeni İlan"
+        edit_title: "İlanı Düzenle"
+        title_label: "Başlık"
+        description_label: "Açıklama"
+        category_label: "Kategori"
+        category_placeholder: "Bir kategori seçin"
+        upload_button: "Görsel veya dosya ekle"
+        upload_uploading: "Yükleniyor…"
+        price_label: "Fiyat"
+        currency_label: "Para birimi"
+        submit_create: "İlan Oluştur"
+        submit_save: "Değişiklikleri Kaydet"
+        error: "Bir sorun oluştu. Lütfen ilanınızı kontrol edip tekrar deneyin."
+
+      listing:
+        seller: "Satıcı:"
+        edit_button: "Düzenle"
+        publish_button: "Yayınla"
+        archive_button: "Arşivle"
+        buy_button: "Satın Al"
+        status:
+          draft: "Taslak"
+          active: "Yayında"
+          reserved: "Rezerve"
+          sold: "Satıldı"
+          archived: "Arşivlendi"
+
+      transaction:
+        confirm_button: "Onayla"
+        cancel_button: "İptal Et"
+        error: "Bu işlemle ilgili bir sorun oluştu. Lütfen tekrar deneyin."
+        status:
+          pending: "Onay bekliyor"
+          completed: "Tamamlandı"
+          cancelled: "İptal edildi"
