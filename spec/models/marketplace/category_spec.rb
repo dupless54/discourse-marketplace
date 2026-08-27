@@ -16,6 +16,13 @@ describe Marketplace::Category do
     expect(category).not_to be_valid
   end
 
+  it "requires a non-negative integer position" do
+    category.position = -1
+
+    expect(category).not_to be_valid
+    expect(category.errors[:position]).to be_present
+  end
+
   describe ".browsable" do
     it "excludes disabled categories" do
       disabled = Fabricate(:marketplace_category, enabled: false)

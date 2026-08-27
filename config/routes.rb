@@ -3,6 +3,10 @@
 Marketplace::Engine.routes.draw do
   get "categories" => "categories#index"
 
+  namespace :admin do
+    resources :categories, only: %i[index create update]
+  end
+
   get "listings" => "listings#index"
   post "listings" => "listings#create"
   get "listings/:id" => "listings#show", constraints: { id: /\d+/ }

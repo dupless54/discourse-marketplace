@@ -12,6 +12,22 @@ en:
       title: "Marketplace"
       new_listing: "New Listing"
 
+      admin:
+        title: "Marketplace"
+        categories:
+          short_title: "Categories"
+          title: "Marketplace Categories"
+          description: "Create, order, and enable or disable the categories used by marketplace listings."
+          new_title: "New category"
+          name: "Name"
+          slug: "Slug"
+          position: "Position"
+          enabled: "Enabled"
+          create: "Create category"
+          save: "Save"
+          empty: "No marketplace categories have been created yet."
+          error: "The category could not be saved. Check the values and try again."
+
       notifications:
         transaction_started: "<p><span>%{username}</span> wants to buy %{description}</p>"
         transaction_started_title: "Marketplace transaction started"
