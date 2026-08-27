@@ -588,8 +588,10 @@ introduced it.
 `assets/javascripts/discourse/` -- verified against current core conventions (core's own
 frontend source moved to a top-level `frontend/discourse/` directory; *plugin* assets still
 live under `assets/javascripts/discourse/`, confirmed against core-bundled plugins like
-`discourse-subscriptions`/`discourse-topic-voting` on the same ref). No admin UI; this is all
-user-facing.
+`discourse-subscriptions`/`discourse-topic-voting` on the same ref). This section covers only
+the user-facing Marketplace UI listed below. The separate category admin UI (Phase 4, PR #13)
+lives under `admin/assets/javascripts/discourse/` and is staff-only, distinct from everything
+in this section.
 
 ```
 marketplace-route-map.js                      auto-discovered by filename convention
