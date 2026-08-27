@@ -309,13 +309,13 @@ There is no `POST .../reject`, `POST .../dispute`, or general `GET /marketplace/
 index/list route -- a full "my transactions" listing endpoint is still a plausible future
 addition (would need the indexes noted in §11 first) but is not built. `GET
 /marketplace/listings/:id/transaction` (Phase 3) is narrower and does not need those indexes:
-it returns only the current user's own transaction on that one listing (preferring the open,
-non-cancelled one, served by the existing partial unique index on `(listing_id) WHERE status
-<> 20`; falling back to the most recent transaction only when none is open), scoped entirely
-by a `buyer_id = :uid OR seller_id = :uid` WHERE clause -- no separate Guardian call is
-needed since no row outside the caller's own participation can ever be returned. 404 when
-none exists. This exists so a listing detail page can discover "do I already have a
-transaction here" without a general index.
+it returns only the current user's own **open, non-cancelled** transaction on that one
+listing, scoped entirely by `listing_id` plus a `buyer_id = :uid OR seller_id = :uid` WHERE
+clause. The existing partial unique index on `(listing_id) WHERE status <> 20` serves the
+open-transaction lookup directly. A cancelled transaction is intentionally treated as no
+current transaction and returns 404, allowing the listing (which cancellation reactivates)
+to start a new purchase cleanly. No row outside the caller's own participation can ever be
+returned, so no separate Guardian call is needed.
 
 `TransactionSerializer` (`app/serializers/marketplace/transaction_serializer.rb`) emits:
 `id, listing_id, listing_title, buyer_id, seller_id, status, buyer_confirmed_at,
@@ -514,8 +514,9 @@ Reflects the specs that actually exist under `spec/`:
   doesn't change, and synced (old dropped, new added) on an edit.
 - **`GET .../listings/:id/transaction`** (Phase 3 addition to
   `spec/requests/marketplace/listings_controller_spec.rb`): returns the caller's own open
-  transaction for buyer and seller alike, 404 for no transaction/missing listing/anonymous,
-  and never returns another user's transaction on the same listing (non-enumerable).
+  transaction for buyer and seller alike; returns 404 for no transaction, a cancelled
+  transaction, a missing listing, or anonymous access; and never returns another user's
+  transaction on the same listing (non-enumerable).
 
 No frontend (JS/QUnit) tests were added in Phase 3 -- this sandboxed environment has no
 Discourse/Ember runtime to write or run them against; see the top-level session report for
@@ -565,7 +566,7 @@ not a correctness gap.
   transactions (should one ever be added — `TradeContract` itself is point-lookup-only and
   doesn't need this) will need a migration adding at least `(buyer_id, status)` and
   `(seller_id, status)` before shipping, per CLAUDE.md's N+1/indexing guidance. Still
-  flagged; Phase 3's one-listing transaction lookup is served by the existing partial
+  flagged; Phase 3's one-listing open-transaction lookup is served by the existing partial
   `listing_id` index and does not justify a general participant-history index yet.
 - **Completion event delivery is best-effort (Phase 2B).** `DB.after_commit` proves
   ordering (fires only after the true outermost commit) and rollback-safety (never fires on
