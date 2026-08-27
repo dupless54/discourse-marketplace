@@ -67,6 +67,7 @@ describe Marketplace::TransactionsController do
       expect(json_body.keys).to contain_exactly(
         "id",
         "listing_id",
+        "listing_title",
         "buyer_id",
         "seller_id",
         "status",
@@ -77,10 +78,15 @@ describe Marketplace::TransactionsController do
         "cancelled_by_id",
         "created_at",
         "updated_at",
+        "buyer",
+        "seller",
       )
       expect(json_body["buyer_id"]).to eq(buyer.id)
       expect(json_body["seller_id"]).to eq(listing.seller_id)
       expect(json_body["listing_id"]).to eq(listing.id)
+      expect(json_body["listing_title"]).to eq(listing.title)
+      expect(json_body["buyer"]["id"]).to eq(buyer.id)
+      expect(json_body["seller"]["id"]).to eq(listing.seller_id)
       expect(json_body["status"]).to eq("pending")
       expect(listing.reload.status).to eq("reserved")
     end
