@@ -16,13 +16,15 @@ describe Marketplace::StaticController do
     end
 
     it "returns 404 when the plugin is disabled" do
+      # Signed in, not anonymous: Middleware::AnonymousCache#cacheable? is
+      # false whenever CurrentUser.has_auth_cookie?(env) is true, so this
+      # request can never be served from (or poison) the anonymous page
+      # cache -- unlike an anonymous GET to this same path, which could
+      # collide with the anonymous request the other example in this file
+      # makes to a path served by the same action.
+      sign_in(Fabricate(:user))
       SiteSetting.marketplace_enabled = false
 
-      # Same StaticController#index action, same requires_plugin before_action,
-      # as the bare /marketplace root -- routed through a non-root shell path
-      # to avoid any ambiguity from Rails' handling of a mounted engine's own
-      # root route, which is a separate routing question from what this
-      # example is verifying (requires_plugin actually gates this controller).
       get "/marketplace/new"
 
       expect(response.status).to eq(404)
