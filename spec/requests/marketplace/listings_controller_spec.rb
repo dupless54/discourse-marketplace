@@ -149,6 +149,88 @@ describe Marketplace::ListingsController do
       expect(seller_json["username"]).to eq(seller.username)
       expect(seller_json).not_to have_key("email")
     end
+
+    it "serves the SPA shell, not JSON, for direct/HTML navigation (no .json suffix, Accept: text/html)" do
+      listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:active],
+        )
+
+      get "/marketplace/listings/#{listing.id}", headers: { "Accept" => "text/html" }
+
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
+      expect(response.body).not_to include(listing.title)
+    end
+
+    it "serves the SPA shell for a missing/private listing under HTML navigation, without touching the DB" do
+      other_seller = Fabricate(:user)
+      draft = Fabricate(:marketplace_listing, seller: other_seller, category: category)
+
+      get "/marketplace/listings/#{draft.id}", headers: { "Accept" => "text/html" }
+      expect(response.status).to eq(200)
+
+      get "/marketplace/listings/999999999", headers: { "Accept" => "text/html" }
+      expect(response.status).to eq(200)
+    end
+
+    it "still serves real listing JSON for an unsuffixed path when Accept is application/json, matching ajax()" do
+      listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:active],
+        )
+
+      get "/marketplace/listings/#{listing.id}", headers: { "Accept" => "application/json" }
+
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("application/json")
+      expect(json_body["id"]).to eq(listing.id)
+      expect(json_body["title"]).to eq(listing.title)
+    end
+  end
+
+  describe "SPA direct-navigation shell (F5 / direct URL, no client-side Ember router yet)" do
+    it "returns 200 HTML for the bare /marketplace root" do
+      get "/marketplace", headers: { "Accept" => "text/html" }
+
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
+    end
+
+    it "returns 200 HTML for /marketplace/new" do
+      get "/marketplace/new", headers: { "Accept" => "text/html" }
+
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
+    end
+
+    it "returns 200 HTML for /marketplace/mine" do
+      get "/marketplace/mine", headers: { "Accept" => "text/html" }
+
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
+    end
+
+    it "returns 200 HTML for /marketplace/listings/:id/edit regardless of whether the listing exists" do
+      get "/marketplace/listings/999999999/edit", headers: { "Accept" => "text/html" }
+
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
+    end
+
+    it "leaves the listings JSON index API at /marketplace/listings completely unrouted to the shell" do
+      get "/marketplace/listings.json"
+
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("application/json")
+      expect(response.parsed_body).to have_key("pagination")
+    end
   end
 
   describe "#update" do

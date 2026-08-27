@@ -1,6 +1,15 @@
 # frozen_string_literal: true
 
 Marketplace::Engine.routes.draw do
+  # Pure-frontend (Ember) routes -- see StaticController for why these carry
+  # no JSON behavior and never should. listings/:id is deliberately absent
+  # here: it is both an Ember route and the JSON API below, resolved by
+  # format inside ListingsController#show, not by a second route.
+  root to: "static#index"
+  get "new" => "static#index"
+  get "mine" => "static#index"
+  get "listings/:id/edit" => "static#index", constraints: { id: /\d+/ }
+
   get "categories" => "categories#index"
 
   namespace :admin do
