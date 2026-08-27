@@ -135,6 +135,15 @@ module Marketplace
       end
 
       transaction_record.save!
+
+      transaction_id = transaction_record.id
+      DB.after_commit do
+        DiscourseEvent.trigger(
+          :marketplace_transaction_first_confirmed,
+          transaction_id,
+          continue_on_error: true,
+        )
+      end
     end
 
     # Final confirmation. The Phase 1 status-shape CHECK requires a

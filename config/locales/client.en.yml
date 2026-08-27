@@ -1,0 +1,68 @@
+en:
+  js:
+    notifications:
+      alt:
+        marketplace:
+          transaction_started: "marketplace"
+          transaction_confirmed: "marketplace"
+          transaction_completed: "marketplace"
+          transaction_cancelled: "marketplace"
+
+    marketplace:
+      title: "Marketplace"
+      new_listing: "New Listing"
+
+      notifications:
+        transaction_started: "<p><span>%{username}</span> wants to buy %{description}</p>"
+        transaction_started_title: "Marketplace transaction started"
+        transaction_confirmed: "<p><span>%{username}</span> confirmed the trade for %{description}</p>"
+        transaction_confirmed_title: "Marketplace confirmation received"
+        transaction_completed: "<p>Your marketplace trade for %{description} is complete</p>"
+        transaction_completed_title: "Marketplace transaction completed"
+        transaction_cancelled: "<p><span>%{username}</span> cancelled the trade for %{description}</p>"
+        transaction_cancelled_title: "Marketplace transaction cancelled"
+
+      browse:
+        sort_newest: "Newest"
+        sort_price_asc: "Price: Low to High"
+        sort_price_desc: "Price: High to Low"
+        search_placeholder: "Search listings"
+        category_all: "All categories"
+        search_button: "Search"
+        load_more: "Load more"
+        empty: "No listings found."
+
+      form:
+        new_title: "New Listing"
+        edit_title: "Edit Listing"
+        title_label: "Title"
+        description_label: "Description"
+        category_label: "Category"
+        category_placeholder: "Select a category"
+        price_label: "Price"
+        currency_label: "Currency"
+        submit_create: "Create Listing"
+        submit_save: "Save Changes"
+        error: "Something went wrong. Please check your listing and try again."
+
+      listing:
+        seller: "Seller:"
+        edit_button: "Edit"
+        publish_button: "Publish"
+        archive_button: "Archive"
+        buy_button: "Buy"
+        status:
+          draft: "Draft"
+          active: "Active"
+          reserved: "Reserved"
+          sold: "Sold"
+          archived: "Archived"
+
+      transaction:
+        confirm_button: "Confirm"
+        cancel_button: "Cancel"
+        error: "Something went wrong with this transaction. Please try again."
+        status:
+          pending: "Pending confirmation"
+          completed: "Completed"
+          cancelled: "Cancelled"

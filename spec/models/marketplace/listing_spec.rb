@@ -59,4 +59,42 @@ describe Marketplace::Listing do
     listing.status = Marketplace::Listing.statuses[:archived]
     expect(listing).to be_valid
   end
+
+  describe "images/attachments" do
+    it "associates uploads referenced in raw via UploadReference on create" do
+      upload = Fabricate(:upload)
+      listing = build_listing(raw: "See the photo: #{upload.short_url}")
+      listing.save!
+
+      expect(UploadReference.where(target: listing).pluck(:upload_id)).to contain_exactly(upload.id)
+    end
+
+    it "does not touch upload references when raw is unchanged" do
+      upload = Fabricate(:upload)
+      listing = build_listing(raw: "See the photo: #{upload.short_url}")
+      listing.save!
+
+      expect { listing.update!(title: "A different title") }.not_to change {
+        UploadReference.where(target: listing).count
+      }
+    end
+
+    it "drops the reference to an upload no longer mentioned after an edit" do
+      old_upload = Fabricate(:upload)
+      new_upload = Fabricate(:upload)
+      listing = build_listing(raw: "See the photo: #{old_upload.short_url}")
+      listing.save!
+
+      listing.update!(raw: "See the new photo: #{new_upload.short_url}")
+
+      expect(UploadReference.where(target: listing).pluck(:upload_id)).to contain_exactly(new_upload.id)
+    end
+
+    it "has no upload references when raw mentions no uploads" do
+      listing = build_listing
+      listing.save!
+
+      expect(UploadReference.where(target: listing)).to be_empty
+    end
+  end
 end

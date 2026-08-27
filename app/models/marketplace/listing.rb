@@ -26,6 +26,21 @@ module Marketplace
               }
     validate :category_must_be_enabled, if: -> { new_record? || will_save_change_to_category_id? }
 
+    # Images/attachments use the standard Discourse mechanism: they are
+    # embedded in `raw` markdown (the same `upload://<short-url>` syntax the
+    # composer inserts everywhere else) and rendered into `cooked` by
+    # PrettyText.cook, already done by Listings::Create/Update. This hook
+    # only does the housekeeping every other Discourse model with
+    # user-suppliable upload references does (see e.g. core's Draft#save,
+    # Badge#save): associate any uploads newly referenced in `raw` so they
+    # survive the upload cleanup job, and drop the association for any that
+    # are no longer referenced after an edit.
+    after_save do
+      if saved_change_to_raw?
+        UploadReference.ensure_exist!(upload_ids: Upload.extract_upload_ids(raw), target: self)
+      end
+    end
+
     private
 
     def category_must_be_enabled

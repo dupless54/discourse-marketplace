@@ -369,4 +369,57 @@ describe Marketplace::Transactions::Cancel do
       expect(result.transaction.cancelled_at).to be_within(5.seconds).of(Time.current)
     end
   end
+
+  describe "cancelled event" do
+    def with_handler
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_cancelled, &handler)
+      yield events
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_cancelled, &handler)
+    end
+
+    it "emits exactly one event, with the scalar transaction id as payload, on a real cancel" do
+      with_handler do |events|
+        transaction = build_transaction
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+        expect(result).to be_success
+        expect(events).to eq([transaction.id])
+      end
+    end
+
+    it "emits zero events on a cancelled replay" do
+      with_handler do |events|
+        transaction = build_transaction
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+        events.clear
+
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+        expect(result).to be_success
+        expect(events).to be_empty
+      end
+    end
+
+    it "emits zero events when cancelling a completed transaction is rejected" do
+      with_handler do |events|
+        now = Time.current
+        transaction =
+          build_transaction(
+            status: :completed,
+            listing: build_listing(status: :sold),
+            buyer_confirmed_at: now,
+            seller_confirmed_at: now,
+            completed_at: now,
+          )
+
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+        expect(result).to be_failure
+        expect(events).to be_empty
+      end
+    end
+  end
 end

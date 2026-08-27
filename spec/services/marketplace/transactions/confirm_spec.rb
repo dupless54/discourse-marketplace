@@ -491,6 +491,74 @@ describe Marketplace::Transactions::Confirm do
     end
   end
 
+  describe "first confirmation event" do
+    def with_handler
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_first_confirmed, &handler)
+      yield events
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_first_confirmed, &handler)
+    end
+
+    it "emits exactly one event, with the scalar transaction id as payload, for a first confirmation" do
+      with_handler do |events|
+        listing = build_listing
+        transaction = build_transaction(listing: listing)
+
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+        expect(result).to be_success
+        expect(events).to eq([transaction.id])
+      end
+    end
+
+    it "emits zero events for the final (second) confirmation" do
+      with_handler do |events|
+        listing = build_listing
+        transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+        expect(result).to be_success
+        expect(result.transaction.status).to eq("completed")
+        expect(events).to be_empty
+      end
+    end
+
+    it "emits zero events for a same-side replay of an already-recorded first confirmation" do
+      with_handler do |events|
+        listing = build_listing
+        transaction = build_transaction(listing: listing)
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+        events.clear
+
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+        expect(result).to be_success
+        expect(events).to be_empty
+      end
+    end
+
+    it "emits zero events for a confirm attempt on a cancelled transaction" do
+      with_handler do |events|
+        listing = build_listing
+        transaction =
+          build_transaction(
+            listing: listing,
+            status: :cancelled,
+            cancelled_at: Time.current,
+            cancelled_by_id: seller.id,
+          )
+
+        result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+        expect(result).to be_failure
+        expect(events).to be_empty
+      end
+    end
+  end
+
   describe "input" do
     it "gives a model-not-found result for a missing transaction" do
       missing_transaction_id = Marketplace::Transaction.maximum(:id).to_i + 1

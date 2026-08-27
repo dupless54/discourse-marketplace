@@ -115,6 +115,15 @@ module Marketplace
           .update_all(status: Marketplace::Listing.statuses[:active], updated_at: now)
 
       raise Marketplace::TransactionInvariantViolation if affected_rows != 1
+
+      transaction_id = transaction_record.id
+      DB.after_commit do
+        DiscourseEvent.trigger(
+          :marketplace_transaction_cancelled,
+          transaction_id,
+          continue_on_error: true,
+        )
+      end
     end
   end
 end

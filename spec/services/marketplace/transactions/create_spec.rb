@@ -261,4 +261,51 @@ describe Marketplace::Transactions::Create do
       expect(result.transaction.status).to eq("pending")
     end
   end
+
+  describe "created event" do
+    def with_handler
+      events = []
+      handler = Proc.new { |transaction_id| events << transaction_id }
+      DiscourseEvent.on(:marketplace_transaction_created, &handler)
+      yield events
+    ensure
+      DiscourseEvent.off(:marketplace_transaction_created, &handler)
+    end
+
+    it "emits exactly one event, with the scalar transaction id as payload, on a real create" do
+      with_handler do |events|
+        listing = build_listing
+        result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+        expect(result).to be_success
+        expect(events).to eq([result.transaction.id])
+      end
+    end
+
+    it "emits zero events on a same-buyer replay" do
+      with_handler do |events|
+        listing = build_listing
+        call_service(guardian: buyer.guardian, listing_id: listing.id)
+        events.clear
+
+        result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+        expect(result).to be_success
+        expect(events).to be_empty
+      end
+    end
+
+    it "emits zero events when a different buyer is rejected for contention" do
+      with_handler do |events|
+        listing = build_listing
+        call_service(guardian: buyer.guardian, listing_id: listing.id)
+        events.clear
+
+        result = call_service(guardian: other_buyer.guardian, listing_id: listing.id)
+
+        expect(result).to be_failure
+        expect(events).to be_empty
+      end
+    end
+  end
 end
