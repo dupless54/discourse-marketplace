@@ -36,13 +36,13 @@ Marketplace::TradeContract.completed_transaction_info(transaction_id)
 | field | type | notes |
 |---|---|---|
 | `transaction_id` | Integer | |
+| `listing_id` | Integer | listing reference for feedback detail/display |
 | `buyer_id` | Integer | |
 | `seller_id` | Integer | |
 | `completed_at` | Time | |
 
-It does not expose `listing_id` or `status`. The method name already encodes
-eligibility (see below), so there is no separate "is it completed" check to
-get wrong.
+It does not expose `status`. The method name already encodes eligibility (see
+below), so there is no separate "is it completed" check to get wrong.
 
 ### Input handling
 
@@ -85,11 +85,3 @@ firing/non-firing cases.
 `completed_transaction_info`'s semantics. Trade Reputation should check it at
 boot and refuse to integrate against an unexpected value rather than assume
 compatibility.
-
-## Known pending change
-
-An open Marketplace PR (`feature/v1-trade-detail-contract`) adds a
-`listing_id` field to `TransactionInfo`, additively (existing callers using
-keyword access are unaffected; `VERSION` stays `1`). This document reflects
-the contract as currently merged on `main`; update the `TransactionInfo`
-field table above once that PR lands.
