@@ -43,7 +43,7 @@ export default class MarketplaceListingForm extends Component {
 
   @action
   updateCategoryId(event) {
-    this.categoryId = event.target.value;
+    this.categoryId = event.target.value ? Number(event.target.value) : "";
   }
 
   @action
