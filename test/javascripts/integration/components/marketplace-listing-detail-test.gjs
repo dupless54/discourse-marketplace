@@ -1,17 +1,25 @@
+import Service from "@ember/service";
 import { click, render } from "@ember/test-helpers";
 import { module, test } from "qunit";
-import sinon from "sinon";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import MarketplaceListingDetail from "discourse/plugins/discourse-marketplace/discourse/components/marketplace-listing-detail";
+
+// See marketplace-listing-card-test.gjs for why this replaces the service
+// wholesale rather than stubbing the @action-decorated openNewMessage method.
+class FakeComposerService extends Service {
+  lastOpenNewMessageArgs = null;
+
+  openNewMessage(args) {
+    this.lastOpenNewMessageArgs = args;
+  }
+}
 
 module("Integration | Component | MarketplaceListingDetail", function (hooks) {
   setupRenderingTest(hooks);
 
   test("offers Message Seller to a logged-in non-seller and opens a prefilled PM", async function (assert) {
-    const openNewMessage = sinon.stub(
-      this.owner.lookup("service:composer"),
-      "openNewMessage"
-    );
+    this.owner.unregister("service:composer");
+    this.owner.register("service:composer", FakeComposerService);
 
     this.listing = {
       id: 1,
@@ -39,8 +47,9 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
 
     await click(".marketplace-listing-detail__message-seller");
 
-    assert.true(openNewMessage.calledOnce);
-    const openedWith = openNewMessage.firstCall.args[0];
+    const openedWith =
+      this.owner.lookup("service:composer").lastOpenNewMessageArgs;
+    assert.ok(openedWith, "openNewMessage was called");
     assert.strictEqual(openedWith.recipients, "seller_user");
     assert.true(openedWith.title.includes("Vintage Synthesizer"));
   });

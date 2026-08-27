@@ -1,8 +1,22 @@
+import Service from "@ember/service";
 import { click, render } from "@ember/test-helpers";
 import { module, test } from "qunit";
-import sinon from "sinon";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import MarketplaceListingCard from "discourse/plugins/discourse-marketplace/discourse/components/marketplace-listing-card";
+
+// A stubbed real composer service, not a sinon method stub -- openNewMessage
+// is an @action-decorated accessor, and directly overwriting it (whether by
+// assignment or via sinon.stub) does not reliably reach the call the
+// component's `{{on "click"}}` handler makes. Swapping the whole service
+// registration is the same pattern discourse/tests/helpers/component-test.js
+// itself uses for current-user/topic-tracking-state.
+class FakeComposerService extends Service {
+  lastOpenNewMessageArgs = null;
+
+  openNewMessage(args) {
+    this.lastOpenNewMessageArgs = args;
+  }
+}
 
 module("Integration | Component | MarketplaceListingCard", function (hooks) {
   setupRenderingTest(hooks);
@@ -64,10 +78,8 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
   });
 
   test("opens a prefilled PM to the seller when Message Seller is clicked", async function (assert) {
-    const openNewMessage = sinon.stub(
-      this.owner.lookup("service:composer"),
-      "openNewMessage"
-    );
+    this.owner.unregister("service:composer");
+    this.owner.register("service:composer", FakeComposerService);
 
     this.listing = {
       id: 5,
@@ -81,8 +93,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
     await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
     await click(".marketplace-listing-card__message");
 
-    assert.true(openNewMessage.calledOnce);
-    const openedWith = openNewMessage.firstCall.args[0];
+    const openedWith =
+      this.owner.lookup("service:composer").lastOpenNewMessageArgs;
+    assert.ok(openedWith, "openNewMessage was called");
     assert.strictEqual(openedWith.recipients, "seller_user");
     assert.true(openedWith.title.includes("Vintage Synthesizer"));
   });
