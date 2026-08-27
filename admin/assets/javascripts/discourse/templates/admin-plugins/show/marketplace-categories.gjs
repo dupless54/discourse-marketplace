@@ -1,4 +1,4 @@
-import MarketplaceCategoryAdmin from "discourse/plugins/discourse-marketplace/admin/components/marketplace-category-admin";
+import MarketplaceCategoryAdmin from "discourse/plugins/discourse-marketplace/discourse/components/marketplace-category-admin";
 
 export default <template>
   <MarketplaceCategoryAdmin

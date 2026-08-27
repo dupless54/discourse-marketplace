@@ -262,3 +262,4 @@ export default class MarketplaceCategoryAdmin extends Component {
     </div>
   </template>
 }
+

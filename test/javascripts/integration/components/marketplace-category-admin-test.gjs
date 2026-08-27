@@ -1,7 +1,7 @@
 import { click, render } from "@ember/test-helpers";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import MarketplaceCategoryAdmin from "discourse/plugins/discourse-marketplace/admin/components/marketplace-category-admin";
+import MarketplaceCategoryAdmin from "discourse/plugins/discourse-marketplace/discourse/components/marketplace-category-admin";
 
 module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
   setupRenderingTest(hooks);
