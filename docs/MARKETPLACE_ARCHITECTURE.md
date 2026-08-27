@@ -1,13 +1,25 @@
 # Marketplace V1 Architecture (Approved)
 
-Status: approved. Sections §2, §3, §4, §6, §7, §9, and §11 were corrected in Phase 2A after
-Transactions stabilized; earlier drafts of those sections described a seller-initiated,
-dispute-capable design that was never built. Phase 2B implemented the transaction completion
-event. Phase 3 (this revision) added listing images/attachments (§2), notifications (§8),
-the `GET .../listings/:id/transaction` lookup and enriched `TransactionSerializer` (§6), and
-the frontend (§10); §2, §6, §8, and §10 were updated accordingly. This document is
-authoritative; where it and the code ever disagree, treat that as a bug in the document and
-fix the document, not the code, unless a real behavior change is intended.
+Status: approved. **Marketplace V1 is COMPLETE** on `main`
+(`a3f44a845629a51d5ceb04696332740a60ebd295`): every area in `docs/PROJECT_BRIEF.md` --
+listings, transactions/lifecycle, notifications, browse/search/filter, My Listings,
+categories/admin, image/attachment upload, and the `Marketplace::TradeContract` integration
+surface -- is implemented and merged. Sections §2, §3, §4, §6, §7, §9, and §11 were corrected
+in Phase 2A after Transactions stabilized; earlier drafts of those sections described a
+seller-initiated, dispute-capable design that was never built. Phase 2B implemented the
+transaction completion event. Phase 3 added listing images/attachments (§2), notifications
+(§8), the `GET .../listings/:id/transaction` lookup and enriched `TransactionSerializer` (§6),
+and the frontend (§10). Phase 4 (this revision) added the My Listings view (§6, §10) and the
+create/edit form's image/attachment upload UI (§10), documents the pre-existing
+`marketplace-transaction-after-actions` `PluginOutlet` (§7) that earlier revisions never
+described, and records the frontend QUnit coverage added alongside all of the above (§9); §6,
+§7, §9, and §10 were updated accordingly. This document is authoritative; where it and the
+code ever disagree, treat that as a bug in the document and fix the document, not the code,
+unless a real behavior change is intended.
+
+Remaining items are intentional V1 scope cuts, not gaps: see §10 (URL-addressable
+search/filter state, a main-nav/sidebar link to `/marketplace`) and §1 (no plugin
+stylesheet).
 
 ## 1. File / component layout
 
@@ -294,6 +306,7 @@ GET    /marketplace/categories
 
 GET    /marketplace/listings            filters per ListingQuery (see lib/marketplace/listing_query.rb)
 POST   /marketplace/listings
+GET    /marketplace/listings/mine       current user's own listings, every status (login required)
 GET    /marketplace/listings/:id
 PUT    /marketplace/listings/:id
 PUT    /marketplace/listings/:id/status
@@ -316,6 +329,16 @@ open-transaction lookup directly. A cancelled transaction is intentionally treat
 current transaction and returns 404, allowing the listing (which cancellation reactivates)
 to start a new purchase cleanly. No row outside the caller's own participation can ever be
 returned, so no separate Guardian call is needed.
+
+`GET /marketplace/listings/mine` (Phase 4, login required) returns the current user's own
+listings across every status (`draft`/`active`/`reserved`/`sold`/`archived`), scoped entirely
+by `WHERE seller_id = current_user.id` in `ListingsController#mine` -- the only way an owner
+can rediscover a `draft` or `archived` listing of theirs, since the public `#index`
+(`ListingQuery`) is mandatory-scoped to `active` listings in `enabled` categories only. No
+separate Guardian predicate was needed, for the same reason `#transaction` above needs none:
+no row outside the caller's own listings can ever be returned. Paginated the same shape as
+`#index` (`page`/`per_page`/`has_more`; `per_page` clamped to `ListingQuery::MAX_PER_PAGE`),
+serialized with the existing `ListingBrowseSerializer`.
 
 `TransactionSerializer` (`app/serializers/marketplace/transaction_serializer.rb`) emits:
 `id, listing_id, listing_title, buyer_id, seller_id, status, buyer_confirmed_at,
@@ -371,6 +394,30 @@ to` a Marketplace model, share Marketplace's service context, or otherwise impor
 `Marketplace::Transaction`/`Marketplace::Listing`. Marketplace, symmetrically, never reads,
 writes, or references any table owned by Trade Reputation. Full contract text lives in
 `docs/TRADE_REPUTATION_CONTRACT.md`.
+
+**UI integration point (`PluginOutlet`, pre-existing, documented here for the first time in
+Phase 4).** Independent of the `TradeContract` API above,
+`components/marketplace-listing-detail.gjs` renders a named, args-only extension point on the
+transaction detail view:
+
+```gjs
+<PluginOutlet
+  @name="marketplace-transaction-after-actions"
+  @outletArgs={{lazyHash listing=this.listing transaction=this.transaction}}
+  @defaultGlimmer={{true}}
+/>
+```
+
+Marketplace is the outlet **provider** only: it renders the named outlet with `listing`/
+`transaction` as outlet args and has no import, reference, or `defined?(...)` check for Trade
+Reputation (or any other consumer) on this side. Trade Reputation is the **connector
+consumer**: it supplies its own
+`assets/javascripts/discourse/connectors/marketplace-transaction-after-actions/<name>.gjs` in
+its own repo (the standard core `PluginOutlet` connector convention) to render UI -- e.g. a
+"leave feedback" action -- using the outlet args, without Marketplace ever needing to know
+Trade Reputation exists. This preserves the same hard boundary as the `TradeContract` API
+above: Marketplace defines the seam and depends on nothing beyond it; any consumer depends on
+Marketplace, never the reverse.
 
 **Completion event (Phase 2B, implemented).** `:marketplace_transaction_completed` fires
 exactly once per real `pending -> completed` transition, and zero times for transaction
@@ -517,28 +564,45 @@ Reflects the specs that actually exist under `spec/`:
   transaction for buyer and seller alike; returns 404 for no transaction, a cancelled
   transaction, a missing listing, or anonymous access; and never returns another user's
   transaction on the same listing (non-enumerable).
+- **`GET .../listings/mine`** (Phase 4 addition to
+  `spec/requests/marketplace/listings_controller_spec.rb`): anonymous rejected (403); returns
+  the owner's listings across every status; never returns another seller's listings
+  (non-enumerable/IDOR); pagination (`page`/`per_page`/`has_more`); `per_page` clamped to the
+  max; invalid `page`/`per_page` -> 400.
 
-No frontend (JS/QUnit) tests were added in Phase 3 -- this sandboxed environment has no
-Discourse/Ember runtime to write or run them against; see the top-level session report for
-what was and wasn't actually executed.
+**Frontend (JS/QUnit), added Phase 4.** `test/javascripts/integration/components/`:
+`marketplace-category-admin-test.gjs` (admin category CRUD), `marketplace-my-listings-test.gjs`
+(renders the current user's listings across every status, the empty state, and load-more
+visibility), and `marketplace-listing-form-test.gjs` (the upload control renders in create and
+edit mode; an existing `raw` description is preserved on edit; a plain text-only description
+still works with no uploads; and, using the same `pretender` + `upload-mixin:<id>:add-files`
+app-event pattern core's own `avatar-uploader-test.gjs`/`watched-word-uploader-test.gjs` use to
+drive a real mocked upload round-trip, a successful upload appends the server-returned
+`upload://` markdown into the description). None of these were executed in this document's
+own sandboxed authoring environment (no Discourse/Ember runtime available there); each was
+confirmed green via the repository's `Discourse Plugin` CI workflow at the exact head that
+introduced it.
 
-## 10. Frontend (Phase 3, implemented)
+## 10. Frontend (Phase 3, implemented; Phase 4 added My Listings and the upload UI)
 
 `assets/javascripts/discourse/` -- verified against current core conventions (core's own
 frontend source moved to a top-level `frontend/discourse/` directory; *plugin* assets still
 live under `assets/javascripts/discourse/`, confirmed against core-bundled plugins like
-`discourse-subscriptions`/`discourse-topic-voting` on the same ref). No admin UI; this is all
-user-facing.
+`discourse-subscriptions`/`discourse-topic-voting` on the same ref). This section covers only
+the user-facing Marketplace UI listed below. The separate category admin UI (Phase 4, PR #13)
+lives under `admin/assets/javascripts/discourse/` and is staff-only, distinct from everything
+in this section.
 
 ```
 marketplace-route-map.js                      auto-discovered by filename convention
-routes/marketplace/{index,new,listing}.js
+routes/marketplace/{index,new,listing,mine}.js
 routes/marketplace/listing/edit.js
-templates/marketplace/{index,new,listing}.gjs  route-template .gjs files (receive @controller)
+templates/marketplace/{index,new,listing,mine}.gjs  route-template .gjs files (receive @controller)
 templates/marketplace/listing/edit.gjs
-components/marketplace-browse.gjs              search/filter/sort + pagination + listing cards
-components/marketplace-listing-form.gjs        shared create/edit form
-components/marketplace-listing-detail.gjs      listing detail + transaction actions/state
+components/marketplace-browse.gjs              search/filter/sort + pagination + listing cards; links to "My Listings" (Phase 4)
+components/marketplace-my-listings.gjs         Phase 4: current user's own listings, every status, paginated
+components/marketplace-listing-form.gjs        shared create/edit form; Phase 4: image/attachment upload UI
+components/marketplace-listing-detail.gjs      listing detail + transaction actions/state; PluginOutlet (§7)
 ```
 
 Routes: `/marketplace` (browse+search/filter, `ListingQuery`'s `category_id`/`q`/`sort`
@@ -546,17 +610,31 @@ params via component-local `@tracked` state, not URL query params -- a deliberat
 scope cut), `/marketplace/new` (create), `/marketplace/listings/:listing_id` (detail;
 `model()` also probes `GET .../transaction`, §6, to render transaction state for a returning
 participant -- a 404 there is the common/expected case, handled locally, not surfaced),
-`/marketplace/listings/:listing_id/edit`. All calls go through the existing JSON API (§6)
-via `ajax()`; no new backend surface beyond the `GET .../transaction` endpoint documented in
-§6. `cooked` is rendered as trusted HTML (`htmlSafe`), matching how Discourse renders `cooked`
-content everywhere else -- safe because `PrettyText.cook` already sanitized it server-side.
+`/marketplace/listings/:listing_id/edit`, and `/marketplace/mine` (Phase 4: the current
+user's own listings across every status, via `GET .../listings/mine`, §6; redirects to
+`/marketplace` if not logged in; linked from a "My Listings" button in the browse header,
+shown only when logged in). All calls go through the existing JSON API (§6) via `ajax()`; no
+backend surface beyond what's documented in §6. `cooked` is rendered as trusted HTML
+(`htmlSafe`), matching how Discourse renders `cooked` content everywhere else -- safe because
+`PrettyText.cook` already sanitized it server-side.
 
-Not built in Phase 3: an image/attachment picker in the create/edit form (plain `raw`
-textarea; a user can still embed `upload://...` markdown manually and §2's `UploadReference`
-housekeeping makes it work correctly, but there is no upload button UI), URL-addressable
-search/filter state, and a main-nav/sidebar link to `/marketplace` (the route exists and is
-directly reachable, just not surfaced from navigation chrome). Each is a plausible follow-up,
-not a correctness gap.
+**Image/attachment upload UI (Phase 4, implemented).** `marketplace-listing-form.gjs` renders
+an "Add image or file" control (hidden file input + `DButton`, driven by core's `UppyUpload`,
+verified against current core source rather than guessed) below the description field in both
+create and edit mode. A successful upload appends core's own `getUploadMarkdown()` result --
+the same `upload://...` markdown the composer inserts -- to the existing `raw` value; §2's
+`UploadReference` housekeeping is unchanged and still does all of the actual persistence-side
+work, so a user can still embed `upload://...` markdown by hand exactly as before. The
+description field itself moved from a bare `<textarea>{{this.raw}}</textarea>` to Ember's
+`<Textarea @value={{this.raw}} />`, needed so markdown appended by the upload flow (not a user
+keystroke) actually shows up in the field. No drag-and-drop or paste: the minimal
+officially-supported pattern this follows (`UppyUpload` + a plain file input, the same shape
+as core's own `form-template-field/upload.gjs`) doesn't wire those up either.
+
+Still not built: URL-addressable search/filter state, and a main-nav/sidebar link to
+`/marketplace` itself (the route is directly reachable -- via `/marketplace/new`'s and
+`/marketplace/mine`'s own links back to it, and by URL -- just not surfaced from top-level
+navigation chrome). Each remains a deliberate scope cut, not a correctness gap.
 
 ## 11. Risks and compatibility
 
@@ -587,7 +665,7 @@ not a correctness gap.
 
 ## 12. Required core-version verification before further implementation
 
-Confirmed during Phase 1/2A/2B/3 review, against the installed core:
+Confirmed during Phase 1/2A/2B/3/4 review, against the installed core:
 
 1. `Service::Base` DSL — confirmed: `params do ... end`, `model`, `policy`, `step`,
    `transaction do ... end` (`lib/service/base/steps_helpers.rb`), as already used by every
@@ -633,3 +711,13 @@ Confirmed during Phase 1/2A/2B/3 review, against the installed core:
    §10. Note: core's *own* frontend source moved to a top-level `frontend/discourse/`
    directory on this ref; plugin assets are unaffected and still live under
    `assets/javascripts/discourse/`.
+8. Non-composer upload UI (Phase 4) — confirmed against a fresh shallow clone of
+   `discourse/discourse@main`: `UppyUpload` (`discourse/lib/uppy/uppy-upload`) and
+   `getUploadMarkdown()` (`discourse/lib/uploads`) are the supported minimal building blocks
+   for an upload control outside the full composer, the same shape core's own
+   `form-template-field/upload.gjs` and the bundled `discourse-ai` plugin's
+   `rag-uploader.gjs` use; Ember's `<Textarea @value=...>` (`@ember/component`) is required
+   (over a bare `<textarea>{{value}}</textarea>`) for a value mutated from outside a user
+   keystroke to actually render, confirmed against core's own
+   `form-template-field/textarea.gjs`. §7's `PluginOutlet` usage predates Phase 4 and needed
+   no new verification. §10.
