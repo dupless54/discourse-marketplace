@@ -14,6 +14,10 @@ Area router:
 - schema/migrations -> `db/AGENTS.md`
 - specs/fabricators -> `spec/AGENTS.md`
 
+## Fast task path
+
+For non-trivial work, use `.agents/skills/task-packet/SKILL.md` before broad reads. Use `docs/ai/REPO_MAP.md` to locate code, `COMMANDS.md` only when validation is needed, and `DECISIONS.md` only when an architecture/integration choice is relevant. Skip the formal packet for trivial one-file edits.
+
 ## Project invariants
 
 Marketplace owns listings, categories, transactions, and transaction truth. Trade Reputation is a separate consumer and must integrate only through a small documented public contract.
@@ -48,4 +52,4 @@ Minimum unnecessary tokens, not minimum reasoning. Prefer exact symbols, paths, 
 
 ## On-demand skills
 
-Reusable procedures live under `.agents/skills/`. Read only the skill matching the task: `project-plan`, `project-implement`, `project-review`, `project-final-verify`, `project-ci-repair`, `project-schema-review`, `project-security-review`, or `project-update-state`.
+Reusable procedures live under `.agents/skills/`. Read only the skill matching the task: `task-packet`, `project-plan`, `project-implement`, `project-review`, `project-final-verify`, `project-ci-repair`, `project-schema-review`, `project-security-review`, or `project-update-state`.
