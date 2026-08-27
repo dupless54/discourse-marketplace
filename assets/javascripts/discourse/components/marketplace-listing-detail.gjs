@@ -14,6 +14,7 @@ import { i18n } from "discourse-i18n";
 
 export default class MarketplaceListingDetail extends Component {
   @service currentUser;
+  @service composer;
 
   @tracked listing = this.args.listing;
   @tracked transaction = this.args.transaction;
@@ -35,6 +36,10 @@ export default class MarketplaceListingDetail extends Component {
       this.listing.status === "active" &&
       !this.transaction
     );
+  }
+
+  get canMessageSeller() {
+    return this.currentUser && !this.isSeller && this.listing.seller;
   }
 
   get isParticipant() {
@@ -74,6 +79,16 @@ export default class MarketplaceListingDetail extends Component {
     } finally {
       this.busy = false;
     }
+  }
+
+  @action
+  messageSeller() {
+    this.composer.openNewMessage({
+      recipients: this.listing.seller.username,
+      title: i18n("marketplace.listing.message_seller_subject", {
+        listing_title: this.listing.title,
+      }),
+    });
   }
 
   @action
@@ -137,95 +152,109 @@ export default class MarketplaceListingDetail extends Component {
 
   <template>
     <div class="marketplace-listing-detail">
-      <h1>{{this.listing.title}}</h1>
-      <div class="marketplace-listing-detail__meta">
-        <span class="marketplace-listing-detail__status">{{i18n
-            (concat "marketplace.listing.status." this.listing.status)
-          }}</span>
-        <span class="marketplace-listing-detail__price">{{this.formattedPrice}}</span>
-        <span class="marketplace-listing-detail__seller">{{i18n
-            "marketplace.listing.seller"
-          }}
-          {{this.listing.seller.username}}</span>
-      </div>
-
-      {{#if this.listing.cooked}}
-        <div class="marketplace-listing-detail__body">{{htmlSafe
-            this.listing.cooked
-          }}</div>
-      {{/if}}
-
-      {{#if this.errorMessage}}
-        <div class="marketplace-listing-detail__error">{{this.errorMessage}}</div>
-      {{/if}}
-
-      {{#if this.isSeller}}
-        <div class="marketplace-listing-detail__seller-actions">
-          <LinkTo @route="marketplace.listing.edit" class="btn">
-            {{i18n "marketplace.listing.edit_button"}}
-          </LinkTo>
-          {{#if (eq this.listing.status "draft")}}
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={{this.busy}}
-              {{on "click" this.publish}}
-            >{{i18n "marketplace.listing.publish_button"}}</button>
-          {{/if}}
-          {{#if (eq this.listing.status "active")}}
-            <button
-              type="button"
-              class="btn"
-              disabled={{this.busy}}
-              {{on "click" this.archive}}
-            >{{i18n "marketplace.listing.archive_button"}}</button>
+      <div class="marketplace-listing-detail__layout">
+        <div class="marketplace-listing-detail__content">
+          {{#if this.listing.cooked}}
+            <div class="marketplace-listing-detail__body">{{htmlSafe
+                this.listing.cooked
+              }}</div>
           {{/if}}
         </div>
-      {{/if}}
 
-      {{#if this.canBuy}}
-        <button
-          type="button"
-          class="btn btn-primary"
-          disabled={{this.busy}}
-          {{on "click" this.buy}}
-        >{{i18n "marketplace.listing.buy_button"}}</button>
-      {{/if}}
-
-      {{#if this.transaction}}
-        <div class="marketplace-transaction">
-          <p>{{i18n
-              (concat "marketplace.transaction.status." this.transaction.status)
-            }}</p>
-
-          {{#if this.canConfirm}}
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={{this.busy}}
-              {{on "click" this.confirm}}
-            >{{i18n "marketplace.transaction.confirm_button"}}</button>
-          {{/if}}
-
-          {{#if this.canCancel}}
-            <button
-              type="button"
-              class="btn"
-              disabled={{this.busy}}
-              {{on "click" this.cancelTransaction}}
-            >{{i18n "marketplace.transaction.cancel_button"}}</button>
-          {{/if}}
-
-          <PluginOutlet
-            @name="marketplace-transaction-after-actions"
-            @outletArgs={{lazyHash
-              listing=this.listing
-              transaction=this.transaction
+        <div class="marketplace-listing-detail__panel">
+          <span class="marketplace-listing-detail__status">{{i18n
+              (concat "marketplace.listing.status." this.listing.status)
+            }}</span>
+          <h1 class="marketplace-listing-detail__title">{{this.listing.title}}</h1>
+          <span class="marketplace-listing-detail__price">{{this.formattedPrice}}</span>
+          <span class="marketplace-listing-detail__seller">{{i18n
+              "marketplace.listing.seller"
             }}
-            @defaultGlimmer={{true}}
-          />
+            {{this.listing.seller.username}}</span>
+
+          {{#if this.errorMessage}}
+            <div class="marketplace-listing-detail__error">{{this.errorMessage}}</div>
+          {{/if}}
+
+          <div class="marketplace-listing-detail__cta">
+            {{#if this.isSeller}}
+              <div class="marketplace-listing-detail__seller-actions">
+                <LinkTo @route="marketplace.listing.edit" class="btn">
+                  {{i18n "marketplace.listing.edit_button"}}
+                </LinkTo>
+                {{#if (eq this.listing.status "draft")}}
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    disabled={{this.busy}}
+                    {{on "click" this.publish}}
+                  >{{i18n "marketplace.listing.publish_button"}}</button>
+                {{/if}}
+                {{#if (eq this.listing.status "active")}}
+                  <button
+                    type="button"
+                    class="btn"
+                    disabled={{this.busy}}
+                    {{on "click" this.archive}}
+                  >{{i18n "marketplace.listing.archive_button"}}</button>
+                {{/if}}
+              </div>
+            {{else}}
+              {{#if this.canMessageSeller}}
+                <button
+                  type="button"
+                  class="btn marketplace-listing-detail__message-seller"
+                  {{on "click" this.messageSeller}}
+                >{{i18n "marketplace.listing.message_seller_button"}}</button>
+              {{/if}}
+
+              {{#if this.canBuy}}
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  disabled={{this.busy}}
+                  {{on "click" this.buy}}
+                >{{i18n "marketplace.listing.buy_button"}}</button>
+              {{/if}}
+            {{/if}}
+          </div>
+
+          {{#if this.transaction}}
+            <div class="marketplace-transaction">
+              <p>{{i18n
+                  (concat "marketplace.transaction.status." this.transaction.status)
+                }}</p>
+
+              {{#if this.canConfirm}}
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  disabled={{this.busy}}
+                  {{on "click" this.confirm}}
+                >{{i18n "marketplace.transaction.confirm_button"}}</button>
+              {{/if}}
+
+              {{#if this.canCancel}}
+                <button
+                  type="button"
+                  class="btn"
+                  disabled={{this.busy}}
+                  {{on "click" this.cancelTransaction}}
+                >{{i18n "marketplace.transaction.cancel_button"}}</button>
+              {{/if}}
+
+              <PluginOutlet
+                @name="marketplace-transaction-after-actions"
+                @outletArgs={{lazyHash
+                  listing=this.listing
+                  transaction=this.transaction
+                }}
+                @defaultGlimmer={{true}}
+              />
+            </div>
+          {{/if}}
         </div>
-      {{/if}}
+      </div>
     </div>
   </template>
 }

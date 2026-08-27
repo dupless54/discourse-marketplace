@@ -6,10 +6,7 @@ import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { i18n } from "discourse-i18n";
-
-function formatPrice(cents, currency) {
-  return `${(cents / 100).toFixed(2)} ${currency}`;
-}
+import MarketplaceListingCard from "./marketplace-listing-card";
 
 export default class MarketplaceBrowse extends Component {
   @service currentUser;
@@ -124,20 +121,11 @@ export default class MarketplaceBrowse extends Component {
       </form>
 
       {{#if this.listings.length}}
-        <ul class="marketplace-browse__listings">
+        <div class="marketplace-listings-grid">
           {{#each this.listings as |listing|}}
-            <li class="marketplace-listing-card">
-              <LinkTo @route="marketplace.listing" @model={{listing.id}}>
-                <span class="marketplace-listing-card__title">{{listing.title}}</span>
-                <span class="marketplace-listing-card__price">{{formatPrice
-                    listing.price_cents
-                    listing.currency
-                  }}</span>
-                <span class="marketplace-listing-card__seller">{{listing.seller.username}}</span>
-              </LinkTo>
-            </li>
+            <MarketplaceListingCard @listing={{listing}} />
           {{/each}}
-        </ul>
+        </div>
 
         {{#if this.hasMore}}
           <button

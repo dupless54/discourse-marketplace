@@ -24,7 +24,7 @@ module Marketplace
       notify(
         recipient_id: transaction.seller_id,
         actor: transaction.buyer,
-        listing_title: transaction.listing.title,
+        listing: transaction.listing,
         message: "marketplace.notifications.transaction_started",
       )
     end
@@ -48,7 +48,7 @@ module Marketplace
       notify(
         recipient_id: recipient_id,
         actor: actor,
-        listing_title: transaction.listing.title,
+        listing: transaction.listing,
         message: "marketplace.notifications.transaction_confirmed",
       )
     end
@@ -61,7 +61,7 @@ module Marketplace
         notify(
           recipient_id: recipient.id,
           actor: nil,
-          listing_title: transaction.listing.title,
+          listing: transaction.listing,
           message: "marketplace.notifications.transaction_completed",
         )
       end
@@ -88,7 +88,7 @@ module Marketplace
         notify(
           recipient_id: recipient.id,
           actor: actor,
-          listing_title: transaction.listing.title,
+          listing: transaction.listing,
           message: "marketplace.notifications.transaction_cancelled",
         )
       end
@@ -99,14 +99,21 @@ module Marketplace
     end
     private_class_method :find_transaction
 
-    def self.notify(recipient_id:, actor:, listing_title:, message:)
+    # listing_id travels in the payload so the client can link the
+    # notification straight back to /marketplace/listings/:id (see the
+    # "custom" notification type renderer registered in
+    # assets/javascripts/discourse/initializers/marketplace-notifications.js).
+    # The recipient is always a transaction participant already, so this
+    # adds no exposure beyond what they can already reach.
+    def self.notify(recipient_id:, actor:, listing:, message:)
       Notification.create!(
         notification_type: Notification.types[:custom],
         user_id: recipient_id,
         data: {
           message: message,
           display_username: actor&.username,
-          topic_title: listing_title,
+          topic_title: listing.title,
+          listing_id: listing.id,
           title: "#{message}_title",
         }.to_json,
       )

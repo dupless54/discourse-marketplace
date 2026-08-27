@@ -97,4 +97,42 @@ describe Marketplace::Listing do
       expect(UploadReference.where(target: listing)).to be_empty
     end
   end
+
+  describe "#thumbnail_url" do
+    it "returns the src of the first non-emoji image in cooked" do
+      listing =
+        build_listing(
+          cooked: '<p>Check it out</p><img src="/uploads/default/original/1X/photo.png" width="100" height="80">',
+        )
+
+      expect(listing.thumbnail_url).to eq("/uploads/default/original/1X/photo.png")
+    end
+
+    it "ignores emoji images and falls through to the next real image" do
+      listing =
+        build_listing(
+          cooked:
+            '<p><img src="/images/emoji/twitter/smile.png" class="emoji"> Great deal!</p>' \
+              '<img src="/uploads/default/original/1X/photo.png">',
+        )
+
+      expect(listing.thumbnail_url).to eq("/uploads/default/original/1X/photo.png")
+    end
+
+    it "returns nil for plain text content with no image" do
+      listing = build_listing(cooked: "<p>Just a text description, no photo.</p>")
+
+      expect(listing.thumbnail_url).to be_nil
+    end
+
+    it "returns nil for a non-image attachment (does not break generic file attachments)" do
+      listing =
+        build_listing(
+          cooked:
+            '<p><a class="attachment" href="/uploads/default/original/1X/manual.pdf">manual.pdf</a></p>',
+        )
+
+      expect(listing.thumbnail_url).to be_nil
+    end
+  end
 end
