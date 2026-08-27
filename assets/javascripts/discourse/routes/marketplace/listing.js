@@ -1,7 +1,10 @@
 import Route from "@ember/routing/route";
+import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 
 export default class MarketplaceListingRoute extends Route {
+  @service currentUser;
+
   async model(params) {
     const listingResult = await ajax(
       `/marketplace/listings/${params.listing_id}`
@@ -15,7 +18,7 @@ export default class MarketplaceListingRoute extends Route {
         );
         transaction = transactionResult.transaction;
       } catch {
-        // No transaction exists yet for the current user on this listing --
+        // No open transaction exists yet for the current user on this listing --
         // that is the common case, not an error.
         transaction = null;
       }
