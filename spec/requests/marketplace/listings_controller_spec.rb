@@ -328,4 +328,109 @@ describe Marketplace::ListingsController do
       expect(response.status).to eq(404)
     end
   end
+
+  describe "#mine" do
+    def get_mine(params = {})
+      get "/marketplace/listings/mine.json", params: params
+    end
+
+    def listing_ids
+      response.parsed_body["listings"].map { |l| l["id"] }
+    end
+
+    it "rejects anonymous access" do
+      get_mine
+
+      expect(response.status).to eq(403)
+    end
+
+    it "returns the current user's own listings across every status" do
+      draft = Fabricate(:marketplace_listing, seller: seller, category: category)
+      active =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:active],
+        )
+      reserved =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:reserved],
+        )
+      sold =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:sold],
+        )
+      archived =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:archived],
+        )
+      sign_in(seller)
+
+      get_mine
+
+      expect(listing_ids).to contain_exactly(
+        draft.id,
+        active.id,
+        reserved.id,
+        sold.id,
+        archived.id,
+      )
+    end
+
+    it "never returns another seller's listings (non-enumerable)" do
+      other_seller = Fabricate(:user, trust_level: TrustLevel[1])
+      mine = Fabricate(:marketplace_listing, seller: seller, category: category)
+      Fabricate(:marketplace_listing, seller: other_seller, category: category)
+      sign_in(seller)
+
+      get_mine
+
+      expect(listing_ids).to eq([mine.id])
+    end
+
+    it "returns page, per_page, and has_more reflecting the request" do
+      Array.new(3) { Fabricate(:marketplace_listing, seller: seller, category: category) }
+      sign_in(seller)
+
+      get_mine(page: 1, per_page: 2)
+
+      pagination = response.parsed_body["pagination"]
+      expect(pagination["page"]).to eq(1)
+      expect(pagination["per_page"]).to eq(2)
+      expect(pagination["has_more"]).to eq(true)
+      expect(response.parsed_body["listings"].size).to eq(2)
+    end
+
+    it "clamps per_page above 50 to 50" do
+      Fabricate(:marketplace_listing, seller: seller, category: category)
+      sign_in(seller)
+
+      get_mine(per_page: 500)
+
+      expect(response.parsed_body["pagination"]["per_page"]).to eq(50)
+    end
+
+    it "returns 400 for invalid page/per_page" do
+      sign_in(seller)
+
+      get_mine(page: 0)
+      expect(response.status).to eq(400)
+
+      get_mine(per_page: -1)
+      expect(response.status).to eq(400)
+
+      get_mine(page: "abc")
+      expect(response.status).to eq(400)
+    end
+  end
 end
