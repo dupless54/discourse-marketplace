@@ -2,7 +2,6 @@
 
 describe "GET /marketplace/listings" do
   fab!(:category) { Fabricate(:marketplace_category, enabled: true) }
-  fab!(:disabled_category) { Fabricate(:marketplace_category, enabled: false) }
   fab!(:seller) { Fabricate(:user) }
 
   before do
@@ -73,7 +72,8 @@ describe "GET /marketplace/listings" do
     end
 
     it "excludes an active listing whose category is disabled" do
-      hidden = make_listing(category: disabled_category)
+      hidden = make_listing
+      hidden.category.update!(enabled: false)
       get_listings
 
       expect(listing_ids).not_to include(hidden.id)

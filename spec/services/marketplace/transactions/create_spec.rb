@@ -111,8 +111,8 @@ describe Marketplace::Transactions::Create do
     end
 
     it "rejects a listing in a disabled category" do
-      disabled_category = Fabricate(:marketplace_category, enabled: false)
-      listing = build_listing(category: disabled_category)
+      listing = build_listing
+      listing.category.update!(enabled: false)
       result = call_service(guardian: buyer.guardian, listing_id: listing.id)
 
       expect(result).to be_failure

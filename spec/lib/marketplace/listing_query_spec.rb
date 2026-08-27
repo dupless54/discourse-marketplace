@@ -2,7 +2,6 @@
 
 describe Marketplace::ListingQuery do
   fab!(:category) { Fabricate(:marketplace_category, enabled: true) }
-  fab!(:disabled_category) { Fabricate(:marketplace_category, enabled: false) }
 
   before { SiteSetting.marketplace_allowed_currencies = "USD|EUR" }
 
@@ -47,7 +46,9 @@ describe Marketplace::ListingQuery do
     end
 
     it "hides active listings whose marketplace category is disabled" do
-      listing = make_listing(category: disabled_category)
+      listing = make_listing
+      listing.category.update!(enabled: false)
+
       expect(query[:records]).not_to include(listing)
     end
   end

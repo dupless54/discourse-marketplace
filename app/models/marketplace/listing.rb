@@ -51,3 +51,32 @@ module Marketplace
     end
   end
 end
+
+# == Schema Information
+#
+# Table name: marketplace_listings
+#
+#  id           :bigint           not null, primary key
+#  closed_at    :datetime
+#  cooked       :text             not null
+#  currency     :string(3)        not null
+#  price_cents  :bigint           not null
+#  published_at :datetime
+#  raw          :text             not null
+#  status       :integer          default("draft"), not null
+#  title        :string(255)      not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  category_id  :bigint           not null
+#  seller_id    :integer          not null
+#
+# Indexes
+#
+#  idx_marketplace_listings_browse_status_published  (status,published_at,id)
+#  idx_on_seller_id_status_created_at_410eb7684b     (seller_id,status,created_at)
+#  idx_on_status_category_id_created_at_8352d3dd6b   (status,category_id,created_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (category_id => marketplace_categories.id) ON DELETE => restrict
+#
