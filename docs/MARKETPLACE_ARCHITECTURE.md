@@ -36,8 +36,7 @@ assets/javascripts/discourse/**            browse/create/edit/detail frontend (s
 assets/stylesheets/common/marketplace.scss not yet implemented (unstyled beyond core .btn/etc.)
 spec/**
 docs/MARKETPLACE_ARCHITECTURE.md           this file
-docs/TRADE_REPUTATION_CONTRACT.md          write once the contract's consumer (Trade
-                                            Reputation) is ready to integrate against it
+docs/TRADE_REPUTATION_CONTRACT.md          public Trade Reputation integration reference
 ```
 
 Namespacing: every Ruby class under `Marketplace::`, every table prefixed `marketplace_`,
@@ -280,8 +279,9 @@ Security posture:
 - **IDOR:** every `find` scoped through Guardian before serialization; 404 (not 403) for
   records the user cannot see or act on where the controller uses `on_model_not_found`
   and `on_failed_policy { raise Discourse::NotFound }`.
-- **No private data:** `TransactionSerializer` emits ids and timestamps only — no emails,
-  IPs, or trust-level internals.
+- **No private data:** `TransactionSerializer` exposes transaction ids/timestamps plus
+  `listing_title` and nested `BasicUserSerializer` buyer/seller public profile fields only —
+  no emails, IPs, or trust-level internals.
 - Site setting `marketplace_enabled` defaults **false**.
 
 ## 6. API / serializer boundary
@@ -332,7 +332,7 @@ booleans -- those remain a plausible future addition, not present today.
 exposes exactly one public lookup and one immutable value type:
 
 ```ruby
-TransactionInfo = Data.define(:transaction_id, :buyer_id, :seller_id, :completed_at)
+TransactionInfo = Data.define(:transaction_id, :listing_id, :buyer_id, :seller_id, :completed_at)
 
 TradeContract.completed_transaction_info(transaction_id)   # -> TransactionInfo | nil
 ```
@@ -354,14 +354,15 @@ accepted; anything else, and any non-positive integer, returns `nil` without rai
 contract never leaks an `ActiveRecord::RecordNotFound` or any other Marketplace-internal
 exception across the plugin boundary.
 
-`TransactionInfo` intentionally omits `listing_id` (no current feedback-eligibility rule
-needs it) and `status` (the method name already encodes "completed"; a redundant status
-field would just invite a second, unnecessary check). It never carries confirmation
-timestamps, cancellation metadata, a `User`, a `Listing`, or the `Marketplace::Transaction`
-AR object itself — only four scalar/time fields, freshly queried and copied on every call,
-so a caller mutating a `Transaction` they hold elsewhere in memory cannot affect a
-previously returned `TransactionInfo`, and a caller holding a `TransactionInfo` has no way
-to write back to Marketplace state (it is a `Data` object: no setters, no `save`/`update`).
+`TransactionInfo` exposes `listing_id` as the stable listing reference needed by Trade
+Reputation feedback detail, and intentionally omits `status` (the method name already encodes
+"completed"; a redundant status field would just invite a second, unnecessary check). It
+never carries confirmation timestamps, cancellation metadata, a `User`, a `Listing`, or the
+`Marketplace::Transaction` AR object itself — only five scalar/time fields, freshly queried
+and copied on every call, so a caller mutating a `Transaction` they hold elsewhere in memory
+cannot affect a previously returned `TransactionInfo`, and a caller holding a
+`TransactionInfo` has no way to write back to Marketplace state (it is a `Data` object: no
+setters, no `save`/`update`).
 
 **Hard boundary**, unchanged from Phase 1 and still the load-bearing rule for everything
 above: Trade Reputation may call `TradeContract` methods and reference `transaction_id`, and
@@ -369,7 +370,7 @@ nothing else. It may not query `marketplace_transactions`/`marketplace_listings`
 to` a Marketplace model, share Marketplace's service context, or otherwise import
 `Marketplace::Transaction`/`Marketplace::Listing`. Marketplace, symmetrically, never reads,
 writes, or references any table owned by Trade Reputation. Full contract text lives in
-`docs/TRADE_REPUTATION_CONTRACT.md` once Trade Reputation exists to consume it.
+`docs/TRADE_REPUTATION_CONTRACT.md`.
 
 **Completion event (Phase 2B, implemented).** `:marketplace_transaction_completed` fires
 exactly once per real `pending -> completed` transition, and zero times for transaction
@@ -493,11 +494,11 @@ Reflects the specs that actually exist under `spec/`:
 - **TradeContract** (`spec/lib/marketplace/trade_contract_spec.rb`, added Phase 2A): the
   full input matrix (nil, zero, negative, non-integer string, numeric string, unknown
   positive id, pending, cancelled) all -> `nil`; a completed transaction returns exact
-  `transaction_id`/`buyer_id`/`seller_id`/`completed_at`; no `listing_id`/`status` exposed;
-  no AR object or AR-like mutability (`save`/`save!`/`update`/`update!` absent, no field
-  setters); a `TransactionInfo` already returned is unaffected by later in-memory mutation
-  of the underlying `Transaction`; exactly one public singleton method exists; `VERSION ==
-  1`.
+  `transaction_id`/`listing_id`/`buyer_id`/`seller_id`/`completed_at`; `status` is not
+  exposed; no AR object or AR-like mutability (`save`/`save!`/`update`/`update!` absent, no
+  field setters); a `TransactionInfo` already returned is unaffected by later in-memory
+  mutation of the underlying `Transaction`; exactly one public singleton method exists;
+  `VERSION == 1`.
 - **Query** (`spec/lib/marketplace/listing_query_spec.rb`): filter/sort correctness.
 - **Notifier** (`spec/lib/marketplace/notifier_spec.rb`, Phase 3): each of the four notify_*
   methods against a fixture transaction -- correct recipient(s), correct `data` payload,
@@ -564,7 +565,8 @@ not a correctness gap.
   transactions (should one ever be added — `TradeContract` itself is point-lookup-only and
   doesn't need this) will need a migration adding at least `(buyer_id, status)` and
   `(seller_id, status)` before shipping, per CLAUDE.md's N+1/indexing guidance. Still
-  flagged, not fixed — Phase 2B only touches `Confirm`, its spec, and this document.
+  flagged; Phase 3's one-listing transaction lookup is served by the existing partial
+  `listing_id` index and does not justify a general participant-history index yet.
 - **Completion event delivery is best-effort (Phase 2B).** `DB.after_commit` proves
   ordering (fires only after the true outermost commit) and rollback-safety (never fires on
   rollback, per core's own `mini_sql_multisite_connection_spec.rb`), but not delivery
@@ -584,7 +586,7 @@ not a correctness gap.
 
 ## 12. Required core-version verification before further implementation
 
-Confirmed during Phase 1/2A/2B review, against the installed core:
+Confirmed during Phase 1/2A/2B/3 review, against the installed core:
 
 1. `Service::Base` DSL — confirmed: `params do ... end`, `model`, `policy`, `step`,
    `transaction do ... end` (`lib/service/base/steps_helpers.rb`), as already used by every
