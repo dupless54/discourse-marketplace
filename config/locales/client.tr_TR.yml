@@ -1,0 +1,68 @@
+tr_TR:
+  js:
+    notifications:
+      alt:
+        marketplace:
+          transaction_started: "pazar yeri"
+          transaction_confirmed: "pazar yeri"
+          transaction_completed: "pazar yeri"
+          transaction_cancelled: "pazar yeri"
+
+    marketplace:
+      title: "Pazar Yeri"
+      new_listing: "Yeni İlan"
+
+      notifications:
+        transaction_started: "<p><span>%{username}</span>, %{description} ilanını satın almak istiyor</p>"
+        transaction_started_title: "Pazar Yeri işlemi başlatıldı"
+        transaction_confirmed: "<p><span>%{username}</span>, %{description} ilanına ait işlemi onayladı</p>"
+        transaction_confirmed_title: "Pazar Yeri işlem onayı alındı"
+        transaction_completed: "<p>%{description} için Pazar Yeri işleminiz tamamlandı</p>"
+        transaction_completed_title: "Pazar Yeri işlemi tamamlandı"
+        transaction_cancelled: "<p><span>%{username}</span>, %{description} için işlemi iptal etti</p>"
+        transaction_cancelled_title: "Pazar Yeri işlemi iptal edildi"
+
+      browse:
+        sort_newest: "En yeni"
+        sort_price_asc: "Fiyat: Düşükten yükseğe"
+        sort_price_desc: "Fiyat: Yüksekten düşüğe"
+        search_placeholder: "İlanlarda ara"
+        category_all: "Tüm kategoriler"
+        search_button: "Ara"
+        load_more: "Daha fazla yükle"
+        empty: "İlan bulunamadı."
+
+      form:
+        new_title: "Yeni İlan"
+        edit_title: "İlanı Düzenle"
+        title_label: "Başlık"
+        description_label: "Açıklama"
+        category_label: "Kategori"
+        category_placeholder: "Bir kategori seçin"
+        price_label: "Fiyat"
+        currency_label: "Para birimi"
+        submit_create: "İlan Oluştur"
+        submit_save: "Değişiklikleri Kaydet"
+        error: "Bir sorun oluştu. Lütfen ilanınızı kontrol edip tekrar deneyin."
+
+      listing:
+        seller: "Satıcı:"
+        edit_button: "Düzenle"
+        publish_button: "Yayınla"
+        archive_button: "Arşivle"
+        buy_button: "Satın Al"
+        status:
+          draft: "Taslak"
+          active: "Yayında"
+          reserved: "Rezerve"
+          sold: "Satıldı"
+          archived: "Arşivlendi"
+
+      transaction:
+        confirm_button: "Onayla"
+        cancel_button: "İptal Et"
+        error: "Bu işlemle ilgili bir sorun oluştu. Lütfen tekrar deneyin."
+        status:
+          pending: "Onay bekliyor"
+          completed: "Tamamlandı"
+          cancelled: "İptal edildi"
