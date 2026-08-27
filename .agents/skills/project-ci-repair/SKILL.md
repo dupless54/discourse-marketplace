@@ -1,6 +1,6 @@
 ---
 name: project-ci-repair
-description: Diagnose a concrete failing CI job and produce the smallest justified repair without broadening scope.
+description: Diagnose a failing latest-head CI check and produce bounded, minimum-scope remediation.
 ---
 # CI repair
-Read root/local rules and current state. Inspect the failing job/log and identify the first actionable root cause. Classify code defect, test/fixture defect, or infrastructure/transient failure. Change only the smallest justified surface, run targeted validation, and preserve original scope. Update state only with verified facts. Do not turn a CI repair into architecture/product expansion.
+Inspect the failing job and identify the first actionable root cause. Classify code, test/fixture, dependency, or infrastructure/transient failure. Produce only the smallest justified repair and run targeted validation. If an authorized Git/GitHub step creates a new head SHA, required CI must be evaluated again for that new SHA; older CI evidence is invalid. Never weaken tests or broaden architecture/product scope merely to obtain green CI. Maximum automatic repair rounds: 3. After 3 unresolved rounds, or when a material architecture/security/schema/product decision is required, return `NEEDS_HUMAN` with concise evidence.

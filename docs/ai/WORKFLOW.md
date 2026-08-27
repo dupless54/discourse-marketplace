@@ -1,14 +1,17 @@
-# Multi-model quality workflow
+# CI-first delivery workflow
 
-Default roles:
-1. Claude = Builder
-2. ChatGPT/Codex = independent Reviewer
-3. Gemini = mandatory Final Verifier
+Any model may act as Builder. Independent ChatGPT/Codex review and Gemini final verification are optional tools, not default merge gates.
 
-Builder receives root/local rules, current state, relevant plan slice, and minimum source/tests.
+## Mandatory delivery gate
+- keep task scope locked
+- validate exact changed paths
+- run relevant targeted checks when available
+- require required CI to be GREEN for the latest exact PR head SHA
+- never reuse CI evidence from an older head SHA
 
-Reviewer receives the same locked task plus the current diff and test/CI evidence. Do not use the Builder's long reasoning as authority. Review concrete correctness, scope, auth/privacy, framework, DB/performance, and meaningful test defects.
+## CI failure remediation
+If CI fails, inspect the failing job, find the first actionable root cause, classify it as code/test-fixture/dependency/infrastructure, make the smallest justified repair, run targeted validation, push a new head, then evaluate CI again for that new SHA. Never weaken tests or expand product/architecture scope merely to make CI green.
 
-Final Verifier runs after Reviewer approval and independently checks the latest exact reviewed diff, unresolved findings, boundaries, and evidence.
+Maximum automatic remediation: 3 repair rounds. After 3 unresolved rounds, or if a material architecture/security/schema/product decision is required, stop with `NEEDS_HUMAN` and report the current head, remaining failure, root cause, attempted repairs, and recommended next action.
 
-Merge only after Builder ready, Reviewer approve, Final Verifier approve, exact-path validation, and CI green on the latest exact PR head. Unresolved reviewer/verifier disagreement requires human arbitration.
+If required CI is not configured or does not run, report `NO_CI`/`NOT_RUN`; do not call it GREEN. A human may explicitly override that gate.

@@ -1,6 +1,6 @@
 ---
 name: project-review
-description: Independently review a task diff for concrete blocking defects without relying on builder reasoning.
+description: Optional independent defect review for high-risk, ambiguous, or explicitly requested changes.
 ---
 # Independent review
-Read the locked task, root/local rules, changed files/diff, and test/CI evidence. Inspect source yourself. Check scope, correctness, edge cases, auth/privacy, framework compatibility, DB/performance when relevant, and meaningful test gaps. Do not manufacture findings or reject for style alone. Return APPROVE, REJECT, or NEEDS_HUMAN with concise evidence and required fixes.
+Use this skill only when the task explicitly requests a second opinion or when risk/ambiguity justifies one. Review the locked task, latest diff/source, and relevant test/CI evidence independently. Focus on concrete correctness, security/privacy, compatibility, DB/performance, and meaningful test gaps. This skill is not a default merge requirement and never replaces required latest-head CI.
