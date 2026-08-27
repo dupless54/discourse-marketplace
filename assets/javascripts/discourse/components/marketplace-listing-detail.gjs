@@ -6,6 +6,8 @@ import { on } from "@ember/modifier";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
 import { htmlSafe } from "@ember/template";
+import PluginOutlet from "discourse/components/plugin-outlet";
+import lazyHash from "discourse/helpers/lazy-hash";
 import { eq } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import { i18n } from "discourse-i18n";
@@ -213,6 +215,15 @@ export default class MarketplaceListingDetail extends Component {
               {{on "click" this.cancelTransaction}}
             >{{i18n "marketplace.transaction.cancel_button"}}</button>
           {{/if}}
+
+          <PluginOutlet
+            @name="marketplace-transaction-after-actions"
+            @outletArgs={{lazyHash
+              listing=this.listing
+              transaction=this.transaction
+            }}
+            @defaultGlimmer={{true}}
+          />
         </div>
       {{/if}}
     </div>
