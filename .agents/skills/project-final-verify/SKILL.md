@@ -1,6 +1,6 @@
 ---
 name: project-final-verify
-description: Perform mandatory final verification on the latest independently reviewed diff before merge eligibility.
+description: Optional second-opinion verification for high-risk or explicitly requested changes.
 ---
 # Final verification
-Run only after independent reviewer approval. Inspect the latest exact diff/source yourself. Verify locked scope, reviewer findings, trust/architecture boundaries, test evidence, and unresolved ambiguity. Prior agent confidence is not evidence. Return APPROVE, REJECT, or NEEDS_HUMAN. Approval never substitutes for latest-head CI.
+Use this skill only when the current task explicitly asks for an additional independent verification or when risk/ambiguity justifies it. Inspect the latest exact diff and evidence independently. This skill is not a default merge requirement and never replaces required CI on the latest exact head.
