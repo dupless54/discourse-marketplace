@@ -1,11 +1,17 @@
 # Current state
 
-Main baseline at context setup:
-`9dc57b2d3a494feb41eae3857195c209b6c16443`
+Main baseline: `a3f44a845629a51d5ceb04696332740a60ebd295`
 
-Open integration work at setup:
-- PR #6: `FEATURE: expose listing reference for trade detail`
-- PR #6 adds the read-only listing reference required by Trade Reputation detail work and includes the Marketplace Fabrication 3 category-sequence compatibility repair uncovered by cross-plugin CI.
-- Trade Reputation PR #10 depends on this Marketplace contract work.
+Marketplace V1 (per `docs/PROJECT_BRIEF.md`) is COMPLETE on `main`. All areas are merged and
+documented in `docs/MARKETPLACE_ARCHITECTURE.md`: listing lifecycle (create/edit/publish/
+archive), browse/search/filter, My Listings (PR #16), transaction lifecycle + notifications,
+`Marketplace::TradeContract` v1 plus the pre-existing `marketplace-transaction-after-actions`
+`PluginOutlet` (§7), categories/admin, and the listing image/attachment upload UI (PR #17).
+Frontend QUnit coverage exists for all three interactive components (§9).
 
-Do not assume an open PR is merged or that its branch equals `main`. Re-read the exact PR/head before dependent work. Current source/tests and current GitHub state override this checkpoint.
+No open blockers. Remaining items are intentional V1 scope cuts, not gaps (see
+`docs/MARKETPLACE_ARCHITECTURE.md` §10): URL-addressable browse/search state, a main-nav/
+sidebar entry point to `/marketplace`, and the plugin stylesheet (§1).
+
+Current source/tests and current GitHub state override this checkpoint if they ever disagree
+with it.
