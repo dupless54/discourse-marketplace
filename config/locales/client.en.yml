@@ -61,6 +61,8 @@ en:
         description_label: "Description"
         category_label: "Category"
         category_placeholder: "Select a category"
+        upload_button: "Add image or file"
+        upload_uploading: "Uploading…"
         price_label: "Price"
         currency_label: "Currency"
         submit_create: "Create Listing"

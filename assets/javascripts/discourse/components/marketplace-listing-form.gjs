@@ -1,10 +1,16 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
+import { Textarea } from "@ember/component";
 import { action } from "@ember/object";
+import { getOwner } from "@ember/owner";
 import { on } from "@ember/modifier";
+import didInsert from "@ember/render-modifiers/modifiers/did-insert";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
+import { getUploadMarkdown } from "discourse/lib/uploads";
+import UppyUpload from "discourse/lib/uppy/uppy-upload";
 import { eq } from "discourse/truth-helpers";
+import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 
 export default class MarketplaceListingForm extends Component {
@@ -23,12 +29,28 @@ export default class MarketplaceListingForm extends Component {
   @tracked saving = false;
   @tracked errorMessage = null;
 
+  uppyUpload = new UppyUpload(getOwner(this), {
+    id: "marketplace-listing-upload",
+    type: "composer",
+    uploadDone: this.uploadDone,
+  });
+
   get currencies() {
     return this.siteSettings.marketplace_allowed_currencies.split("|");
   }
 
   get isEdit() {
     return !!this.args.listing;
+  }
+
+  get uploading() {
+    return this.uppyUpload.uploading || this.uppyUpload.processing;
+  }
+
+  get uploadButtonLabel() {
+    return this.uploading
+      ? "marketplace.form.upload_uploading"
+      : "marketplace.form.upload_button";
   }
 
   @action
@@ -39,6 +61,17 @@ export default class MarketplaceListingForm extends Component {
   @action
   updateRaw(event) {
     this.raw = event.target.value;
+  }
+
+  @action
+  pickUpload() {
+    this.uppyUpload.openPicker();
+  }
+
+  @action
+  uploadDone(upload) {
+    const markdown = getUploadMarkdown(upload);
+    this.raw = this.raw ? `${this.raw}\n${markdown}` : markdown;
   }
 
   @action
@@ -113,8 +146,33 @@ export default class MarketplaceListingForm extends Component {
 
       <label>
         {{i18n "marketplace.form.description_label"}}
-        <textarea rows="8" {{on "input" this.updateRaw}}>{{this.raw}}</textarea>
+        <Textarea
+          @value={{this.raw}}
+          rows="8"
+          {{on "input" this.updateRaw}}
+        />
       </label>
+
+      <div class="marketplace-listing-form__upload">
+        <input
+          {{didInsert this.uppyUpload.setup}}
+          type="file"
+          class="marketplace-listing-form__upload-input"
+          disabled={{this.uploading}}
+        />
+        <DButton
+          class="btn-default marketplace-listing-form__upload-button"
+          @label={{this.uploadButtonLabel}}
+          @icon="upload"
+          @action={{this.pickUpload}}
+          @disabled={{this.uploading}}
+        />
+        {{#if this.uploading}}
+          <span class="marketplace-listing-form__upload-progress">
+            {{this.uppyUpload.uploadProgress}}%
+          </span>
+        {{/if}}
+      </div>
 
       <label>
         {{i18n "marketplace.form.category_label"}}
