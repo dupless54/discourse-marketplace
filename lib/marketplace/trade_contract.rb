@@ -4,7 +4,12 @@ module Marketplace
   module TradeContract
     VERSION = 1
 
-    TransactionInfo = Data.define(:transaction_id, :listing_id, :buyer_id, :seller_id, :completed_at)
+    TransactionInfo =
+      Data.define(:transaction_id, :listing_id, :buyer_id, :seller_id, :completed_at) do
+        def initialize(transaction_id:, buyer_id:, seller_id:, completed_at:, listing_id: nil)
+          super(transaction_id:, listing_id:, buyer_id:, seller_id:, completed_at:)
+        end
+      end
 
     # Only a completed transaction is ever eligible for trade feedback (see
     # docs/MARKETPLACE_ARCHITECTURE.md §7), so this is the only lookup this
