@@ -194,7 +194,7 @@ describe Marketplace::ListingQuery do
     end
 
     it "applies the page offset correctly" do
-      listings = Array.new(5) { |i| make_listing(published_at: (10 - i).days.ago) }
+      listings = Array.new(5) { |i| make_listing(published_at: (i + 1).days.ago) }
 
       page_one = query(per_page: 2, page: 1)[:records]
       page_two = query(per_page: 2, page: 2)[:records]
