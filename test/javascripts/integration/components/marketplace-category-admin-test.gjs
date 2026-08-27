@@ -7,7 +7,7 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
   setupRenderingTest(hooks);
 
   test("renders enabled and disabled categories for administration", async function (assert) {
-    const categories = [
+    this.categories = [
       {
         id: 1,
         name: "Electronics",
@@ -25,7 +25,7 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
     ];
 
     await render(<template>
-      <MarketplaceCategoryAdmin @initialCategories={{categories}} />
+      <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
     </template>);
 
     assert.dom(".marketplace-category-admin__new-name").exists("the create form is rendered");
