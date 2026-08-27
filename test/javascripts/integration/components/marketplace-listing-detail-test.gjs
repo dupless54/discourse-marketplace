@@ -1,5 +1,6 @@
 import { click, render } from "@ember/test-helpers";
 import { module, test } from "qunit";
+import sinon from "sinon";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import MarketplaceListingDetail from "discourse/plugins/discourse-marketplace/discourse/components/marketplace-listing-detail";
 
@@ -7,10 +8,10 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
   setupRenderingTest(hooks);
 
   test("offers Message Seller to a logged-in non-seller and opens a prefilled PM", async function (assert) {
-    let openedWith = null;
-    this.owner.lookup("service:composer").openNewMessage = (args) => {
-      openedWith = args;
-    };
+    const openNewMessage = sinon.stub(
+      this.owner.lookup("service:composer"),
+      "openNewMessage"
+    );
 
     this.listing = {
       id: 1,
@@ -38,6 +39,8 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
 
     await click(".marketplace-listing-detail__message-seller");
 
+    assert.true(openNewMessage.calledOnce);
+    const openedWith = openNewMessage.firstCall.args[0];
     assert.strictEqual(openedWith.recipients, "seller_user");
     assert.true(openedWith.title.includes("Vintage Synthesizer"));
   });

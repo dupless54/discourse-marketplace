@@ -1,5 +1,6 @@
 import { click, render } from "@ember/test-helpers";
 import { module, test } from "qunit";
+import sinon from "sinon";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import MarketplaceListingCard from "discourse/plugins/discourse-marketplace/discourse/components/marketplace-listing-card";
 
@@ -63,10 +64,10 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
   });
 
   test("opens a prefilled PM to the seller when Message Seller is clicked", async function (assert) {
-    let openedWith = null;
-    this.owner.lookup("service:composer").openNewMessage = (args) => {
-      openedWith = args;
-    };
+    const openNewMessage = sinon.stub(
+      this.owner.lookup("service:composer"),
+      "openNewMessage"
+    );
 
     this.listing = {
       id: 5,
@@ -80,6 +81,8 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
     await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
     await click(".marketplace-listing-card__message");
 
+    assert.true(openNewMessage.calledOnce);
+    const openedWith = openNewMessage.firstCall.args[0];
     assert.strictEqual(openedWith.recipients, "seller_user");
     assert.true(openedWith.title.includes("Vintage Synthesizer"));
   });
