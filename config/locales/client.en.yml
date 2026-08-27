@@ -11,6 +11,7 @@ en:
     marketplace:
       title: "Marketplace"
       new_listing: "New Listing"
+      my_listings: "My Listings"
 
       admin:
         title: "Marketplace"
@@ -37,6 +38,11 @@ en:
         transaction_completed_title: "Marketplace transaction completed"
         transaction_cancelled: "<p><span>%{username}</span> cancelled the trade for %{description}</p>"
         transaction_cancelled_title: "Marketplace transaction cancelled"
+
+      mine:
+        title: "My Listings"
+        empty: "You haven't created any listings yet."
+        load_more: "Load more"
 
       browse:
         sort_newest: "Newest"

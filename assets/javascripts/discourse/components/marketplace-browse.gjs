@@ -88,6 +88,9 @@ export default class MarketplaceBrowse extends Component {
       <div class="marketplace-browse__header">
         <h1>{{i18n "marketplace.title"}}</h1>
         {{#if this.currentUser}}
+          <LinkTo @route="marketplace.mine" class="btn">
+            {{i18n "marketplace.my_listings"}}
+          </LinkTo>
           <LinkTo @route="marketplace.new" class="btn btn-primary">
             {{i18n "marketplace.new_listing"}}
           </LinkTo>

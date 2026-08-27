@@ -3,7 +3,7 @@
 module Marketplace
   class ListingsController < ::ApplicationController
     requires_plugin Marketplace::PLUGIN_NAME
-    requires_login only: %i[create update update_status transaction]
+    requires_login only: %i[create update update_status transaction mine]
 
     def index
       result = Marketplace::ListingQuery.new(params: params).results
@@ -14,6 +14,47 @@ module Marketplace
           page: result[:page],
           per_page: result[:per_page],
           has_more: result[:has_more],
+        },
+      )
+    end
+
+    # Returns the current user's own listings across every status (draft,
+    # active, reserved, sold, archived) so a seller can find a listing again
+    # after leaving its detail page -- the public #index intentionally never
+    # returns anything but active/enabled-category listings, so this is the
+    # only way an owner can rediscover a draft or archived listing of theirs.
+    # Scoped entirely by the WHERE clause on the current user's id, the same
+    # reasoning already used by #transaction: no separate Guardian predicate
+    # is needed, since no row outside the viewer's own listings can ever be
+    # returned.
+    def mine
+      page = positive_integer_param(params[:page], :page, default: 1)
+      per_page =
+        [
+          positive_integer_param(
+            params[:per_page],
+            :per_page,
+            default: Marketplace::ListingQuery::DEFAULT_PER_PAGE,
+          ),
+          Marketplace::ListingQuery::MAX_PER_PAGE,
+        ].min
+
+      scope =
+        Marketplace::Listing
+          .includes(:seller)
+          .where(seller_id: current_user.id)
+          .order(created_at: :desc, id: :desc)
+
+      records = scope.limit(per_page + 1).offset((page - 1) * per_page).to_a
+      has_more = records.size > per_page
+      records = records.first(per_page)
+
+      render_json_dump(
+        listings: serialize_data(records, Marketplace::ListingBrowseSerializer),
+        pagination: {
+          page: page,
+          per_page: per_page,
+          has_more: has_more,
         },
       )
     end
@@ -134,6 +175,20 @@ module Marketplace
           )
         end
       end
+    end
+
+    private
+
+    # Strict, matching Marketplace::ListingQuery: only digit strings are
+    # accepted, so "abc", "1.5", "-1", and "" all raise rather than silently
+    # coercing to 0/1 via to_i.
+    def positive_integer_param(value, key, default:)
+      return default if value.blank?
+
+      str = value.to_s.strip
+      raise Discourse::InvalidParameters.new(key) if !str.match?(/\A[1-9]\d*\z/)
+
+      str.to_i
     end
   end
 end
