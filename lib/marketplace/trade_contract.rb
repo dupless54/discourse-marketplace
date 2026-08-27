@@ -4,7 +4,7 @@ module Marketplace
   module TradeContract
     VERSION = 1
 
-    TransactionInfo = Data.define(:transaction_id, :buyer_id, :seller_id, :completed_at)
+    TransactionInfo = Data.define(:transaction_id, :listing_id, :buyer_id, :seller_id, :completed_at)
 
     # Only a completed transaction is ever eligible for trade feedback (see
     # docs/MARKETPLACE_ARCHITECTURE.md §7), so this is the only lookup this
@@ -17,21 +17,19 @@ module Marketplace
 
       transaction =
         Marketplace::Transaction
-          .select(:id, :buyer_id, :seller_id, :completed_at)
+          .select(:id, :listing_id, :buyer_id, :seller_id, :completed_at)
           .find_by(id: id, status: Marketplace::Transaction.statuses[:completed])
       return nil if transaction.blank?
 
       TransactionInfo.new(
         transaction_id: transaction.id,
+        listing_id: transaction.listing_id,
         buyer_id: transaction.buyer_id,
         seller_id: transaction.seller_id,
         completed_at: transaction.completed_at,
       )
     end
 
-    # Deliberately strict: only an actual Integer is accepted. This contract
-    # is called across a plugin boundary, so it does not attempt to coerce
-    # stringified ids the way a Rails controller param would.
     def self.normalize_id(value)
       return nil unless value.is_a?(Integer)
 
