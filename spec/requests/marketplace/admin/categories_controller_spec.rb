@@ -39,7 +39,11 @@ describe Marketplace::Admin::CategoriesController do
     it "denies anonymous users" do
       get "/marketplace/admin/categories.json"
 
-      expect(response.status).to eq(404)
+      # Marketplace::Admin::CategoriesController < ::Admin::AdminController,
+      # which raises Discourse::InvalidAccess (403) for a logged-out request
+      # via requires_login/ensure_admin -- this is core's own, unmodified
+      # admin-controller behavior, not a Marketplace 404-for-IDOR case.
+      expect(response.status).to eq(403)
     end
 
     it "denies non-admin users" do
