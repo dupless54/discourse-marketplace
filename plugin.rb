@@ -16,6 +16,12 @@ require_relative "lib/marketplace/engine"
 require_relative "lib/marketplace/guardian_extension"
 
 after_initialize do
+  add_admin_route(
+    "marketplace.admin.title",
+    "discourse-marketplace",
+    { use_new_show_route: true },
+  )
+
   Discourse::Application.routes.append { mount ::Marketplace::Engine, at: "/marketplace" }
 
   reloadable_patch { ::Guardian.prepend(Marketplace::GuardianExtension) }

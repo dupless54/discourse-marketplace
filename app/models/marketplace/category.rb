@@ -16,6 +16,7 @@ module Marketplace
               format: {
                 with: SLUG_FORMAT,
               }
+    validates :position, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
     scope :browsable, -> { where(enabled: true).order(:position) }
   end
