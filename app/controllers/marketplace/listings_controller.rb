@@ -87,12 +87,25 @@ module Marketplace
       end
     end
 
+    # This path is both the Ember listing-detail route and the JSON API a
+    # listing's viewer fetches from -- resolved by request format, the same
+    # convention core itself uses (e.g. UsersController#show,
+    # BadgesController#index), rather than by a second, competing route.
+    # Direct navigation/F5 (Accept: text/html) gets the SPA shell with no
+    # data access at all; Ember then re-requests this same URL itself via
+    # ajax() (Accept: application/json), which reaches the json branch below
+    # completely unchanged from before.
     def show
-      listing = Marketplace::Listing.find_by(id: params[:id])
-      raise Discourse::NotFound if listing.blank?
-      raise Discourse::NotFound if !guardian.can_see_marketplace_listing?(listing)
+      respond_to do |format|
+        format.html { render "default/empty" }
+        format.json do
+          listing = Marketplace::Listing.find_by(id: params[:id])
+          raise Discourse::NotFound if listing.blank?
+          raise Discourse::NotFound if !guardian.can_see_marketplace_listing?(listing)
 
-      render_serialized(listing, Marketplace::ListingDetailSerializer, root: "listing")
+          render_serialized(listing, Marketplace::ListingDetailSerializer, root: "listing")
+        end
+      end
     end
 
     def update
