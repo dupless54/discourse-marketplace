@@ -18,7 +18,12 @@ describe Marketplace::StaticController do
     it "returns 404 when the plugin is disabled" do
       SiteSetting.marketplace_enabled = false
 
-      get "/marketplace"
+      # Same StaticController#index action, same requires_plugin before_action,
+      # as the bare /marketplace root -- routed through a non-root shell path
+      # to avoid any ambiguity from Rails' handling of a mounted engine's own
+      # root route, which is a separate routing question from what this
+      # example is verifying (requires_plugin actually gates this controller).
+      get "/marketplace/new"
 
       expect(response.status).to eq(404)
     end
