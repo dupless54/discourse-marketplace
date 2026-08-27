@@ -50,6 +50,10 @@ Stop for unresolved architecture, schema/migration, authorization/security, publ
 
 Minimum unnecessary tokens, not minimum reasoning. Prefer exact symbols, paths, diffs, failing assertions, and targeted reads. Do not summarize whole files or reread stable docs without a concrete need.
 
+## Adaptive model / effort routing
+
+Classify execution risk with `docs/ai/EFFORT_ROUTER.md` before broad reads. Start at the lowest sufficient tier: T0 mechanical, T1 routine, T2 high-risk, T3 exceptional. Escalate for risk/ambiguity rather than task size, and de-escalate when the risky phase ends. Use platform-native workers under `.claude/agents/` or `.codex/agents/` when supported; never trade away correctness, security, or validation to save tokens.
+
 ## On-demand skills
 
 Reusable procedures live under `.agents/skills/`. Read only the skill matching the task: `task-packet`, `project-plan`, `project-implement`, `project-review`, `project-final-verify`, `project-ci-repair`, `project-schema-review`, `project-security-review`, or `project-update-state`.
