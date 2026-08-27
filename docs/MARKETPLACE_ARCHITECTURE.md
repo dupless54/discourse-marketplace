@@ -1,12 +1,13 @@
 # Marketplace V1 Architecture (Approved)
 
-Status: approved, reflects the merged implementation as of `cc4fd43` on `main`. Sections
-§2, §3, §4, §6, §7, §9, and §11 were corrected in Phase 2A after Transactions stabilized;
-earlier drafts of those sections described a seller-initiated, dispute-capable design that
-was never built. Phase 2B (this revision) implemented the transaction completion event; §4,
-§7, §9, §11, and §12 were updated accordingly. This document is authoritative; where it and
-the code ever disagree, treat that as a bug in the document and fix the document, not the
-code, unless a real behavior change is intended.
+Status: approved. Sections §2, §3, §4, §6, §7, §9, and §11 were corrected in Phase 2A after
+Transactions stabilized; earlier drafts of those sections described a seller-initiated,
+dispute-capable design that was never built. Phase 2B implemented the transaction completion
+event. Phase 3 (this revision) added listing images/attachments (§2), notifications (§8),
+the `GET .../listings/:id/transaction` lookup and enriched `TransactionSerializer` (§6), and
+the frontend (§10); §2, §6, §8, and §10 were updated accordingly. This document is
+authoritative; where it and the code ever disagree, treat that as a bug in the document and
+fix the document, not the code, unless a real behavior change is intended.
 
 ## 1. File / component layout
 
@@ -30,12 +31,12 @@ app/controllers/marketplace/{categories,listings,transactions}_controller.rb
 app/serializers/marketplace/{category,listing,listing_detail,transaction}_serializer.rb
 app/services/marketplace/listings/{create,update,transition_status}.rb
 app/services/marketplace/transactions/{create,confirm,cancel}.rb
-assets/javascripts/discourse/**            not yet implemented (see §10)
-assets/stylesheets/common/marketplace.scss not yet implemented
+lib/marketplace/notifier.rb                transaction-lifecycle-event -> Notification (§8)
+assets/javascripts/discourse/**            browse/create/edit/detail frontend (see §10)
+assets/stylesheets/common/marketplace.scss not yet implemented (unstyled beyond core .btn/etc.)
 spec/**
 docs/MARKETPLACE_ARCHITECTURE.md           this file
-docs/TRADE_REPUTATION_CONTRACT.md          write once the contract's consumer (Trade
-                                            Reputation) is ready to integrate against it
+docs/TRADE_REPUTATION_CONTRACT.md          public Trade Reputation integration reference
 ```
 
 Namespacing: every Ruby class under `Marketplace::`, every table prefixed `marketplace_`,
@@ -92,6 +93,18 @@ with listings).
 
 Status enum (integers with gaps, never rename/renumber): `draft=0, active=10, reserved=20,
 sold=30, archived=40`.
+
+**Images/attachments (Phase 3).** No separate upload table or `image_ids` column. Images use
+the same mechanism as every other Discourse model that accepts user-suppliable uploads
+(`Draft`, `Badge`, `UserProfile`, etc.): they are embedded in `raw` using the composer's
+normal `upload://<short-url>` markdown syntax, rendered into `cooked` by `PrettyText.cook`
+(already done by `Listings::Create`/`Listings::Update`), and an `after_save` hook on
+`Marketplace::Listing` calls `UploadReference.ensure_exist!(upload_ids:
+Upload.extract_upload_ids(raw), target: self)` whenever `raw` changes. This both protects
+referenced uploads from the core cleanup job and drops the reference to any upload no longer
+mentioned after an edit (an `ensure_exist!` full sync, not additive-only). No new serializer
+field is needed: `cooked` is already always exposed on `ListingDetailSerializer`, so any
+embedded images render wherever a client renders `cooked` as trusted HTML.
 
 ### `marketplace_transactions`
 
@@ -266,8 +279,9 @@ Security posture:
 - **IDOR:** every `find` scoped through Guardian before serialization; 404 (not 403) for
   records the user cannot see or act on where the controller uses `on_model_not_found`
   and `on_failed_policy { raise Discourse::NotFound }`.
-- **No private data:** `TransactionSerializer` emits ids and timestamps only — no emails,
-  IPs, or trust-level internals.
+- **No private data:** `TransactionSerializer` exposes transaction ids/timestamps plus
+  `listing_title` and nested `BasicUserSerializer` buyer/seller public profile fields only —
+  no emails, IPs, or trust-level internals.
 - Site setting `marketplace_enabled` defaults **false**.
 
 ## 6. API / serializer boundary
@@ -283,6 +297,7 @@ POST   /marketplace/listings
 GET    /marketplace/listings/:id
 PUT    /marketplace/listings/:id
 PUT    /marketplace/listings/:id/status
+GET    /marketplace/listings/:id/transaction
 
 POST   /marketplace/transactions        { listing_id }
 GET    /marketplace/transactions/:id
@@ -290,15 +305,26 @@ POST   /marketplace/transactions/:id/confirm
 POST   /marketplace/transactions/:id/cancel
 ```
 
-There is no `POST .../reject`, `POST .../dispute`, or `GET /marketplace/transactions`
-index/list route yet — a "my transactions" listing endpoint is a plausible future addition
-(would need the indexes noted in §2/§11 first) but is not built.
+There is no `POST .../reject`, `POST .../dispute`, or general `GET /marketplace/transactions`
+index/list route -- a full "my transactions" listing endpoint is still a plausible future
+addition (would need the indexes noted in §11 first) but is not built. `GET
+/marketplace/listings/:id/transaction` (Phase 3) is narrower and does not need those indexes:
+it returns only the current user's own **open, non-cancelled** transaction on that one
+listing, scoped entirely by `listing_id` plus a `buyer_id = :uid OR seller_id = :uid` WHERE
+clause. The existing partial unique index on `(listing_id) WHERE status <> 20` serves the
+open-transaction lookup directly. A cancelled transaction is intentionally treated as no
+current transaction and returns 404, allowing the listing (which cancellation reactivates)
+to start a new purchase cleanly. No row outside the caller's own participation can ever be
+returned, so no separate Guardian call is needed.
 
 `TransactionSerializer` (`app/serializers/marketplace/transaction_serializer.rb`) emits:
-`id, listing_id, buyer_id, seller_id, status, buyer_confirmed_at, seller_confirmed_at,
-completed_at, cancelled_at, cancelled_by_id, created_at, updated_at`. It does not currently
-emit nested `seller`/`buyer`/`listing` objects, `viewer_role`, or `can_confirm`/`can_cancel`
-booleans — those are plausible future serializer additions, not present today.
+`id, listing_id, listing_title, buyer_id, seller_id, status, buyer_confirmed_at,
+seller_confirmed_at, completed_at, cancelled_at, cancelled_by_id, created_at, updated_at,
+buyer, seller` (Phase 3 added `listing_title` and nested `buyer`/`seller`
+`BasicUserSerializer` objects -- public profile fields only, and only ever reachable by a
+participant or staff via the existing `can_see_marketplace_transaction?` gate, so this is not
+a new privacy surface). It does not emit `viewer_role` or `can_confirm`/`can_cancel`
+booleans -- those remain a plausible future addition, not present today.
 
 ## 7. Trade Reputation contract (the small public surface)
 
@@ -306,7 +332,7 @@ booleans — those are plausible future serializer additions, not present today.
 exposes exactly one public lookup and one immutable value type:
 
 ```ruby
-TransactionInfo = Data.define(:transaction_id, :buyer_id, :seller_id, :completed_at)
+TransactionInfo = Data.define(:transaction_id, :listing_id, :buyer_id, :seller_id, :completed_at)
 
 TradeContract.completed_transaction_info(transaction_id)   # -> TransactionInfo | nil
 ```
@@ -328,14 +354,15 @@ accepted; anything else, and any non-positive integer, returns `nil` without rai
 contract never leaks an `ActiveRecord::RecordNotFound` or any other Marketplace-internal
 exception across the plugin boundary.
 
-`TransactionInfo` intentionally omits `listing_id` (no current feedback-eligibility rule
-needs it) and `status` (the method name already encodes "completed"; a redundant status
-field would just invite a second, unnecessary check). It never carries confirmation
-timestamps, cancellation metadata, a `User`, a `Listing`, or the `Marketplace::Transaction`
-AR object itself — only four scalar/time fields, freshly queried and copied on every call,
-so a caller mutating a `Transaction` they hold elsewhere in memory cannot affect a
-previously returned `TransactionInfo`, and a caller holding a `TransactionInfo` has no way
-to write back to Marketplace state (it is a `Data` object: no setters, no `save`/`update`).
+`TransactionInfo` exposes `listing_id` as the stable listing reference needed by Trade
+Reputation feedback detail, and intentionally omits `status` (the method name already encodes
+"completed"; a redundant status field would just invite a second, unnecessary check). It
+never carries confirmation timestamps, cancellation metadata, a `User`, a `Listing`, or the
+`Marketplace::Transaction` AR object itself — only five scalar/time fields, freshly queried
+and copied on every call, so a caller mutating a `Transaction` they hold elsewhere in memory
+cannot affect a previously returned `TransactionInfo`, and a caller holding a
+`TransactionInfo` has no way to write back to Marketplace state (it is a `Data` object: no
+setters, no `save`/`update`).
 
 **Hard boundary**, unchanged from Phase 1 and still the load-bearing rule for everything
 above: Trade Reputation may call `TradeContract` methods and reference `transaction_id`, and
@@ -343,7 +370,7 @@ nothing else. It may not query `marketplace_transactions`/`marketplace_listings`
 to` a Marketplace model, share Marketplace's service context, or otherwise import
 `Marketplace::Transaction`/`Marketplace::Listing`. Marketplace, symmetrically, never reads,
 writes, or references any table owned by Trade Reputation. Full contract text lives in
-`docs/TRADE_REPUTATION_CONTRACT.md` once Trade Reputation exists to consume it.
+`docs/TRADE_REPUTATION_CONTRACT.md`.
 
 **Completion event (Phase 2B, implemented).** `:marketplace_transaction_completed` fires
 exactly once per real `pending -> completed` transition, and zero times for transaction
@@ -390,12 +417,50 @@ any listener was loaded, or during a lost-event window remain reviewable without
 an event to have ever fired for them. The event exists only for optional uses — notifications,
 cache invalidation, async processing — never for correctness.
 
-## 8. Notifications
+## 8. Notifications (Phase 3, implemented)
 
-Not yet implemented. A future `Jobs::Marketplace::NotifyTransactionActors`, enqueued after
-commit, is a plausible design for: first confirmation received (-> the other participant),
-completion (-> both). Exact registration mechanism still pending core verification; no
-`app/jobs` directory exists in this plugin yet.
+`lib/marketplace/notifier.rb` (`Marketplace::Notifier`) listens for Marketplace's own
+transaction lifecycle `DiscourseEvent`s and creates one in-forum `Notification` per affected
+participant:
+
+- `:marketplace_transaction_created` (new, fired from `Transactions::Create` on a genuine new
+  transaction, never a replay) -> notifies the seller.
+- `:marketplace_transaction_first_confirmed` (new, fired from `Transactions::Confirm#record_
+  first_confirmation`, never on the final/second confirmation or a same-side replay) ->
+  notifies whichever participant has *not* yet confirmed, derived purely from the freshly
+  reloaded `buyer_confirmed_at`/`seller_confirmed_at` (no extra payload needed).
+- `:marketplace_transaction_completed` (existing event, unchanged trigger site -- Phase 3
+  only adds a *listener*) -> notifies both participants.
+- `:marketplace_transaction_cancelled` (new, fired from `Transactions::Cancel`, never on a
+  cancelled replay or a rejected cancel-of-completed) -> notifies the participant who did
+  *not* cancel, or both if staff cancelled.
+
+All four triggers follow the exact `DB.after_commit { DiscourseEvent.trigger(..., transaction_
+id, continue_on_error: true) }` pattern the completion event already established (§7): fired
+only after a real commit, payload is always the scalar `transaction_id`, and a raising
+listener is logged and swallowed rather than turning an already-successful request into a
+failure. Listeners are registered in `plugin.rb` via `Plugin::Instance#on` (not raw
+`DiscourseEvent.on`), which auto-guards on `enabled?` for free.
+
+**Mechanism**: `Notification.create!(notification_type: Notification.types[:custom],
+user_id: recipient_id, data: { message:, display_username:, topic_title:, title: }.to_json)`
+with `topic_id`/`post_number` left `nil` -- verified from core (`db/structure.sql`: both
+columns are nullable) and from the identical pattern already shipped in core's own bundled
+`discourse-solved` plugin. There is no supported way for an out-of-tree plugin to add a new
+named entry to `Notification.types` (that enum is fixed in `app/models/notification.rb`); the
+`:custom` type plus a `data.message`/`data.title` i18n-key payload is the correct, supported
+extension point for a plugin with no topic/post of its own. Client-side rendering (core's
+`frontend/discourse/app/lib/notification-types/custom.js` and `base.js`) needs no
+Marketplace-specific JS: without a `topic_id` the notification renders with no link (`linkHref`
+returns `undefined`, a normal/handled case -- e.g. `admin_problems`/`new_features` notification
+types behave the same way), which is an accepted Phase 3 limitation, not a bug, given there
+was no listing/transaction frontend to link to before this same phase added one (see §10).
+Locale keys live in `config/locales/client.en.yml` under `js.marketplace.notifications.*` and
+`js.notifications.alt.marketplace.*`.
+
+Delivery has the same best-effort posture as §7's completion event: no retry, no outbox, and
+never the basis of correctness (transaction/listing state itself is, per §7's `TradeContract`
+discussion).
 
 ## 9. Tests
 
@@ -429,20 +494,69 @@ Reflects the specs that actually exist under `spec/`:
 - **TradeContract** (`spec/lib/marketplace/trade_contract_spec.rb`, added Phase 2A): the
   full input matrix (nil, zero, negative, non-integer string, numeric string, unknown
   positive id, pending, cancelled) all -> `nil`; a completed transaction returns exact
-  `transaction_id`/`buyer_id`/`seller_id`/`completed_at`; no `listing_id`/`status` exposed;
-  no AR object or AR-like mutability (`save`/`save!`/`update`/`update!` absent, no field
-  setters); a `TransactionInfo` already returned is unaffected by later in-memory mutation
-  of the underlying `Transaction`; exactly one public singleton method exists; `VERSION ==
-  1`.
+  `transaction_id`/`listing_id`/`buyer_id`/`seller_id`/`completed_at`; `status` is not
+  exposed; no AR object or AR-like mutability (`save`/`save!`/`update`/`update!` absent, no
+  field setters); a `TransactionInfo` already returned is unaffected by later in-memory
+  mutation of the underlying `Transaction`; exactly one public singleton method exists;
+  `VERSION == 1`.
 - **Query** (`spec/lib/marketplace/listing_query_spec.rb`): filter/sort correctness.
+- **Notifier** (`spec/lib/marketplace/notifier_spec.rb`, Phase 3): each of the four notify_*
+  methods against a fixture transaction -- correct recipient(s), correct `data` payload,
+  and the "notify nobody" edge cases (unknown id, both sides already confirmed).
+- **Service event specs** (Phase 3 additions to `create_spec.rb`/`cancel_spec.rb`, mirroring
+  `confirm_spec.rb`'s existing "completion event" style): `:marketplace_transaction_created`
+  and `:marketplace_transaction_cancelled` fire exactly once with the scalar transaction id
+  on a real transition, zero times on a replay or rejected transition;
+  `confirm_spec.rb` gained a matching "first confirmation event" group for `:marketplace_
+  transaction_first_confirmed`.
+- **Listing images** (Phase 3 addition to `spec/models/marketplace/listing_spec.rb`):
+  `UploadReference` rows are created for uploads mentioned in `raw`, untouched when `raw`
+  doesn't change, and synced (old dropped, new added) on an edit.
+- **`GET .../listings/:id/transaction`** (Phase 3 addition to
+  `spec/requests/marketplace/listings_controller_spec.rb`): returns the caller's own open
+  transaction for buyer and seller alike; returns 404 for no transaction, a cancelled
+  transaction, a missing listing, or anonymous access; and never returns another user's
+  transaction on the same listing (non-enumerable).
 
-## 10. Frontend
+No frontend (JS/QUnit) tests were added in Phase 3 -- this sandboxed environment has no
+Discourse/Ember runtime to write or run them against; see the top-level session report for
+what was and wasn't actually executed.
 
-Not yet implemented — no `assets/javascripts/discourse/` directory exists. The routes,
-Glimmer components, and `api-initializers/marketplace.js` sketched in earlier drafts of
-this document remain a reasonable target shape for that future work but should be verified
-against current core frontend conventions when it's actually started, not assumed from this
-document.
+## 10. Frontend (Phase 3, implemented)
+
+`assets/javascripts/discourse/` -- verified against current core conventions (core's own
+frontend source moved to a top-level `frontend/discourse/` directory; *plugin* assets still
+live under `assets/javascripts/discourse/`, confirmed against core-bundled plugins like
+`discourse-subscriptions`/`discourse-topic-voting` on the same ref). No admin UI; this is all
+user-facing.
+
+```
+marketplace-route-map.js                      auto-discovered by filename convention
+routes/marketplace/{index,new,listing}.js
+routes/marketplace/listing/edit.js
+templates/marketplace/{index,new,listing}.gjs  route-template .gjs files (receive @controller)
+templates/marketplace/listing/edit.gjs
+components/marketplace-browse.gjs              search/filter/sort + pagination + listing cards
+components/marketplace-listing-form.gjs        shared create/edit form
+components/marketplace-listing-detail.gjs      listing detail + transaction actions/state
+```
+
+Routes: `/marketplace` (browse+search/filter, `ListingQuery`'s `category_id`/`q`/`sort`
+params via component-local `@tracked` state, not URL query params -- a deliberate Phase 3
+scope cut), `/marketplace/new` (create), `/marketplace/listings/:listing_id` (detail;
+`model()` also probes `GET .../transaction`, §6, to render transaction state for a returning
+participant -- a 404 there is the common/expected case, handled locally, not surfaced),
+`/marketplace/listings/:listing_id/edit`. All calls go through the existing JSON API (§6)
+via `ajax()`; no new backend surface beyond the `GET .../transaction` endpoint documented in
+§6. `cooked` is rendered as trusted HTML (`htmlSafe`), matching how Discourse renders `cooked`
+content everywhere else -- safe because `PrettyText.cook` already sanitized it server-side.
+
+Not built in Phase 3: an image/attachment picker in the create/edit form (plain `raw`
+textarea; a user can still embed `upload://...` markdown manually and §2's `UploadReference`
+housekeeping makes it work correctly, but there is no upload button UI), URL-addressable
+search/filter state, and a main-nav/sidebar link to `/marketplace` (the route exists and is
+directly reachable, just not surfaced from navigation chrome). Each is a plausible follow-up,
+not a correctness gap.
 
 ## 11. Risks and compatibility
 
@@ -452,7 +566,8 @@ document.
   transactions (should one ever be added — `TradeContract` itself is point-lookup-only and
   doesn't need this) will need a migration adding at least `(buyer_id, status)` and
   `(seller_id, status)` before shipping, per CLAUDE.md's N+1/indexing guidance. Still
-  flagged, not fixed — Phase 2B only touches `Confirm`, its spec, and this document.
+  flagged; Phase 3's one-listing open-transaction lookup is served by the existing partial
+  `listing_id` index and does not justify a general participant-history index yet.
 - **Completion event delivery is best-effort (Phase 2B).** `DB.after_commit` proves
   ordering (fires only after the true outermost commit) and rollback-safety (never fires on
   rollback, per core's own `mini_sql_multisite_connection_spec.rb`), but not delivery
@@ -472,7 +587,7 @@ document.
 
 ## 12. Required core-version verification before further implementation
 
-Confirmed during Phase 1/2A/2B review, against the installed core:
+Confirmed during Phase 1/2A/2B/3 review, against the installed core:
 
 1. `Service::Base` DSL — confirmed: `params do ... end`, `model`, `policy`, `step`,
    `transaction do ... end` (`lib/service/base/steps_helpers.rb`), as already used by every
@@ -495,7 +610,26 @@ Confirmed during Phase 1/2A/2B review, against the installed core:
    Namespace)` check (only real example found: a spec in `discourse-github` checking
    `defined?(::Chat)`). Trade Reputation, when it exists, should guard on `defined?(::
    Marketplace::TradeContract)` plus a `TradeContract::VERSION` check, not a manifest field.
-
-Still unverified, and not yet needed (no code in this plugin depends on them yet):
-notification registration API (§8) and `UploadReference`/upload-attachment API for listing
-images — confirm before starting §8/§10 work, not before this document's own accuracy.
+5. `UploadReference.ensure_exist!` (`app/models/upload_reference.rb`) — confirmed against
+   core's own usage (`Draft`, `Badge`, `UserProfile`, `Category`, etc.): polymorphic
+   `target`/`target_type`+`target_id`, does a full sync (deletes references not in the given
+   `upload_ids`, then inserts the new set), used from every core model's `after_save`. §2.
+6. Notification creation for a plugin with no topic/post of its own — confirmed against core's
+   own bundled `discourse-solved` plugin (`Notification.create!(notification_type:
+   Notification.types[:custom], user_id:, data: { message:, display_username:, topic_title:,
+   title: }.to_json)`) and against `db/structure.sql` (`topic_id`/`post_number` nullable).
+   `Notification.types` (`app/models/notification.rb`) is a fixed core enum with no plugin
+   registration API — `:custom` plus a `data.message`/`data.title` payload is the correct
+   extension point, not a gap to work around. Client rendering confirmed against core's
+   `frontend/discourse/app/lib/notification-types/{base,custom}.js`. §8.
+7. Plugin frontend conventions — confirmed against core-bundled plugins on the same ref
+   (`discourse-subscriptions`, `discourse-topic-voting`, `chat`): `assets/javascripts/
+   discourse/<name>-route-map.js` auto-discovered by filename; `routes/<path>.js` (plain
+   `Route` with `model()`); `templates/<path>.gjs` (a route-template `.gjs` file receiving
+   `@controller`, no explicit `Controller` class needed); interactive `.gjs` components
+   (`@glimmer/component` + `@glimmer/tracking` + `{{on}}`/`{{i18n}}`/`<LinkTo>`); `ajax()`
+   (`discourse/lib/ajax`) rejects on non-2xx with no automatic global error UI (that is the
+   separate, opt-in `popupAjaxError` helper) — safe to `try/catch` an expected 404 silently.
+   §10. Note: core's *own* frontend source moved to a top-level `frontend/discourse/`
+   directory on this ref; plugin assets are unaffected and still live under
+   `assets/javascripts/discourse/`.

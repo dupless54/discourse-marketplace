@@ -2,7 +2,6 @@
 
 describe Marketplace::ListingQuery do
   fab!(:category) { Fabricate(:marketplace_category, enabled: true) }
-  fab!(:disabled_category) { Fabricate(:marketplace_category, enabled: false) }
 
   before { SiteSetting.marketplace_allowed_currencies = "USD|EUR" }
 
@@ -47,7 +46,9 @@ describe Marketplace::ListingQuery do
     end
 
     it "hides active listings whose marketplace category is disabled" do
-      listing = make_listing(category: disabled_category)
+      listing = make_listing
+      listing.category.update!(enabled: false)
+
       expect(query[:records]).not_to include(listing)
     end
   end
@@ -193,7 +194,7 @@ describe Marketplace::ListingQuery do
     end
 
     it "applies the page offset correctly" do
-      listings = Array.new(5) { |i| make_listing(published_at: (10 - i).days.ago) }
+      listings = Array.new(5) { |i| make_listing(published_at: (i + 1).days.ago) }
 
       page_one = query(per_page: 2, page: 1)[:records]
       page_two = query(per_page: 2, page: 2)[:records]

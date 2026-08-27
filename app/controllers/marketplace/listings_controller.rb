@@ -3,7 +3,7 @@
 module Marketplace
   class ListingsController < ::ApplicationController
     requires_plugin Marketplace::PLUGIN_NAME
-    requires_login only: %i[create update update_status]
+    requires_login only: %i[create update update_status transaction]
 
     def index
       result = Marketplace::ListingQuery.new(params: params).results
@@ -78,6 +78,29 @@ module Marketplace
           )
         end
       end
+    end
+
+    # Lets a listing's viewer discover their own open transaction on it
+    # (if any) without a general "my transactions" index -- scoped
+    # entirely by the WHERE clause itself (buyer_id/seller_id = current
+    # user), so no separate Guardian predicate is needed: no row outside
+    # the viewer's own participation can ever be returned. The existing
+    # partial unique index on (listing_id) WHERE status <> 20 serves this
+    # exact open-transaction query. Cancelled transactions intentionally
+    # return 404 so an active listing can start a new transaction cleanly.
+    def transaction
+      listing = Marketplace::Listing.find_by(id: params[:id])
+      raise Discourse::NotFound if listing.blank?
+
+      record =
+        Marketplace::Transaction
+          .where(listing_id: listing.id)
+          .where("buyer_id = :uid OR seller_id = :uid", uid: current_user.id)
+          .where.not(status: Marketplace::Transaction.statuses[:cancelled])
+          .first
+      raise Discourse::NotFound if record.blank?
+
+      render_serialized(record, Marketplace::TransactionSerializer, root: "transaction")
     end
 
     def update_status

@@ -26,3 +26,29 @@ module Marketplace
     end
   end
 end
+
+# == Schema Information
+#
+# Table name: marketplace_transactions
+#
+#  id                  :bigint           not null, primary key
+#  buyer_confirmed_at  :datetime
+#  cancelled_at        :datetime
+#  completed_at        :datetime
+#  seller_confirmed_at :datetime
+#  status              :integer          default("pending"), not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  buyer_id            :integer          not null
+#  cancelled_by_id     :integer
+#  listing_id          :bigint           not null
+#  seller_id           :integer          not null
+#
+# Indexes
+#
+#  idx_marketplace_transactions_listing_open  (listing_id) UNIQUE WHERE (status <> 20)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (listing_id => marketplace_listings.id) ON DELETE => restrict
+#

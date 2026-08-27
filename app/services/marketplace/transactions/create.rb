@@ -27,6 +27,7 @@ module Marketplace
         model :transaction_candidate, :build_transaction
         step :save_transaction
         step :reserve_listing
+        step :register_created_event
         step :publish_transaction_result
       end
     end
@@ -117,6 +118,23 @@ module Marketplace
           .update_all(status: Marketplace::Listing.statuses[:reserved], updated_at: now)
 
       raise Marketplace::TransactionInvariantViolation if affected_rows != 1
+    end
+
+    # Registered only once the save and the reservation CAS have both
+    # succeeded, mirroring the completion event's placement in Confirm (see
+    # docs/MARKETPLACE_ARCHITECTURE.md §7/§8): DB.after_commit ties the
+    # notification to this transaction's real, committed outcome, and
+    # continue_on_error: true keeps a failing listener from turning an
+    # already-successful create into a failed result.
+    def register_created_event(transaction_candidate:)
+      transaction_id = transaction_candidate.id
+      DB.after_commit do
+        DiscourseEvent.trigger(
+          :marketplace_transaction_created,
+          transaction_id,
+          continue_on_error: true,
+        )
+      end
     end
 
     # Only reached once both the save and the reservation CAS have

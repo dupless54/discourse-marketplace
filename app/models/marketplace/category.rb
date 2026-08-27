@@ -20,3 +20,21 @@ module Marketplace
     scope :browsable, -> { where(enabled: true).order(:position) }
   end
 end
+
+# == Schema Information
+#
+# Table name: marketplace_categories
+#
+#  id         :bigint           not null, primary key
+#  enabled    :boolean          default(TRUE), not null
+#  name       :string(100)      not null
+#  position   :integer          default(0), not null
+#  slug       :string(100)      not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_marketplace_categories_on_enabled_and_position  (enabled,position)
+#  index_marketplace_categories_on_slug                  (slug) UNIQUE
+#

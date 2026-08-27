@@ -235,4 +235,97 @@ describe Marketplace::ListingsController do
       expect(response.status).to eq(404)
     end
   end
+
+  describe "#transaction" do
+    fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
+    fab!(:unrelated_user) { Fabricate(:user, trust_level: TrustLevel[1]) }
+
+    def build_listing(status: :reserved, **overrides)
+      Fabricate(
+        :marketplace_listing,
+        seller: seller,
+        category: category,
+        status: Marketplace::Listing.statuses[status],
+        **overrides,
+      )
+    end
+
+    it "returns the current user's open transaction on the listing" do
+      listing = build_listing
+      transaction =
+        Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transaction.json"
+
+      expect(response.status).to eq(200)
+      expect(response.parsed_body["transaction"]["id"]).to eq(transaction.id)
+    end
+
+    it "works the same for the seller side of the same transaction" do
+      listing = build_listing
+      transaction =
+        Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
+      sign_in(seller)
+
+      get "/marketplace/listings/#{listing.id}/transaction.json"
+
+      expect(response.status).to eq(200)
+      expect(response.parsed_body["transaction"]["id"]).to eq(transaction.id)
+    end
+
+    it "returns 404 when the current user has no transaction on the listing" do
+      listing = build_listing
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transaction.json"
+
+      expect(response.status).to eq(404)
+    end
+
+    it "returns 404 for a cancelled transaction so a new purchase can start" do
+      listing = build_listing(status: :active)
+      Fabricate(
+        :marketplace_transaction,
+        listing: listing,
+        buyer: buyer,
+        seller: seller,
+        status: Marketplace::Transaction.statuses[:cancelled],
+        cancelled_at: Time.current,
+        cancelled_by_id: buyer.id,
+      )
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transaction.json"
+
+      expect(response.status).to eq(404)
+    end
+
+    it "never returns another user's transaction on the same listing (non-enumerable)" do
+      listing = build_listing
+      Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
+      sign_in(unrelated_user)
+
+      get "/marketplace/listings/#{listing.id}/transaction.json"
+
+      expect(response.status).to eq(404)
+    end
+
+    it "rejects anonymous access" do
+      listing = build_listing
+      Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
+
+      get "/marketplace/listings/#{listing.id}/transaction.json"
+
+      expect(response.status).to eq(403)
+    end
+
+    it "returns 404 for a missing listing" do
+      sign_in(buyer)
+
+      get "/marketplace/listings/-1/transaction.json"
+
+      expect(response.status).to eq(404)
+    end
+  end
 end

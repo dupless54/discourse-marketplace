@@ -17,7 +17,11 @@ describe Marketplace::GuardianExtension do
     )
   end
 
-  def build_transaction(listing: build_listing(status: :reserved), buyer: buyer, seller: seller)
+  def build_transaction(
+    listing: build_listing(status: :reserved),
+    buyer: self.buyer,
+    seller: self.seller
+  )
     Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
   end
 
@@ -85,8 +89,9 @@ describe Marketplace::GuardianExtension do
     end
 
     it "is false when the listing's category is disabled" do
-      disabled_category = Fabricate(:marketplace_category, enabled: false)
-      listing = build_listing(status: :active, category: disabled_category)
+      listing = build_listing(status: :active)
+      listing.category.update!(enabled: false)
+
       expect(buyer.guardian.can_create_marketplace_transaction?(listing)).to eq(false)
     end
 
