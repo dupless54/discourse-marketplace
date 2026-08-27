@@ -1,0 +1,8 @@
+tr_TR:
+  site_settings:
+    marketplace_enabled: "Pazar yeri eklentisini etkinleştir"
+    marketplace_min_trust_level: "Pazar yeri ilanı oluşturmak için gereken minimum güven seviyesi"
+    marketplace_allowed_currencies: "Satıcıların ilanlarda kullanabileceği para birimi kodları (ISO 4217)"
+  marketplace:
+    errors:
+      category_disabled: "devre dışı bırakılmış ve ilanlar için kullanılamaz"
