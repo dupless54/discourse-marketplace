@@ -55,6 +55,11 @@ const EMPTY_TRANSACTIONS = {
   pagination: { page: 1, per_page: 20, has_more: false },
 };
 
+const EMPTY_OFFERS = {
+  offers: [],
+  pagination: { page: 1, per_page: 50, has_more: false },
+};
+
 function stubListingEditEndpoints(server, helper) {
   server.get("/marketplace/listings", () => helper.response(EMPTY_LISTINGS));
   server.get("/marketplace/listings/42", () =>
@@ -62,6 +67,9 @@ function stubListingEditEndpoints(server, helper) {
   );
   server.get("/marketplace/listings/42/transactions", () =>
     helper.response(EMPTY_TRANSACTIONS)
+  );
+  server.get("/marketplace/listings/42/offers", () =>
+    helper.response(EMPTY_OFFERS)
   );
   server.get("/marketplace/categories", () =>
     helper.response({ categories: [CATEGORY] })
