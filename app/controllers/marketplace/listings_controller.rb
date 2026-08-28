@@ -223,7 +223,16 @@ module Marketplace
     private
 
     def mark_favorites!(listings)
-      return if current_user.blank? || listings.blank?
+      return if listings.blank?
+
+      # Always initialize the viewer-specific state so a reused ActiveRecord
+      # instance can never carry a previous request's favorite flag into an
+      # anonymous or different-user serialization.
+      listings.each do |listing|
+        listing.instance_variable_set(:@marketplace_favorited_by_viewer, false)
+      end
+
+      return if current_user.blank?
 
       favorite_ids =
         Marketplace::Favorite
