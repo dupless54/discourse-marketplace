@@ -10,14 +10,26 @@ module Marketplace
       attribute :category_id, :integer
       attribute :price_cents, :integer
       attribute :currency, :string
+      attribute :inventory_mode, :string, default: "single"
+      attribute :stock_quantity, :integer
+      attribute :expires_at, :datetime
 
       validates :title, presence: true
       validates :raw, presence: true
       validates :category_id, presence: true
       validates :price_cents, presence: true, numericality: { only_integer: true }
       validates :currency, presence: true
+      validates :inventory_mode, inclusion: { in: Marketplace::Listing.inventory_modes.keys }
+      validates :stock_quantity,
+                presence: true,
+                numericality: {
+                  only_integer: true,
+                  greater_than_or_equal_to: 1,
+                },
+                if: -> { inventory_mode == "finite" }
 
       before_validation { self.currency = currency.to_s.upcase }
+      before_validation { self.inventory_mode = inventory_mode.presence || "single" }
     end
 
     policy :can_create_marketplace_listing
@@ -49,6 +61,9 @@ module Marketplace
         price_cents: params.price_cents,
         currency: params.currency,
         status: Marketplace::Listing.statuses[:draft],
+        inventory_mode: Marketplace::Listing.inventory_modes[params.inventory_mode],
+        stock_quantity: params.inventory_mode == "finite" ? params.stock_quantity : nil,
+        expires_at: params.expires_at,
       )
     end
 

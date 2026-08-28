@@ -33,13 +33,35 @@ export default class MarketplaceListingDetail extends Component {
     return (
       this.currentUser &&
       !this.isSeller &&
-      this.listing.status === "active" &&
+      !!this.listing.purchasable &&
       !this.transaction
     );
   }
 
   get canMessageSeller() {
     return this.currentUser && !this.isSeller && this.listing.seller;
+  }
+
+  // Only rendered while the listing is still active -- draft/reserved/sold/
+  // archived already have their own dedicated status line above.
+  get availabilityLabel() {
+    if (this.listing.status !== "active") {
+      return null;
+    }
+    if (this.listing.expired) {
+      return i18n("marketplace.listing.expires.expired");
+    }
+    if (this.listing.inventory_mode === "unlimited") {
+      return i18n("marketplace.listing.stock.unlimited");
+    }
+    if (this.listing.inventory_mode === "finite") {
+      return this.listing.stock_available > 0
+        ? i18n("marketplace.listing.stock.remaining", {
+            count: this.listing.stock_available,
+          })
+        : i18n("marketplace.listing.stock.out_of_stock");
+    }
+    return null;
   }
 
   get isParticipant() {
@@ -91,6 +113,15 @@ export default class MarketplaceListingDetail extends Component {
     });
   }
 
+  // Re-fetches the listing rather than hand-patching status locally: a
+  // finite/unlimited listing's availability (stock_available, purchasable)
+  // can change without its status changing at all, so only the server's
+  // view is trustworthy here.
+  async refreshListing() {
+    const result = await ajax(`/marketplace/listings/${this.listing.id}`);
+    this.listing = result.listing;
+  }
+
   @action
   buy() {
     this.runAction(async () => {
@@ -99,6 +130,7 @@ export default class MarketplaceListingDetail extends Component {
         data: { listing_id: this.listing.id },
       });
       this.transaction = result.transaction;
+      await this.refreshListing();
     });
   }
 
@@ -111,7 +143,7 @@ export default class MarketplaceListingDetail extends Component {
       );
       this.transaction = result.transaction;
       if (result.transaction.status === "completed") {
-        this.listing = { ...this.listing, status: "sold" };
+        await this.refreshListing();
       }
     });
   }
@@ -124,7 +156,7 @@ export default class MarketplaceListingDetail extends Component {
         { type: "POST" }
       );
       this.transaction = result.transaction;
-      this.listing = { ...this.listing, status: "active" };
+      await this.refreshListing();
     });
   }
 
@@ -167,6 +199,11 @@ export default class MarketplaceListingDetail extends Component {
             }}</span>
           <h1 class="marketplace-listing-detail__title">{{this.listing.title}}</h1>
           <span class="marketplace-listing-detail__price">{{this.formattedPrice}}</span>
+          {{#if this.availabilityLabel}}
+            <span class="marketplace-listing-detail__availability">
+              {{this.availabilityLabel}}
+            </span>
+          {{/if}}
           <span class="marketplace-listing-detail__seller">{{i18n
               "marketplace.listing.seller"
             }}

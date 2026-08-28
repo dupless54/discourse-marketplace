@@ -235,20 +235,33 @@ describe Marketplace::Transaction do
     end
   end
 
-  describe "partial unique index on listing_id" do
+  # Re-scoped from (listing_id) to (listing_id, buyer_id) to support finite/
+  # unlimited listings, where multiple different buyers legitimately hold
+  # concurrent open transactions on the same listing -- see
+  # db/migrate/20260827230100_replace_marketplace_transactions_listing_unique_index.rb.
+  # A single buyer still cannot open a second pending transaction on a
+  # listing they already have one on, at the database level.
+  describe "partial unique index on (listing_id, buyer_id)" do
     it "allows the first pending transaction for a listing" do
       expect(persist_valid_pending).to be_persisted
     end
 
-    it "rejects a second non-cancelled transaction for the same listing at the database level" do
+    it "rejects a second non-cancelled transaction for the same buyer on the same listing" do
       persist_valid_pending
-      other_buyer = Fabricate(:user)
-      second = build_transaction(buyer: other_buyer)
+      second = build_transaction
 
       expect { second.save! }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
-    it "still blocks a new transaction once the existing one is completed" do
+    it "allows a second non-cancelled transaction for a different buyer on the same listing" do
+      persist_valid_pending
+      other_buyer = Fabricate(:user)
+      second = build_transaction(buyer: other_buyer)
+
+      expect(second.save!).to eq(true)
+    end
+
+    it "still blocks a same-buyer replay attempt once the existing one is completed" do
       first = persist_valid_pending
       now = Time.zone.now
       first.update_columns(
@@ -258,13 +271,12 @@ describe Marketplace::Transaction do
         completed_at: now,
       )
 
-      other_buyer = Fabricate(:user)
-      second = build_transaction(buyer: other_buyer)
+      second = build_transaction
 
       expect { second.save! }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
-    it "allows a new pending transaction once the existing one is cancelled" do
+    it "allows a new pending transaction for the same buyer once the existing one is cancelled" do
       first = persist_valid_pending
       first.update_columns(
         status: Marketplace::Transaction.statuses[:cancelled],
@@ -272,8 +284,7 @@ describe Marketplace::Transaction do
         cancelled_by_id: staff.id,
       )
 
-      other_buyer = Fabricate(:user)
-      second = build_transaction(buyer: other_buyer)
+      second = build_transaction
 
       expect(second.save!).to eq(true)
     end

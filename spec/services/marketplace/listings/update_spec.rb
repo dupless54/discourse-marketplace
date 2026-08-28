@@ -138,4 +138,109 @@ describe Marketplace::Listings::Update do
     expect(result).to be_failure
     expect(result).to fail_a_contract
   end
+
+  describe "inventory_mode" do
+    it "switches a listing with no transaction history from single to finite" do
+      result =
+        call_service(
+          guardian: guardian,
+          params: params.merge(inventory_mode: "finite", stock_quantity: 4),
+        )
+
+      expect(result).to be_success
+      expect(result.listing.inventory_mode).to eq("finite")
+      expect(result.listing.stock_quantity).to eq(4)
+    end
+
+    it "allows raising stock_quantity on an existing finite listing with committed stock" do
+      finite_listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 2,
+          stock_reserved: 1,
+          stock_sold: 1,
+        )
+      Fabricate(:marketplace_transaction, listing: finite_listing, status: Marketplace::Transaction.statuses[:pending])
+
+      result =
+        call_service(
+          guardian: guardian,
+          params:
+            params.merge(
+              listing_id: finite_listing.id,
+              inventory_mode: "finite",
+              stock_quantity: 10,
+            ),
+        )
+
+      expect(result).to be_success
+      expect(result.listing.stock_quantity).to eq(10)
+    end
+
+    it "fails model validation when shrinking stock_quantity below already-committed stock" do
+      finite_listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 5,
+          stock_reserved: 2,
+          stock_sold: 2,
+        )
+
+      result =
+        call_service(
+          guardian: guardian,
+          params:
+            params.merge(listing_id: finite_listing.id, inventory_mode: "finite", stock_quantity: 3),
+        )
+
+      expect(result).to be_failure
+      expect(result.listing.errors[:stock_quantity]).to be_present
+    end
+
+    it "fails model validation when switching inventory_mode after the listing has any transaction" do
+      finite_listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 5,
+        )
+      Fabricate(:marketplace_transaction, listing: finite_listing, status: Marketplace::Transaction.statuses[:pending])
+
+      result =
+        call_service(
+          guardian: guardian,
+          params: params.merge(listing_id: finite_listing.id, inventory_mode: "single"),
+        )
+
+      expect(result).to be_failure
+      expect(result.listing.errors[:inventory_mode]).to be_present
+    end
+  end
+
+  describe "expires_at" do
+    it "sets an expiration on an existing listing" do
+      expires_at = 1.week.from_now.change(usec: 0)
+      result = call_service(guardian: guardian, params: params.merge(expires_at: expires_at.iso8601))
+
+      expect(result).to be_success
+      expect(result.listing.expires_at).to eq(expires_at)
+    end
+
+    it "clears an existing expiration when expires_at is omitted" do
+      listing.update!(expires_at: 1.week.from_now)
+
+      result = call_service(guardian: guardian, params: params)
+
+      expect(result).to be_success
+      expect(result.listing.expires_at).to be_nil
+    end
+  end
 end

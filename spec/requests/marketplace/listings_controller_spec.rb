@@ -72,6 +72,33 @@ describe Marketplace::ListingsController do
       expect(listing.seller_id).to eq(seller.id)
       expect(listing.status).to eq("draft")
     end
+
+    it "creates a finite listing with the given stock_quantity" do
+      sign_in(seller)
+      post "/marketplace/listings.json",
+           params: create_params(inventory_mode: "finite", stock_quantity: 4)
+
+      expect(response.status).to eq(201)
+      expect(json_body["inventory_mode"]).to eq("finite")
+      expect(json_body["stock_quantity"]).to eq(4)
+      expect(json_body["stock_available"]).to eq(4)
+    end
+
+    it "creates an unlimited listing" do
+      sign_in(seller)
+      post "/marketplace/listings.json", params: create_params(inventory_mode: "unlimited")
+
+      expect(response.status).to eq(201)
+      expect(json_body["inventory_mode"]).to eq("unlimited")
+      expect(json_body["stock_quantity"]).to be_nil
+    end
+
+    it "returns 400 for finite with no stock_quantity" do
+      sign_in(seller)
+      post "/marketplace/listings.json", params: create_params(inventory_mode: "finite")
+
+      expect(response.status).to eq(400)
+    end
   end
 
   describe "#show" do
@@ -271,6 +298,34 @@ describe Marketplace::ListingsController do
     it "returns 422 on validation failure" do
       sign_in(seller)
       put "/marketplace/listings/#{listing.id}.json", params: create_params(title: "ab")
+
+      expect(response.status).to eq(422)
+    end
+
+    it "switches a fresh listing to finite with a stock_quantity" do
+      sign_in(seller)
+      put "/marketplace/listings/#{listing.id}.json",
+          params: create_params(inventory_mode: "finite", stock_quantity: 3)
+
+      expect(response.status).to eq(200)
+      expect(json_body["inventory_mode"]).to eq("finite")
+      expect(json_body["stock_quantity"]).to eq(3)
+    end
+
+    it "returns 422 when shrinking stock_quantity below already-committed stock" do
+      finite_listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 5,
+          stock_reserved: 2,
+          stock_sold: 2,
+        )
+      sign_in(seller)
+      put "/marketplace/listings/#{finite_listing.id}.json",
+          params: create_params(inventory_mode: "finite", stock_quantity: 3)
 
       expect(response.status).to eq(422)
     end
@@ -513,6 +568,33 @@ describe Marketplace::ListingsController do
 
       get_mine(page: "abc")
       expect(response.status).to eq(400)
+    end
+
+    it "exposes stock, mode, expiry, and status for the seller's own finite listing" do
+      finite_listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:active],
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 5,
+          stock_reserved: 1,
+          stock_sold: 2,
+          expires_at: 1.week.from_now,
+        )
+      sign_in(seller)
+
+      get_mine
+
+      listing_json = response.parsed_body["listings"].first
+      expect(listing_json["id"]).to eq(finite_listing.id)
+      expect(listing_json["inventory_mode"]).to eq("finite")
+      expect(listing_json["stock_quantity"]).to eq(5)
+      expect(listing_json["stock_available"]).to eq(2)
+      expect(listing_json["stock_sold"]).to eq(2)
+      expect(listing_json["status"]).to eq("active")
+      expect(listing_json["expires_at"]).to be_present
     end
   end
 end

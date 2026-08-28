@@ -113,4 +113,58 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
         "the uploaded file's markdown is inserted into the description"
       );
   });
+
+  test("defaults to single and hides the stock field, showing it once Stoklu/finite is selected", async function (assert) {
+    await render(
+      <template>
+        <MarketplaceListingForm @categories={{categories}} />
+      </template>
+    );
+
+    assert
+      .dom(".marketplace-listing-form__inventory-mode")
+      .hasValue("single");
+    assert.dom(".marketplace-listing-form__stock-field").doesNotExist();
+
+    await fillIn(".marketplace-listing-form__inventory-mode", "finite");
+
+    assert.dom(".marketplace-listing-form__stock-field").exists();
+
+    await fillIn(".marketplace-listing-form__inventory-mode", "unlimited");
+
+    assert.dom(".marketplace-listing-form__stock-field").doesNotExist();
+  });
+
+  test("pre-fills inventory mode, stock quantity, and expiration when editing an existing finite listing", async function (assert) {
+    const listing = {
+      id: 7,
+      title: "Existing finite listing",
+      raw: "A limited run item",
+      category_id: 1,
+      price_cents: 500,
+      currency: "USD",
+      inventory_mode: "finite",
+      stock_quantity: 8,
+      expires_at: "2030-01-15T10:30:00.000Z",
+    };
+
+    await render(
+      <template>
+        <MarketplaceListingForm
+          @categories={{categories}}
+          @listing={{listing}}
+        />
+      </template>
+    );
+
+    assert
+      .dom(".marketplace-listing-form__inventory-mode")
+      .hasValue("finite");
+    assert
+      .dom(".marketplace-listing-form__stock-field input")
+      .hasValue("8");
+    assert
+      .dom(".marketplace-listing-form__expires-field input")
+      .hasValue(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+  });
 });

@@ -20,6 +20,37 @@ describe Marketplace::Transactions::Create do
     described_class.call(guardian: guardian, params: { listing_id: listing_id })
   end
 
+  def build_finite_listing(
+    stock_quantity: 2,
+    stock_reserved: 0,
+    stock_sold: 0,
+    status: :active,
+    **overrides
+  )
+    Fabricate(
+      :marketplace_listing,
+      seller: seller,
+      category: category,
+      status: Marketplace::Listing.statuses[status],
+      inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+      stock_quantity: stock_quantity,
+      stock_reserved: stock_reserved,
+      stock_sold: stock_sold,
+      **overrides,
+    )
+  end
+
+  def build_unlimited_listing(status: :active, **overrides)
+    Fabricate(
+      :marketplace_listing,
+      seller: seller,
+      category: category,
+      status: Marketplace::Listing.statuses[status],
+      inventory_mode: Marketplace::Listing.inventory_modes[:unlimited],
+      **overrides,
+    )
+  end
+
   describe "success" do
     it "creates exactly one pending transaction and reserves the listing together" do
       listing = build_listing
@@ -306,6 +337,148 @@ describe Marketplace::Transactions::Create do
         expect(result).to be_failure
         expect(events).to be_empty
       end
+    end
+  end
+
+  describe "finite stock" do
+    it "lets two different buyers each hold a concurrent pending transaction" do
+      listing = build_finite_listing(stock_quantity: 2)
+
+      first = call_service(guardian: buyer.guardian, listing_id: listing.id)
+      second = call_service(guardian: other_buyer.guardian, listing_id: listing.id)
+
+      expect(first).to be_success
+      expect(second).to be_success
+      expect(first.transaction.id).not_to eq(second.transaction.id)
+      expect(listing.reload.stock_reserved).to eq(2)
+      expect(listing.status).to eq("active")
+    end
+
+    it "rejects a third buyer once stock is fully reserved" do
+      listing = build_finite_listing(stock_quantity: 1)
+      call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      result = call_service(guardian: other_buyer.guardian, listing_id: listing.id)
+
+      expect(result.failure?).to eq(true)
+      expect(result.listing_unavailable).to eq(true)
+      expect(listing.reload.stock_reserved).to eq(1)
+      expect(Marketplace::Transaction.where(listing_id: listing.id).count).to eq(1)
+    end
+
+    it "excludes stock already permanently sold from availability" do
+      listing = build_finite_listing(stock_quantity: 1, stock_sold: 1)
+
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result.failure?).to eq(true)
+      expect(result.listing_unavailable).to eq(true)
+    end
+
+    it "returns the exact same transaction on a same-buyer retry without double-reserving" do
+      listing = build_finite_listing(stock_quantity: 2)
+      first = call_service(guardian: buyer.guardian, listing_id: listing.id)
+      second = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(second.transaction.id).to eq(first.transaction.id)
+      expect(listing.reload.stock_reserved).to eq(1)
+    end
+
+    it "rejects a draft finite listing with a plain policy failure, not listing_unavailable" do
+      listing = build_finite_listing(status: :draft, stock_quantity: 2)
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_failure
+      expect(result).to fail_a_policy(:can_create_marketplace_transaction)
+      expect(result.listing_unavailable).to be_blank
+    end
+
+    it "rejects an expired finite listing with a plain policy failure" do
+      listing = build_finite_listing(stock_quantity: 2, expires_at: 1.hour.ago)
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_failure
+      expect(result).to fail_a_policy(:can_create_marketplace_transaction)
+    end
+
+    it "raises TransactionInvariantViolation and rolls back when the reserve CAS affects zero rows" do
+      listing = build_finite_listing(stock_quantity: 1)
+
+      allow(Marketplace::Listing).to receive(:where).and_call_original
+      allow(Marketplace::Listing).to receive(:where).with(
+        id: listing.id,
+        status: Marketplace::Listing.statuses[:active],
+      ).and_return(Marketplace::Listing.none)
+
+      expect { call_service(guardian: buyer.guardian, listing_id: listing.id) }.to raise_error(
+        Marketplace::TransactionInvariantViolation,
+      )
+      expect(Marketplace::Transaction.where(listing_id: listing.id).count).to eq(0)
+    end
+  end
+
+  describe "unlimited stock" do
+    it "lets many different buyers each hold a concurrent pending transaction" do
+      listing = build_unlimited_listing
+
+      first = call_service(guardian: buyer.guardian, listing_id: listing.id)
+      second = call_service(guardian: other_buyer.guardian, listing_id: listing.id)
+
+      expect(first).to be_success
+      expect(second).to be_success
+      expect(listing.reload.status).to eq("active")
+    end
+
+    it "returns the exact same transaction on a same-buyer retry" do
+      listing = build_unlimited_listing
+      first = call_service(guardian: buyer.guardian, listing_id: listing.id)
+      second = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(second.transaction.id).to eq(first.transaction.id)
+      expect(Marketplace::Transaction.where(listing_id: listing.id).count).to eq(1)
+    end
+
+    it "rejects an expired unlimited listing with a plain policy failure" do
+      listing = build_unlimited_listing(expires_at: 1.hour.ago)
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_failure
+      expect(result).to fail_a_policy(:can_create_marketplace_transaction)
+    end
+  end
+
+  describe "concurrent final-unit purchase protection" do
+    # Real race, not a sequential replay: N threads each drive the full
+    # service concurrently against a single finite unit. Whichever thread's
+    # atomic guarded UPDATE (see Transactions::Create#reserve_finite_capacity)
+    # wins, the loser must observe a consistent, already-exhausted listing --
+    # never double-reserve the same last unit. Mirrors the established
+    # multi-thread counter-race pattern already used in this codebase's
+    # dependencies (e.g. Llm::QuotaUsage#increment_usage! specs).
+    it "never lets two buyers both reserve the last unit of a finite listing" do
+      listing = build_finite_listing(stock_quantity: 1)
+      buyers = [buyer, other_buyer]
+      results = Array.new(2)
+
+      threads =
+        buyers.each_with_index.map do |b, i|
+          Thread.new { results[i] = call_service(guardian: b.guardian, listing_id: listing.id) }
+        end
+      threads.each(&:join)
+
+      successes = results.select(&:success?)
+      failures = results.reject(&:success?)
+
+      expect(successes.length).to eq(1)
+      expect(failures.length).to eq(1)
+      expect(failures.first.listing_unavailable).to eq(true)
+      expect(listing.reload.stock_reserved).to eq(1)
+      expect(
+        Marketplace::Transaction.where(
+          listing_id: listing.id,
+          status: Marketplace::Transaction.statuses[:pending],
+        ).count,
+      ).to eq(1)
     end
   end
 end

@@ -422,4 +422,118 @@ describe Marketplace::Transactions::Cancel do
       end
     end
   end
+
+  describe "finite stock" do
+    def build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0, status: :active, **overrides)
+      Fabricate(
+        :marketplace_listing,
+        seller: seller,
+        category: category,
+        status: Marketplace::Listing.statuses[status],
+        inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+        stock_quantity: stock_quantity,
+        stock_reserved: stock_reserved,
+        stock_sold: stock_sold,
+        **overrides,
+      )
+    end
+
+    it "releases exactly the one unit this transaction held, leaving listing.status untouched" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0)
+      transaction = build_transaction(listing: listing)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      reloaded = listing.reload
+      expect(reloaded.stock_reserved).to eq(0)
+      expect(reloaded.status).to eq("active")
+      expect(reloaded.purchasable?).to eq(true)
+    end
+
+    it "does not release a unit twice when the same cancellation is replayed" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 2, stock_sold: 0)
+      transaction_a =
+        Fabricate(
+          :marketplace_transaction,
+          listing: listing,
+          buyer: buyer,
+          seller: seller,
+          status: Marketplace::Transaction.statuses[:pending],
+        )
+      Fabricate(
+        :marketplace_transaction,
+        listing: listing,
+        buyer: unrelated_user,
+        seller: seller,
+        status: Marketplace::Transaction.statuses[:pending],
+      )
+
+      first = call_service(guardian: buyer.guardian, transaction_id: transaction_a.id)
+      second = call_service(guardian: buyer.guardian, transaction_id: transaction_a.id)
+
+      expect(first).to be_success
+      expect(second).to be_success
+      expect(listing.reload.stock_reserved).to eq(1)
+    end
+
+    it "lets a listing become purchasable again after a cancellation frees the last unit" do
+      listing = build_finite_listing(stock_quantity: 1, stock_reserved: 1, stock_sold: 0)
+      transaction = build_transaction(listing: listing)
+
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(listing.reload.purchasable?).to eq(true)
+    end
+
+    it "raises TransactionInvariantViolation for a pending transaction whose listing has no reserved stock" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 0, stock_sold: 0)
+      transaction = build_transaction(listing: listing)
+
+      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
+        Marketplace::TransactionInvariantViolation,
+      )
+    end
+
+    it "raises TransactionInvariantViolation and rolls back when the release CAS affects zero rows" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0)
+      transaction = build_transaction(listing: listing, buyer_confirmed_at: 1.minute.ago)
+
+      allow(Marketplace::Listing).to receive(:where).and_call_original
+      allow(Marketplace::Listing).to receive(:where).with(
+        id: listing.id,
+        inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+      ).and_return(Marketplace::Listing.none)
+
+      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
+        Marketplace::TransactionInvariantViolation,
+      )
+      reloaded = transaction.reload
+      expect(reloaded.status).to eq("pending")
+      expect(reloaded.cancelled_at).to be_nil
+      expect(listing.reload.stock_reserved).to eq(1)
+    end
+  end
+
+  describe "unlimited stock" do
+    it "is a no-op release (nothing was ever reserved)" do
+      listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:active],
+          inventory_mode: Marketplace::Listing.inventory_modes[:unlimited],
+        )
+      transaction = build_transaction(listing: listing)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      reloaded = listing.reload
+      expect(reloaded.stock_sold).to eq(0)
+      expect(reloaded.status).to eq("active")
+      expect(reloaded.purchasable?).to eq(true)
+    end
+  end
 end

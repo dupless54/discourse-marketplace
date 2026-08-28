@@ -41,6 +41,14 @@ module Marketplace
         .joins(:category)
         .where(marketplace_listings: { status: Marketplace::Listing.statuses[:active] })
         .where(marketplace_categories: { enabled: true })
+        .where("marketplace_listings.expires_at IS NULL OR marketplace_listings.expires_at > ?", Time.current)
+        .where(
+          "marketplace_listings.inventory_mode <> :finite OR (" \
+            "marketplace_listings.stock_quantity IS NOT NULL AND " \
+            "marketplace_listings.stock_reserved + marketplace_listings.stock_sold < " \
+            "marketplace_listings.stock_quantity)",
+          finite: Marketplace::Listing.inventory_modes[:finite],
+        )
     end
 
     def filter_by_category(scope)

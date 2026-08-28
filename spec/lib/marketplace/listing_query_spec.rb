@@ -51,6 +51,52 @@ describe Marketplace::ListingQuery do
 
       expect(query[:records]).not_to include(listing)
     end
+
+    it "hides an expired active listing" do
+      listing = make_listing(expires_at: 1.hour.ago)
+      expect(query[:records]).not_to include(listing)
+    end
+
+    it "shows an active listing with a future expiration" do
+      listing = make_listing(expires_at: 1.hour.from_now)
+      expect(query[:records]).to include(listing)
+    end
+
+    it "shows an active listing with no expiration" do
+      listing = make_listing(expires_at: nil)
+      expect(query[:records]).to include(listing)
+    end
+
+    it "hides a finite listing with zero remaining stock" do
+      listing =
+        make_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 3,
+          stock_reserved: 2,
+          stock_sold: 1,
+        )
+      expect(query[:records]).not_to include(listing)
+    end
+
+    it "shows a finite listing with remaining stock" do
+      listing =
+        make_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 3,
+          stock_reserved: 1,
+          stock_sold: 1,
+        )
+      expect(query[:records]).to include(listing)
+    end
+
+    it "shows an unlimited listing with a large stock_sold count" do
+      listing =
+        make_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:unlimited],
+          stock_sold: 999,
+        )
+      expect(query[:records]).to include(listing)
+    end
   end
 
   describe "filters" do

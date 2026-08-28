@@ -78,6 +78,57 @@ describe "GET /marketplace/listings" do
 
       expect(listing_ids).not_to include(hidden.id)
     end
+
+    it "excludes an expired active listing" do
+      expired = make_listing(expires_at: 1.hour.ago)
+      get_listings
+
+      expect(listing_ids).not_to include(expired.id)
+    end
+
+    it "includes an active listing with a future expiration" do
+      not_expired = make_listing(expires_at: 1.hour.from_now)
+      get_listings
+
+      expect(listing_ids).to include(not_expired.id)
+    end
+
+    it "excludes a finite listing with no remaining stock" do
+      sold_out =
+        make_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 2,
+          stock_reserved: 1,
+          stock_sold: 1,
+        )
+      get_listings
+
+      expect(listing_ids).not_to include(sold_out.id)
+    end
+
+    it "includes a finite listing with remaining stock" do
+      in_stock =
+        make_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 2,
+          stock_reserved: 1,
+          stock_sold: 0,
+        )
+      get_listings
+
+      expect(listing_ids).to include(in_stock.id)
+    end
+
+    it "includes an unlimited listing regardless of stock_sold" do
+      unlimited =
+        make_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:unlimited],
+          stock_sold: 40,
+        )
+      get_listings
+
+      expect(listing_ids).to include(unlimited.id)
+    end
   end
 
   describe "browse serializer fields" do
@@ -97,6 +148,13 @@ describe "GET /marketplace/listings" do
         "published_at",
         "thumbnail_url",
         "seller",
+        "inventory_mode",
+        "stock_quantity",
+        "stock_available",
+        "stock_sold",
+        "expires_at",
+        "expired",
+        "purchasable",
       )
     end
 

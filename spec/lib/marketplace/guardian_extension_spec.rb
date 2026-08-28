@@ -104,6 +104,45 @@ describe Marketplace::GuardianExtension do
       listing = build_listing(status: :active)
       expect(staff.guardian.can_create_marketplace_transaction?(listing)).to eq(true)
     end
+
+    it "is false for an expired active listing" do
+      listing = build_listing(status: :active, expires_at: 1.hour.ago)
+      expect(buyer.guardian.can_create_marketplace_transaction?(listing)).to eq(false)
+    end
+
+    it "is true for an active listing with a future expiration" do
+      listing = build_listing(status: :active, expires_at: 1.hour.from_now)
+      expect(buyer.guardian.can_create_marketplace_transaction?(listing)).to eq(true)
+    end
+
+    it "is true for an active unlimited listing with a large stock_sold count" do
+      listing = build_listing(status: :active, inventory_mode: :unlimited, stock_sold: 500)
+      expect(buyer.guardian.can_create_marketplace_transaction?(listing)).to eq(true)
+    end
+
+    it "is true for an active finite listing with remaining stock" do
+      listing =
+        build_listing(
+          status: :active,
+          inventory_mode: :finite,
+          stock_quantity: 2,
+          stock_reserved: 1,
+          stock_sold: 0,
+        )
+      expect(buyer.guardian.can_create_marketplace_transaction?(listing)).to eq(true)
+    end
+
+    it "is false for an active finite listing with no remaining stock" do
+      listing =
+        build_listing(
+          status: :active,
+          inventory_mode: :finite,
+          stock_quantity: 2,
+          stock_reserved: 1,
+          stock_sold: 1,
+        )
+      expect(buyer.guardian.can_create_marketplace_transaction?(listing)).to eq(false)
+    end
   end
 
   describe "#can_see_marketplace_transaction?" do

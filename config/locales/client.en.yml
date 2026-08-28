@@ -70,6 +70,13 @@ en:
         upload_uploading: "Uploading…"
         price_label: "Price"
         currency_label: "Currency"
+        inventory_mode_label: "Sale type"
+        inventory_mode_single: "Single item"
+        inventory_mode_finite: "Limited stock"
+        inventory_mode_unlimited: "Unlimited"
+        stock_quantity_label: "Stock quantity"
+        expires_at_label: "Listing expires (optional)"
+        expires_at_hint: "Leave blank for no expiration"
         submit_create: "Create Listing"
         submit_save: "Save Changes"
         error: "Something went wrong. Please check your listing and try again."
@@ -88,6 +95,14 @@ en:
           reserved: "Reserved"
           sold: "Sold"
           archived: "Archived"
+        stock:
+          unlimited: "Unlimited stock"
+          remaining: "%{count} left"
+          out_of_stock: "Out of stock"
+          sold_count: "%{count} sold"
+        expires:
+          label: "Expires %{date}"
+          expired: "Expired"
 
       transaction:
         confirm_button: "Confirm"

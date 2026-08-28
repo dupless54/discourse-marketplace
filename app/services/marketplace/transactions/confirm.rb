@@ -92,7 +92,11 @@ module Marketplace
     end
 
     def verify_pending_invariant(listing:)
-      raise Marketplace::TransactionInvariantViolation if !listing.reserved?
+      if listing.single?
+        raise Marketplace::TransactionInvariantViolation if !listing.reserved?
+      elsif listing.finite?
+        raise Marketplace::TransactionInvariantViolation if listing.stock_reserved < 1
+      end
     end
 
     # guardian.user is safe to dereference here: the can_confirm_marketplace_transaction
@@ -175,12 +179,7 @@ module Marketplace
       transaction_record.completed_at = now
       transaction_record.save!
 
-      affected_rows =
-        Marketplace::Listing
-          .where(id: listing.id, status: Marketplace::Listing.statuses[:reserved])
-          .update_all(status: Marketplace::Listing.statuses[:sold], closed_at: now, updated_at: now)
-
-      raise Marketplace::TransactionInvariantViolation if affected_rows != 1
+      consume_listing_capacity(listing, now)
 
       transaction_id = transaction_record.id
       DB.after_commit do
@@ -190,6 +189,38 @@ module Marketplace
           continue_on_error: true,
         )
       end
+    end
+
+    # SINGLE: the whole-listing reserved->sold CAS, unchanged from before
+    # inventory modes existed. FINITE: the reserved unit becomes permanently
+    # consumed (stock_reserved -= 1, stock_sold += 1); listing.status is
+    # never touched here -- purchasability is derived from the counters
+    # (see Marketplace::Listing#purchasable?), so a later cancellation
+    # elsewhere or a seller-raised stock_quantity can still reopen the
+    # listing without any status flip-flopping. UNLIMITED: nothing was ever
+    # reserved, so only the non-gating stock_sold counter advances.
+    def consume_listing_capacity(listing, now)
+      if listing.single?
+        affected_rows =
+          Marketplace::Listing
+            .where(id: listing.id, status: Marketplace::Listing.statuses[:reserved])
+            .update_all(status: Marketplace::Listing.statuses[:sold], closed_at: now, updated_at: now)
+      elsif listing.finite?
+        affected_rows =
+          Marketplace::Listing
+            .where(id: listing.id, inventory_mode: Marketplace::Listing.inventory_modes[:finite])
+            .where("stock_reserved > 0")
+            .update_all(
+              ["stock_reserved = stock_reserved - 1, stock_sold = stock_sold + 1, updated_at = ?", now],
+            )
+      else
+        affected_rows =
+          Marketplace::Listing
+            .where(id: listing.id)
+            .update_all(["stock_sold = stock_sold + 1, updated_at = ?", now])
+      end
+
+      raise Marketplace::TransactionInvariantViolation if affected_rows != 1
     end
   end
 end
