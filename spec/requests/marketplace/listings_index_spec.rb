@@ -156,6 +156,7 @@ describe "GET /marketplace/listings" do
         "expires_at",
         "expired",
         "purchasable",
+        "favorited",
       )
     end
 
