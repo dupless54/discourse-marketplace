@@ -12,6 +12,11 @@ en:
           transaction_confirmed: "marketplace"
           transaction_completed: "marketplace"
           transaction_cancelled: "marketplace"
+          offer_received: "marketplace"
+          offer_countered: "marketplace"
+          offer_accepted: "marketplace"
+          offer_rejected: "marketplace"
+          offer_withdrawn: "marketplace"
 
     marketplace:
       title: "Marketplace"
@@ -67,6 +72,16 @@ en:
         transaction_completed_title: "Marketplace transaction completed"
         transaction_cancelled: "%{username} cancelled the trade for %{listing_title}"
         transaction_cancelled_title: "Marketplace transaction cancelled"
+        offer_received: "%{username} sent an offer for %{listing_title}"
+        offer_received_title: "New Marketplace offer"
+        offer_countered: "%{username} sent a counteroffer for %{listing_title}"
+        offer_countered_title: "Marketplace counteroffer"
+        offer_accepted: "%{username} accepted the offer for %{listing_title}"
+        offer_accepted_title: "Marketplace offer accepted"
+        offer_rejected: "%{username} rejected the offer for %{listing_title}"
+        offer_rejected_title: "Marketplace offer rejected"
+        offer_withdrawn: "%{username} withdrew the offer for %{listing_title}"
+        offer_withdrawn_title: "Marketplace offer withdrawn"
 
       mine:
         title: "My Listings"
@@ -80,6 +95,52 @@ en:
         empty: "You haven't saved any listings yet."
         load_more: "Load more"
         error: "The favorite could not be updated. Please try again."
+
+      offers:
+        title: "My Offers"
+        tabs:
+          buyer: "Offers I Sent"
+          seller: "Offers I Received"
+        filters:
+          all: "All"
+        status_filter: "Filter offers by status"
+        empty: "No offers found."
+        load_more: "Load more"
+
+      offer:
+        panel_title: "Offers"
+        amount_label: "Offer amount"
+        amount_placeholder: "Enter an amount"
+        submit: "Make Offer"
+        from_buyer: "Offer from %{username}"
+        counterparty: "With %{username}"
+        asking_price: "Asking price: %{price}"
+        expires: "Expires: %{date}"
+        accept: "Accept"
+        reject: "Reject"
+        counter: "Counteroffer"
+        send_counter: "Send Counteroffer"
+        withdraw: "Withdraw"
+        cancel: "Cancel"
+        loading: "Loading offers…"
+        invalid_amount: "Enter a valid amount with up to two decimal places."
+        error: "The offer action could not be completed. Please try again."
+        status:
+          pending: "Pending"
+          accepted: "Accepted"
+          rejected: "Rejected"
+          withdrawn: "Withdrawn"
+          expired: "Expired"
+        errors:
+          offer_already_pending: "You already have a pending offer for this listing."
+          buyer_has_pending_transaction: "A purchase transaction is already pending for this listing."
+          listing_unavailable: "This listing is no longer available for this offer."
+          offer_expired: "This offer has expired."
+          offer_not_pending: "This offer is no longer pending."
+          offer_not_below_asking_price: "Your first offer must be lower than the asking price."
+          offer_above_asking_price: "A counteroffer cannot be above the current asking price."
+          offer_amount_unchanged: "The counteroffer must use a different amount."
+          offer_invalid: "This offer is not valid."
 
       browse:
         sort_newest: "Newest"
