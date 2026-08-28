@@ -23,6 +23,12 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
     assert
       .dom(".marketplace-listing-form__upload-input")
       .exists("a file input is registered for the uploader");
+    assert
+      .dom(".marketplace-listing-form__upload-input")
+      .hasClass(
+        "hidden-upload-field",
+        "the native file input is visually hidden, not shown duplicated next to the upload button"
+      );
   });
 
   test("shows an upload control and the existing description when editing a listing", async function (assert) {

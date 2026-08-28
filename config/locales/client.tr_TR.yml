@@ -1,4 +1,9 @@
 tr_TR:
+  admin_js:
+    admin:
+      site_settings:
+        categories:
+          marketplace: "Pazar Yeri"
   js:
     notifications:
       alt:
@@ -30,13 +35,13 @@ tr_TR:
           error: "Kategori kaydedilemedi. Değerleri kontrol edip tekrar deneyin."
 
       notifications:
-        transaction_started: "<p><span>%{username}</span>, %{description} ilanını satın almak istiyor</p>"
+        transaction_started: "%{username} %{listing_title} ilanını satın almak istiyor"
         transaction_started_title: "Pazar Yeri işlemi başlatıldı"
-        transaction_confirmed: "<p><span>%{username}</span>, %{description} için takası onayladı</p>"
+        transaction_confirmed: "%{username} %{listing_title} işlemini onayladı"
         transaction_confirmed_title: "Pazar Yeri onayı alındı"
-        transaction_completed: "<p>%{description} için pazar yeri takasınız tamamlandı</p>"
+        transaction_completed: "%{listing_title} işlemi tamamlandı"
         transaction_completed_title: "Pazar Yeri işlemi tamamlandı"
-        transaction_cancelled: "<p><span>%{username}</span>, %{description} için takası iptal etti</p>"
+        transaction_cancelled: "%{username} %{listing_title} işlemini iptal etti"
         transaction_cancelled_title: "Pazar Yeri işlemi iptal edildi"
 
       mine:
@@ -75,6 +80,8 @@ tr_TR:
         publish_button: "Yayınla"
         archive_button: "Arşivle"
         buy_button: "Satın Al"
+        message_seller_button: "Satıcıya Mesaj Gönder"
+        message_seller_subject: "İlanınız hakkında: %{listing_title}"
         status:
           draft: "Taslak"
           active: "Yayında"

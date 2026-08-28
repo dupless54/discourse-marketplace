@@ -2,7 +2,14 @@
 
 module Marketplace
   class ListingBrowseSerializer < ApplicationSerializer
-    attributes :id, :title, :category_id, :price_cents, :currency, :status, :published_at
+    attributes :id,
+               :title,
+               :category_id,
+               :price_cents,
+               :currency,
+               :status,
+               :published_at,
+               :thumbnail_url
 
     has_one :seller, serializer: BasicUserSerializer, embed: :objects
   end

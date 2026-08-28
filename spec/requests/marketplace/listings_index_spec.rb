@@ -95,6 +95,7 @@ describe "GET /marketplace/listings" do
         "currency",
         "status",
         "published_at",
+        "thumbnail_url",
         "seller",
       )
     end
@@ -119,6 +120,22 @@ describe "GET /marketplace/listings" do
       expect(seller_json["id"]).to eq(seller.id)
       expect(seller_json["username"]).to eq(seller.username)
       expect(seller_json).not_to have_key("email")
+    end
+
+    it "returns the first cooked image as thumbnail_url when the listing has one" do
+      make_listing(cooked: '<p>Nice</p><img src="/uploads/default/original/1X/photo.png">')
+      get_listings
+
+      expect(response.parsed_body["listings"].first["thumbnail_url"]).to eq(
+        "/uploads/default/original/1X/photo.png",
+      )
+    end
+
+    it "returns a null thumbnail_url when the listing has no image" do
+      make_listing(cooked: "<p>No photo here.</p>")
+      get_listings
+
+      expect(response.parsed_body["listings"].first["thumbnail_url"]).to be_nil
     end
   end
 

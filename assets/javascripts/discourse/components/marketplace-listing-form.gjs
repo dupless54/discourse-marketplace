@@ -123,7 +123,7 @@ export default class MarketplaceListingForm extends Component {
 
   <template>
     <form class="marketplace-listing-form" {{on "submit" this.submit}}>
-      <h1>
+      <h1 class="marketplace-listing-form__heading">
         {{#if this.isEdit}}
           {{i18n "marketplace.form.edit_title"}}
         {{else}}
@@ -135,29 +135,30 @@ export default class MarketplaceListingForm extends Component {
         <div class="marketplace-listing-form__error">{{this.errorMessage}}</div>
       {{/if}}
 
-      <label>
-        {{i18n "marketplace.form.title_label"}}
+      <div class="marketplace-listing-form__field">
+        <label>{{i18n "marketplace.form.title_label"}}</label>
         <input
           type="text"
           value={{this.title}}
           {{on "input" this.updateTitle}}
         />
-      </label>
+      </div>
 
-      <label>
-        {{i18n "marketplace.form.description_label"}}
+      <div class="marketplace-listing-form__field">
+        <label>{{i18n "marketplace.form.description_label"}}</label>
         <Textarea
           @value={{this.raw}}
           rows="8"
+          class="marketplace-listing-form__description"
           {{on "input" this.updateRaw}}
         />
-      </label>
+      </div>
 
-      <div class="marketplace-listing-form__upload">
+      <div class="marketplace-listing-form__field marketplace-listing-form__upload">
         <input
           {{didInsert this.uppyUpload.setup}}
           type="file"
-          class="marketplace-listing-form__upload-input"
+          class="marketplace-listing-form__upload-input hidden-upload-field"
           disabled={{this.uploading}}
         />
         <DButton
@@ -174,8 +175,8 @@ export default class MarketplaceListingForm extends Component {
         {{/if}}
       </div>
 
-      <label>
-        {{i18n "marketplace.form.category_label"}}
+      <div class="marketplace-listing-form__field">
+        <label>{{i18n "marketplace.form.category_label"}}</label>
         <select {{on "change" this.updateCategoryId}}>
           <option value="">{{i18n "marketplace.form.category_placeholder"}}</option>
           {{#each @categories as |category|}}
@@ -185,38 +186,42 @@ export default class MarketplaceListingForm extends Component {
             >{{category.name}}</option>
           {{/each}}
         </select>
-      </label>
+      </div>
 
-      <label>
-        {{i18n "marketplace.form.price_label"}}
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={{this.price}}
-          {{on "input" this.updatePrice}}
-        />
-      </label>
+      <div class="marketplace-listing-form__row">
+        <div class="marketplace-listing-form__field marketplace-listing-form__price-field">
+          <label>{{i18n "marketplace.form.price_label"}}</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={{this.price}}
+            {{on "input" this.updatePrice}}
+          />
+        </div>
 
-      <label>
-        {{i18n "marketplace.form.currency_label"}}
-        <select {{on "change" this.updateCurrency}}>
-          {{#each this.currencies as |currencyCode|}}
-            <option
-              value={{currencyCode}}
-              selected={{eq currencyCode this.currency}}
-            >{{currencyCode}}</option>
-          {{/each}}
-        </select>
-      </label>
+        <div class="marketplace-listing-form__field marketplace-listing-form__currency-field">
+          <label>{{i18n "marketplace.form.currency_label"}}</label>
+          <select {{on "change" this.updateCurrency}}>
+            {{#each this.currencies as |currencyCode|}}
+              <option
+                value={{currencyCode}}
+                selected={{eq currencyCode this.currency}}
+              >{{currencyCode}}</option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
 
-      <button type="submit" class="btn btn-primary" disabled={{this.saving}}>
-        {{#if this.isEdit}}
-          {{i18n "marketplace.form.submit_save"}}
-        {{else}}
-          {{i18n "marketplace.form.submit_create"}}
-        {{/if}}
-      </button>
+      <div class="marketplace-listing-form__actions">
+        <button type="submit" class="btn btn-primary" disabled={{this.saving}}>
+          {{#if this.isEdit}}
+            {{i18n "marketplace.form.submit_save"}}
+          {{else}}
+            {{i18n "marketplace.form.submit_create"}}
+          {{/if}}
+        </button>
+      </div>
     </form>
   </template>
 }

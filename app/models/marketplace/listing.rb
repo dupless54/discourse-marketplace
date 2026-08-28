@@ -41,6 +41,26 @@ module Marketplace
       end
     end
 
+    # Card thumbnail, derived from the already-persisted `cooked` column --
+    # no extra query, no migration. Mirrors the same safe, precedented
+    # technique core itself uses to read structure out of cooked HTML
+    # (Nokogiri::HTML5.fragment(cooked), see e.g. Post#mentions): parse the
+    # fragment and pull the `src` off the first non-emoji <img>, exactly the
+    # thumbnail-sized image Discourse's own upload pipeline already wrote
+    # into `cooked` when the raw markdown referenced an upload. Never
+    # returns markup, only a URL string. A listing with no image (a plain
+    # description, or a non-image attachment like a PDF) simply has no <img>
+    # to match, so this returns nil and the client falls back to a
+    # placeholder -- generic attachments are untouched either way.
+    def thumbnail_url
+      return @thumbnail_url if defined?(@thumbnail_url)
+
+      @thumbnail_url = begin
+        image = Nokogiri::HTML5.fragment(cooked).at_css("img:not(.emoji):not(.avatar)")
+        image&.attr("src").presence
+      end
+    end
+
     private
 
     def category_must_be_enabled

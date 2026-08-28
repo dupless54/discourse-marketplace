@@ -1,4 +1,9 @@
 en:
+  admin_js:
+    admin:
+      site_settings:
+        categories:
+          marketplace: "Marketplace"
   js:
     notifications:
       alt:
@@ -30,13 +35,13 @@ en:
           error: "The category could not be saved. Check the values and try again."
 
       notifications:
-        transaction_started: "<p><span>%{username}</span> wants to buy %{description}</p>"
+        transaction_started: "%{username} wants to buy %{listing_title}"
         transaction_started_title: "Marketplace transaction started"
-        transaction_confirmed: "<p><span>%{username}</span> confirmed the trade for %{description}</p>"
+        transaction_confirmed: "%{username} confirmed the trade for %{listing_title}"
         transaction_confirmed_title: "Marketplace confirmation received"
-        transaction_completed: "<p>Your marketplace trade for %{description} is complete</p>"
+        transaction_completed: "Your trade for %{listing_title} is complete"
         transaction_completed_title: "Marketplace transaction completed"
-        transaction_cancelled: "<p><span>%{username}</span> cancelled the trade for %{description}</p>"
+        transaction_cancelled: "%{username} cancelled the trade for %{listing_title}"
         transaction_cancelled_title: "Marketplace transaction cancelled"
 
       mine:
@@ -75,6 +80,8 @@ en:
         publish_button: "Publish"
         archive_button: "Archive"
         buy_button: "Buy"
+        message_seller_button: "Message Seller"
+        message_seller_subject: "About your listing: %{listing_title}"
         status:
           draft: "Draft"
           active: "Active"

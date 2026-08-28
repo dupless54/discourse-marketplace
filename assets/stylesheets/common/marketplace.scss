@@ -1,0 +1,327 @@
+// Marketplace uses Discourse's own theme custom properties throughout
+// (var(--primary), var(--secondary), var(--tertiary), etc.) rather than any
+// hardcoded colors, so it follows the site's light/dark scheme automatically
+// -- the same mechanism every other Discourse plugin stylesheet relies on.
+
+.marketplace-browse,
+.marketplace-my-listings,
+.marketplace-listing-detail,
+.marketplace-new,
+.marketplace-listing-edit {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1em;
+}
+
+.marketplace-browse__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-bottom: 1em;
+}
+
+.marketplace-browse__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-bottom: 1.5em;
+}
+
+// --- Shared listing-card grid (Browse + My Listings) ------------------
+
+.marketplace-listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1em;
+}
+
+.marketplace-listing-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius, 8px);
+  overflow: hidden;
+  background: var(--secondary);
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-card);
+  }
+}
+
+.marketplace-listing-card__media-link {
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.marketplace-listing-card__media {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--primary-very-low);
+  overflow: hidden;
+}
+
+.marketplace-listing-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.marketplace-listing-card__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--primary-medium);
+
+  .d-icon {
+    width: 2.5em;
+    height: 2.5em;
+  }
+}
+
+.marketplace-listing-card__status-badge {
+  position: absolute;
+  top: 0.5em;
+  right: 0.5em;
+  padding: 0.15em 0.6em;
+  border-radius: 1em;
+  font-size: $font-down-2;
+  font-weight: bold;
+  background: var(--primary-low);
+  color: var(--primary);
+
+  &--active {
+    background: var(--success-low, var(--primary-low));
+    color: var(--success, var(--primary));
+  }
+
+  &--sold {
+    background: var(--love-low, var(--primary-low));
+    color: var(--love, var(--primary));
+  }
+
+  &--reserved,
+  &--draft {
+    background: var(--primary-low);
+    color: var(--primary-medium);
+  }
+}
+
+.marketplace-listing-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  padding: 0.75em 0.9em;
+}
+
+.marketplace-listing-card__price {
+  font-size: $font-up-1;
+  font-weight: bold;
+  color: var(--tertiary);
+}
+
+.marketplace-listing-card__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.marketplace-listing-card__seller {
+  font-size: $font-down-1;
+  color: var(--primary-medium);
+}
+
+.marketplace-listing-card__actions {
+  display: flex;
+  gap: 0.5em;
+  padding: 0 0.9em 0.9em;
+  margin-top: auto;
+
+  .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+// --- Listing detail visual hierarchy -----------------------------------
+
+.marketplace-listing-detail__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 2em;
+  align-items: start;
+}
+
+.marketplace-listing-detail__content {
+  min-width: 0;
+}
+
+// Cooked listing content can contain user-uploaded images. Without this,
+// an oversized upload renders at its native pixel dimensions and blows out
+// the layout -- this is the actual production bug being fixed here.
+.marketplace-listing-detail__body {
+  min-width: 0;
+  overflow-wrap: break-word;
+
+  img {
+    max-width: 100%;
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: var(--d-border-radius, 8px);
+  }
+}
+
+.marketplace-listing-detail__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  padding: 1em;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius, 8px);
+  position: sticky;
+  top: 1em;
+}
+
+.marketplace-listing-detail__status {
+  align-self: flex-start;
+  padding: 0.15em 0.6em;
+  border-radius: 1em;
+  font-size: $font-down-2;
+  font-weight: bold;
+  background: var(--primary-low);
+  color: var(--primary-medium);
+}
+
+.marketplace-listing-detail__title {
+  margin: 0.1em 0;
+}
+
+.marketplace-listing-detail__price {
+  font-size: $font-up-3;
+  font-weight: bold;
+  color: var(--tertiary);
+}
+
+.marketplace-listing-detail__seller {
+  color: var(--primary-medium);
+}
+
+.marketplace-listing-detail__error {
+  color: var(--danger);
+}
+
+.marketplace-listing-detail__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 0.75em;
+}
+
+.marketplace-listing-detail__seller-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.marketplace-transaction {
+  margin-top: 1em;
+  padding-top: 1em;
+  border-top: 1px solid var(--primary-low);
+}
+
+@media (max-width: 700px) {
+  .marketplace-listing-detail__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace-listing-detail__panel {
+    position: static;
+  }
+}
+
+// --- New/Edit listing form ----------------------------------------------
+
+.marketplace-listing-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1em;
+  max-width: 640px;
+}
+
+.marketplace-listing-form__heading {
+  margin-bottom: 0;
+}
+
+.marketplace-listing-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+
+  label {
+    font-weight: 600;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.marketplace-listing-form__description {
+  resize: vertical;
+}
+
+.marketplace-listing-form__row {
+  display: flex;
+  gap: 1em;
+
+  .marketplace-listing-form__field {
+    flex: 1;
+  }
+}
+
+.marketplace-listing-form__upload {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.marketplace-listing-form__upload-progress {
+  color: var(--primary-medium);
+  font-size: $font-down-1;
+}
+
+.marketplace-listing-form__actions {
+  margin-top: 0.5em;
+}
+
+.marketplace-listing-form__error {
+  color: var(--danger);
+}
+
+@media (max-width: 500px) {
+  .marketplace-listing-form__row {
+    flex-direction: column;
+  }
+}
