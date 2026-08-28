@@ -1,0 +1,158 @@
+.marketplace-offer-panel,
+.marketplace-offer-center {
+  margin-top: 1.5rem;
+}
+
+.marketplace-offer-panel {
+  max-width: 48rem;
+  padding: 1rem;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius);
+  background: var(--secondary);
+
+  &__new,
+  &__counter,
+  &__actions,
+  &__amount-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__new {
+    margin-bottom: 1rem;
+  }
+
+  &__amount-input input,
+  &__counter input {
+    width: 10rem;
+  }
+
+  &__list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  &__item {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    background: var(--primary-very-low);
+  }
+
+  &__price {
+    font-size: var(--font-up-1);
+    font-weight: 700;
+  }
+
+  &__status {
+    color: var(--primary-medium);
+  }
+
+  &__error {
+    margin-bottom: 0.75rem;
+    color: var(--danger);
+  }
+}
+
+.marketplace-offer-center {
+  &__tabs,
+  &__filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__tab--active {
+    background: var(--tertiary-low);
+  }
+
+  &__list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  &__error {
+    margin-bottom: 1rem;
+    color: var(--danger);
+  }
+
+  &__load-more {
+    margin-top: 1rem;
+  }
+}
+
+.marketplace-offer-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius);
+  background: var(--secondary);
+
+  &__main {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__main h2 {
+    margin: 0 0 0.5rem;
+  }
+
+  &__amount {
+    font-size: var(--font-up-1);
+    font-weight: 700;
+  }
+
+  &__status {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--d-border-radius);
+    background: var(--primary-low);
+  }
+
+  &__actions,
+  &__counter-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__counter-form {
+    flex-basis: 100%;
+  }
+
+  &__counter-form input {
+    width: 10rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .marketplace-offer-card {
+    flex-direction: column;
+  }
+
+  .marketplace-offer-panel {
+    padding: 0.75rem;
+
+    &__new,
+    &__counter,
+    &__actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    &__amount-input input,
+    &__counter input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  }
+}
