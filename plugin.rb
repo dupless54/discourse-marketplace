@@ -24,7 +24,11 @@ after_initialize do
     { use_new_show_route: true },
   )
 
-  Discourse::Application.routes.append { mount ::Marketplace::Engine, at: "/marketplace" }
+  Discourse::Application.routes.append do
+    get "/admin/plugins/discourse-marketplace/categories" => "admin/plugins#index",
+        constraints: StaffConstraint.new
+    mount ::Marketplace::Engine, at: "/marketplace"
+  end
 
   reloadable_patch { ::Guardian.prepend(Marketplace::GuardianExtension) }
 
