@@ -1,5 +1,6 @@
 import { click, fillIn, render } from "@ember/test-helpers";
 import { module, test } from "qunit";
+import DialogHolder from "discourse/dialog-holder/components/dialog-holder";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import pretender, { response } from "discourse/tests/helpers/create-pretender";
 import MarketplaceCategoryAdmin from "discourse/plugins/discourse-marketplace/discourse/components/marketplace-category-admin";
@@ -159,5 +160,34 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
     assert.dom(".marketplace-category-admin__field-position").hasValue("4");
     assert.dom(".marketplace-category-admin__field-required").isChecked();
     assert.dom(".marketplace-category-admin__field-enabled").isNotChecked();
+  });
+
+  test("deletes an unused category after confirmation", async function (assert) {
+    this.categories = [
+      {
+        id: 1,
+        name: "Cars",
+        slug: "cars",
+        position: 1,
+        enabled: true,
+        field_definitions: [],
+      },
+    ];
+    pretender.delete("/marketplace/admin/categories/1", () => response({}));
+
+    await render(<template>
+      <DialogHolder />
+      <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
+    </template>);
+
+    await click(".marketplace-category-admin__delete-category");
+
+    assert
+      .dom(".dialog-body")
+      .includesText("Cars", "the confirmation identifies the category");
+
+    await click(".dialog-footer .btn-primary");
+
+    assert.dom('[data-category-id="1"]').doesNotExist("the deleted category is removed");
   });
 });
