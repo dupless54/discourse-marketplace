@@ -277,7 +277,7 @@ describe Marketplace::Listing do
   describe ".cook" do
     it "wraps an embedded image in the lightbox markup PhotoSwipe activates client-side" do
       upload = Fabricate(:upload)
-      cooked = Marketplace::Listing.cook("Check it out: #{upload.short_url}")
+      cooked = Marketplace::Listing.cook("![photo](#{upload.short_url})")
       fragment = Nokogiri::HTML5.fragment(cooked)
 
       wrapper = fragment.at_css("div.lightbox-wrapper")

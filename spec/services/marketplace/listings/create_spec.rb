@@ -38,7 +38,7 @@ describe Marketplace::Listings::Create do
     result =
       call_service(
         guardian: guardian,
-        params: params.merge(raw: "Photo: #{upload.short_url}"),
+        params: params.merge(raw: "![photo](#{upload.short_url})"),
       )
 
     expect(result).to be_success
