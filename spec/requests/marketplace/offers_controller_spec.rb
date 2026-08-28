@@ -214,6 +214,7 @@ describe Marketplace::OffersController do
 
       post "/marketplace/offers/#{offer.id}/accept.json"
       first_id = response.parsed_body.dig("transaction", "id")
+      expect(first_id).to be_present
       post "/marketplace/offers/#{offer.id}/accept.json"
 
       expect(response.status).to eq(200)
