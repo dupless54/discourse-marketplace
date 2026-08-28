@@ -40,11 +40,9 @@ module Marketplace
           .includes(:buyer, :seller, :listing, :accepted_transaction)
           .where(listing_id: listing.id)
 
-      if current_user.id == listing.seller_id || guardian.is_staff?
-        # Seller/staff may inspect the listing's negotiations. Everyone else
-        # is scoped to their own buyer row by construction, preventing IDOR.
-        scope = scope
-      else
+      # Seller/staff may inspect the listing's negotiations. Everyone else is
+      # scoped to their own buyer row by construction, preventing IDOR.
+      if current_user.id != listing.seller_id && !guardian.is_staff?
         scope = scope.where(buyer_id: current_user.id)
       end
 
@@ -92,13 +90,8 @@ module Marketplace
       ) do |result|
         on_success do |offer:, transaction:|
           render_json_dump(
-            offer: Marketplace::OfferSerializer.new(offer, scope: guardian, root: false).as_json,
-            transaction:
-              Marketplace::TransactionSerializer.new(
-                transaction,
-                scope: guardian,
-                root: false,
-              ).as_json,
+            offer: serialize_data(offer, Marketplace::OfferSerializer),
+            transaction: serialize_data(transaction, Marketplace::TransactionSerializer),
           )
         end
         on_model_not_found(:offer) { raise Discourse::NotFound }
