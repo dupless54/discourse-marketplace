@@ -1,6 +1,7 @@
 import { concat, fn } from "@ember/helper";
 import { action } from "@ember/object";
 import { on } from "@ember/modifier";
+import { service } from "@ember/service";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { ajax } from "discourse/lib/ajax";
@@ -46,6 +47,8 @@ function textToChoices(text) {
 }
 
 export default class MarketplaceCategoryAdmin extends Component {
+  @service dialog;
+
   fieldTypes = FIELD_TYPES;
   @tracked categories = this.args.initialCategories.map((category) =>
     this.prepareCategory(category)
@@ -55,6 +58,7 @@ export default class MarketplaceCategoryAdmin extends Component {
   @tracked newPosition = 0;
   @tracked newEnabled = true;
   @tracked savingId = null;
+  @tracked deletingId = null;
   @tracked savingFieldId = null;
   @tracked creatingFieldFor = null;
   @tracked creating = false;
@@ -216,6 +220,31 @@ export default class MarketplaceCategoryAdmin extends Component {
   }
 
   @action
+  deleteCategory(category) {
+    return this.dialog.yesNoConfirm({
+      message: i18n("marketplace.admin.categories.delete_confirm", {
+        name: category.name,
+      }),
+      didConfirm: async () => {
+        this.deletingId = category.id;
+        this.errorMessage = null;
+        try {
+          await ajax(`/marketplace/admin/categories/${category.id}`, {
+            type: "DELETE",
+          });
+          this.categories = this.categories.filter(
+            (item) => item.id !== category.id
+          );
+        } catch (error) {
+          this.errorMessage = this.errorFor(error);
+        } finally {
+          this.deletingId = null;
+        }
+      },
+    });
+  }
+
+  @action
   async createField(category) {
     this.creatingFieldFor = category.id;
     this.errorMessage = null;
@@ -372,6 +401,13 @@ export default class MarketplaceCategoryAdmin extends Component {
               @icon="check"
               @action={{fn this.saveCategory category}}
               @disabled={{this.savingId}}
+            />
+            <DButton
+              class="btn-danger btn-small marketplace-category-admin__delete-category"
+              @label="marketplace.admin.categories.delete"
+              @icon="trash-can"
+              @action={{fn this.deleteCategory category}}
+              @disabled={{this.deletingId}}
             />
           </div>
 
