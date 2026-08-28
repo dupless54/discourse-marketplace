@@ -2,6 +2,11 @@ import { click, currentURL, visit } from "@ember/test-helpers";
 import { test } from "qunit";
 import { acceptance } from "discourse/tests/helpers/qunit-helpers";
 
+const EMPTY_LISTINGS = {
+  listings: [],
+  pagination: { page: 1, per_page: 20, has_more: false },
+};
+
 const LISTING = {
   id: 77,
   title: "Saved marketplace listing",
@@ -27,6 +32,13 @@ acceptance("Marketplace | favorites", function (needs) {
   needs.user({ id: 7, username: "buyer" });
   needs.settings({ marketplace_enabled: true });
   needs.pretender((server, helper) => {
+    // The Marketplace parent route may settle through the browse index while
+    // Ember enters this child route directly, so keep those parent requests
+    // deterministic in the acceptance environment as well.
+    server.get("/marketplace/categories", () =>
+      helper.response({ categories: [] })
+    );
+    server.get("/marketplace/listings", () => helper.response(EMPTY_LISTINGS));
     server.get("/marketplace/favorites", () =>
       helper.response({
         listings: [LISTING],
