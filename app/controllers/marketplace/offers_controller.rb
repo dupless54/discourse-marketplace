@@ -88,8 +88,9 @@ module Marketplace
       ) do |result|
         on_success do |offer:, transaction:|
           render_json_dump(
-            offer: serialize_data(offer, Marketplace::OfferSerializer),
-            transaction: serialize_data(transaction, Marketplace::TransactionSerializer),
+            offer: serialize_data(offer, Marketplace::OfferSerializer, root: false),
+            transaction:
+              serialize_data(transaction, Marketplace::TransactionSerializer, root: false),
           )
         end
         on_model_not_found(:offer) { raise Discourse::NotFound }
