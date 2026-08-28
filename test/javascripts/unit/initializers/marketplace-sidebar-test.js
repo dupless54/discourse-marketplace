@@ -11,7 +11,15 @@ function mainPanel() {
 }
 
 function marketplaceSections() {
-  return mainPanel().sections.filter((section) => section.name === "marketplace");
+  // panel.sections holds the raw, uninstantiated classes returned from the
+  // addSidebarSection callback -- core only calls `new` on them lazily, at
+  // sidebar render time (see components/sidebar/api-sections.gjs). Reading
+  // `.name` off the class itself would return the JS Function.name (the
+  // class's own declared identifier), not our custom getter, so instantiate
+  // first, exactly as the real render path does.
+  return mainPanel()
+    .sections.map((Section) => new Section())
+    .filter((section) => section.name === "marketplace");
 }
 
 module("Unit | Initializer | marketplace-sidebar", function (hooks) {
