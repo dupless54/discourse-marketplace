@@ -6,6 +6,7 @@ tr_TR:
   marketplace:
     errors:
       category_disabled: "devre dışı bırakılmış ve ilanlar için kullanılamaz"
+      category_in_use: "Bu kategori hâlâ pazar yeri ilanlarında kullanıldığı için silinemez. Bunun yerine devre dışı bırakın veya önce bu ilanları başka bir kategoriye taşıyın."
       stock_exceeded: "zaten rezerve edilmiş veya satılmış birim sayısından az olamaz"
       inventory_mode_locked: "ilanın işlem geçmişi olduğu için değiştirilemez"
       too_many_category_fields: "Bir kategoride 30'dan fazla ilan alanı olamaz"
