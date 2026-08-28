@@ -7,12 +7,14 @@ module Marketplace
     SORTS = %w[newest price_asc price_desc].freeze
     MAX_STRUCTURED_FILTERS = 30
 
-    def initialize(params: {})
+    def initialize(params: {}, seller_id: nil)
       @params = params
+      @seller_id = seller_id
     end
 
     def results
       scope = base_scope
+      scope = filter_by_seller(scope)
       scope = filter_by_category(scope)
       scope = filter_by_structured_fields(scope)
       scope = filter_by_currency(scope)
@@ -32,7 +34,7 @@ module Marketplace
 
     private
 
-    attr_reader :params
+    attr_reader :params, :seller_id
 
     # Mandatory, no exceptions: browse/index only ever returns active listings
     # in enabled categories, regardless of who is asking. No guardian is even
@@ -51,6 +53,12 @@ module Marketplace
             "marketplace_listings.stock_quantity)",
           finite: Marketplace::Listing.inventory_modes[:finite],
         )
+    end
+
+    def filter_by_seller(scope)
+      return scope if seller_id.nil?
+
+      scope.where(seller_id: seller_id)
     end
 
     def filter_by_category(scope)
