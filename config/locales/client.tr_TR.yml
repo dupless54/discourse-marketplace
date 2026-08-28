@@ -105,6 +105,12 @@ tr_TR:
           expired: "Süresi doldu"
 
       transaction:
+        seller_heading: "İşlemler"
+        pending_heading: "Bekleyenler"
+        history_heading: "Geçmiş"
+        buyer: "Alıcı: %{username}"
+        no_pending: "Bekleyen işlem yok."
+        load_more: "Daha fazla yükle"
         confirm_button: "Onayla"
         cancel_button: "İptal Et"
         error: "Bu işlemle ilgili bir sorun oluştu. Lütfen tekrar deneyin."

@@ -3,6 +3,8 @@ import MarketplaceListingDetail from "../../components/marketplace-listing-detai
 export default <template>
   <MarketplaceListingDetail
     @listing={{@controller.model.listing}}
-    @transaction={{@controller.model.transaction}}
+    @transactions={{@controller.model.transactions}}
+    @transactionsPagination={{@controller.model.transactionsPagination}}
+    @selectedTransactionId={{@controller.model.selectedTransactionId}}
   />
 </template>

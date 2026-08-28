@@ -25,6 +25,7 @@ module Marketplace
         recipient_id: transaction.seller_id,
         actor: transaction.buyer,
         listing: transaction.listing,
+        transaction_id: transaction.id,
         message: "marketplace.notifications.transaction_started",
       )
     end
@@ -49,6 +50,7 @@ module Marketplace
         recipient_id: recipient_id,
         actor: actor,
         listing: transaction.listing,
+        transaction_id: transaction.id,
         message: "marketplace.notifications.transaction_confirmed",
       )
     end
@@ -62,6 +64,7 @@ module Marketplace
           recipient_id: recipient.id,
           actor: nil,
           listing: transaction.listing,
+          transaction_id: transaction.id,
           message: "marketplace.notifications.transaction_completed",
         )
       end
@@ -89,6 +92,7 @@ module Marketplace
           recipient_id: recipient.id,
           actor: actor,
           listing: transaction.listing,
+          transaction_id: transaction.id,
           message: "marketplace.notifications.transaction_cancelled",
         )
       end
@@ -99,13 +103,13 @@ module Marketplace
     end
     private_class_method :find_transaction
 
-    # listing_id travels in the payload so the client can link the
-    # notification straight back to /marketplace/listings/:id (see the
-    # "custom" notification type renderer registered in
+    # listing_id and transaction_id travel in the payload so the client can
+    # link back to the exact transaction on /marketplace/listings/:id (see
+    # the "custom" notification type renderer registered in
     # assets/javascripts/discourse/initializers/marketplace-notifications.js).
     # The recipient is always a transaction participant already, so this
     # adds no exposure beyond what they can already reach.
-    def self.notify(recipient_id:, actor:, listing:, message:)
+    def self.notify(recipient_id:, actor:, listing:, transaction_id:, message:)
       Notification.create!(
         notification_type: Notification.types[:custom],
         user_id: recipient_id,
@@ -114,6 +118,7 @@ module Marketplace
           display_username: actor&.username,
           topic_title: listing.title,
           listing_id: listing.id,
+          transaction_id: transaction_id,
           title: "#{message}_title",
         }.to_json,
       )

@@ -5,25 +5,50 @@ import { ajax } from "discourse/lib/ajax";
 export default class MarketplaceListingRoute extends Route {
   @service currentUser;
 
+  queryParams = {
+    transaction_id: { refreshModel: true },
+  };
+
   async model(params) {
     const listingResult = await ajax(
       `/marketplace/listings/${params.listing_id}`
     );
 
-    let transaction = null;
+    let transactions = [];
+    let transactionsPagination = null;
     if (this.currentUser) {
-      try {
-        const transactionResult = await ajax(
-          `/marketplace/listings/${params.listing_id}/transaction`
+      const baseUrl = `/marketplace/listings/${params.listing_id}/transactions`;
+
+      if (params.transaction_id) {
+        const exactResult = await ajax(
+          `${baseUrl}?transaction_id=${encodeURIComponent(params.transaction_id)}`
         );
-        transaction = transactionResult.transaction;
-      } catch {
-        // No open transaction exists yet for the current user on this listing --
-        // that is the common case, not an error.
-        transaction = null;
+        transactions = exactResult.transactions;
+        transactionsPagination = exactResult.pagination;
+
+        const pageResult = await ajax(`${baseUrl}?page=1`);
+        const ids = new Set(transactions.map((transaction) => transaction.id));
+        transactions = [
+          ...transactions,
+          ...pageResult.transactions.filter(
+            (transaction) => !ids.has(transaction.id)
+          ),
+        ];
+        transactionsPagination = pageResult.pagination;
+      } else {
+        const result = await ajax(`${baseUrl}?page=1`);
+        transactions = result.transactions;
+        transactionsPagination = result.pagination;
       }
     }
 
-    return { listing: listingResult.listing, transaction };
+    return {
+      listing: listingResult.listing,
+      transactions,
+      transactionsPagination,
+      selectedTransactionId: params.transaction_id
+        ? Number(params.transaction_id)
+        : null,
+    };
   }
 }

@@ -125,6 +125,29 @@ describe Marketplace::Transactions::Create do
       expect(result).to fail_a_policy(:can_create_marketplace_transaction)
     end
 
+    it "keeps SINGLE one-sale behavior after completion" do
+      listing = build_listing(status: :sold)
+      now = Time.current
+      completed =
+        Fabricate(
+          :marketplace_transaction,
+          listing: listing,
+          buyer: buyer,
+          seller: seller,
+          status: Marketplace::Transaction.statuses[:completed],
+          buyer_confirmed_at: now,
+          seller_confirmed_at: now,
+          completed_at: now,
+        )
+
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_failure
+      expect(result).to fail_a_policy(:can_create_marketplace_transaction)
+      expect(Marketplace::Transaction.where(listing_id: listing.id).pluck(:id)).to eq([completed.id])
+      expect(listing.reload.status).to eq("sold")
+    end
+
     it "rejects a sold listing" do
       listing = build_listing(status: :sold)
       result = call_service(guardian: buyer.guardian, listing_id: listing.id)
@@ -384,6 +407,52 @@ describe Marketplace::Transactions::Create do
       expect(listing.reload.stock_reserved).to eq(1)
     end
 
+    it "lets the same buyer purchase again after completion while preserving history" do
+      listing = build_finite_listing(stock_quantity: 2, stock_sold: 1)
+      now = Time.current
+      completed =
+        Fabricate(
+          :marketplace_transaction,
+          listing: listing,
+          buyer: buyer,
+          seller: seller,
+          status: Marketplace::Transaction.statuses[:completed],
+          buyer_confirmed_at: now,
+          seller_confirmed_at: now,
+          completed_at: now,
+        )
+
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_success
+      expect(result.transaction.id).not_to eq(completed.id)
+      expect(result.transaction.status).to eq("pending")
+      expect(completed.reload.status).to eq("completed")
+      expect(listing.reload.stock_reserved).to eq(1)
+      expect(listing.stock_sold).to eq(1)
+    end
+
+    it "lets the same buyer purchase again after cancellation" do
+      listing = build_finite_listing(stock_quantity: 2)
+      cancelled =
+        Fabricate(
+          :marketplace_transaction,
+          listing: listing,
+          buyer: buyer,
+          seller: seller,
+          status: Marketplace::Transaction.statuses[:cancelled],
+          cancelled_at: Time.current,
+          cancelled_by_id: buyer.id,
+        )
+
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_success
+      expect(result.transaction.id).not_to eq(cancelled.id)
+      expect(cancelled.reload.status).to eq("cancelled")
+      expect(listing.reload.stock_reserved).to eq(1)
+    end
+
     it "rejects a draft finite listing with a plain policy failure, not listing_unavailable" do
       listing = build_finite_listing(status: :draft, stock_quantity: 2)
       result = call_service(guardian: buyer.guardian, listing_id: listing.id)
@@ -436,6 +505,31 @@ describe Marketplace::Transactions::Create do
 
       expect(second.transaction.id).to eq(first.transaction.id)
       expect(Marketplace::Transaction.where(listing_id: listing.id).count).to eq(1)
+    end
+
+    it "lets the same buyer purchase again after completion" do
+      listing = build_unlimited_listing(stock_sold: 1)
+      now = Time.current
+      completed =
+        Fabricate(
+          :marketplace_transaction,
+          listing: listing,
+          buyer: buyer,
+          seller: seller,
+          status: Marketplace::Transaction.statuses[:completed],
+          buyer_confirmed_at: now,
+          seller_confirmed_at: now,
+          completed_at: now,
+        )
+
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_success
+      expect(result.transaction.id).not_to eq(completed.id)
+      expect(completed.reload.status).to eq("completed")
+      expect(Marketplace::Transaction.where(listing_id: listing.id, buyer_id: buyer.id).count).to eq(
+        2,
+      )
     end
 
     it "rejects an expired unlimited listing with a plain policy failure" do

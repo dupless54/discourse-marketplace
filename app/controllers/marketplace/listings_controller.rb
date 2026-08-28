@@ -3,7 +3,10 @@
 module Marketplace
   class ListingsController < ::ApplicationController
     requires_plugin Marketplace::PLUGIN_NAME
-    requires_login only: %i[create update update_status transaction mine]
+    requires_login only: %i[create update update_status transactions mine]
+
+    TRANSACTIONS_DEFAULT_PER_PAGE = 20
+    TRANSACTIONS_MAX_PER_PAGE = 50
 
     def index
       result = Marketplace::ListingQuery.new(params: params).results
@@ -134,27 +137,71 @@ module Marketplace
       end
     end
 
-    # Lets a listing's viewer discover their own open transaction on it
-    # (if any) without a general "my transactions" index -- scoped
-    # entirely by the WHERE clause itself (buyer_id/seller_id = current
-    # user), so no separate Guardian predicate is needed: no row outside
-    # the viewer's own participation can ever be returned. The existing
-    # partial unique index on (listing_id) WHERE status <> 20 serves this
-    # exact open-transaction query. Cancelled transactions intentionally
-    # return 404 so an active listing can start a new transaction cleanly.
-    def transaction
+    # Participant-scoped transaction history for one listing. A listing's
+    # seller sees every transaction for that listing; every other user sees
+    # only rows where they are the buyer. An explicit transaction_id is an
+    # exact selector for notification links, never an authorization input:
+    # it is applied only after the participant scope and returns the same
+    # masked 404 for a missing or another buyer's transaction.
+    def transactions
       listing = Marketplace::Listing.find_by(id: params[:id])
       raise Discourse::NotFound if listing.blank?
 
-      record =
+      scope =
         Marketplace::Transaction
+          .includes(:buyer, :seller, :listing)
           .where(listing_id: listing.id)
-          .where("buyer_id = :uid OR seller_id = :uid", uid: current_user.id)
-          .where.not(status: Marketplace::Transaction.statuses[:cancelled])
-          .first
-      raise Discourse::NotFound if record.blank?
 
-      render_serialized(record, Marketplace::TransactionSerializer, root: "transaction")
+      scope =
+        if listing.seller_id == current_user.id
+          scope.where(seller_id: current_user.id)
+        else
+          scope.where(buyer_id: current_user.id)
+        end
+
+      if params[:transaction_id].present?
+        transaction_id = positive_integer_param(params[:transaction_id], :transaction_id)
+        record = scope.find_by(id: transaction_id)
+        raise Discourse::NotFound if record.blank?
+
+        return render_json_dump(
+                 transactions: serialize_data([record], Marketplace::TransactionSerializer),
+                 pagination: {
+                   page: 1,
+                   per_page: 1,
+                   has_more: false,
+                 },
+               )
+      end
+
+      page = positive_integer_param(params[:page], :page, default: 1)
+      per_page =
+        [
+          positive_integer_param(
+            params[:per_page],
+            :per_page,
+            default: TRANSACTIONS_DEFAULT_PER_PAGE,
+          ),
+          TRANSACTIONS_MAX_PER_PAGE,
+        ].min
+
+      records =
+        scope
+          .order(status: :asc, created_at: :desc, id: :desc)
+          .limit(per_page + 1)
+          .offset((page - 1) * per_page)
+          .to_a
+      has_more = records.size > per_page
+      records = records.first(per_page)
+
+      render_json_dump(
+        transactions: serialize_data(records, Marketplace::TransactionSerializer),
+        pagination: {
+          page: page,
+          per_page: per_page,
+          has_more: has_more,
+        },
+      )
     end
 
     def update_status
@@ -195,7 +242,7 @@ module Marketplace
     # Strict, matching Marketplace::ListingQuery: only digit strings are
     # accepted, so "abc", "1.5", "-1", and "" all raise rather than silently
     # coercing to 0/1 via to_i.
-    def positive_integer_param(value, key, default:)
+    def positive_integer_param(value, key, default: nil)
       return default if value.blank?
 
       str = value.to_s.strip

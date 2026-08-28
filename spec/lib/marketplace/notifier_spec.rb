@@ -43,11 +43,27 @@ describe Marketplace::Notifier do
       expect(data["display_username"]).to eq(buyer.username)
       expect(data["topic_title"]).to eq(listing.title)
       expect(data["listing_id"]).to eq(listing.id)
+      expect(data["transaction_id"]).to eq(transaction.id)
       expect(data["title"]).to eq("marketplace.notifications.transaction_started_title")
     end
 
     it "does nothing for an unknown transaction id" do
       expect { described_class.notify_transaction_created(-1) }.not_to change { Notification.count }
+    end
+
+    it "keeps notifications for two buyers on one listing distinguishable" do
+      other_buyer = Fabricate(:user)
+      first = build_transaction
+      second = build_transaction(buyer: other_buyer)
+
+      described_class.notify_transaction_created(first.id)
+      described_class.notify_transaction_created(second.id)
+
+      transaction_ids =
+        custom_notifications_for(seller).order(:id).map do |notification|
+          JSON.parse(notification.data)["transaction_id"]
+        end
+      expect(transaction_ids).to eq([first.id, second.id])
     end
   end
 
@@ -63,6 +79,7 @@ describe Marketplace::Notifier do
       data = JSON.parse(custom_notifications_for(seller).first.data)
       expect(data["message"]).to eq("marketplace.notifications.transaction_confirmed")
       expect(data["listing_id"]).to eq(listing.id)
+      expect(data["transaction_id"]).to eq(transaction.id)
     end
 
     it "notifies the buyer when the seller confirmed first" do
@@ -107,6 +124,7 @@ describe Marketplace::Notifier do
       data = JSON.parse(custom_notifications_for(buyer).first.data)
       expect(data["message"]).to eq("marketplace.notifications.transaction_completed")
       expect(data["listing_id"]).to eq(listing.id)
+      expect(data["transaction_id"]).to eq(transaction.id)
     end
   end
 
@@ -123,6 +141,7 @@ describe Marketplace::Notifier do
       data = JSON.parse(custom_notifications_for(seller).first.data)
       expect(data["message"]).to eq("marketplace.notifications.transaction_cancelled")
       expect(data["listing_id"]).to eq(listing.id)
+      expect(data["transaction_id"]).to eq(transaction.id)
     end
 
     it "notifies only the buyer when the seller cancelled" do
