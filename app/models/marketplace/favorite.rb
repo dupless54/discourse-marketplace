@@ -23,6 +23,7 @@ end
 #
 # Indexes
 #
+#  idx_marketplace_favorites_listing       (listing_id)
 #  idx_marketplace_favorites_user_created  (user_id,created_at,id)
 #  idx_marketplace_favorites_user_listing  (user_id,listing_id) UNIQUE
 #
