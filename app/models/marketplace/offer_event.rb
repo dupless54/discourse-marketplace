@@ -5,7 +5,7 @@ module Marketplace
     self.table_name = "marketplace_offer_events"
 
     belongs_to :offer, class_name: "Marketplace::Offer", inverse_of: :events
-    belongs_to :actor, class_name: "User"
+    belongs_to :actor, class_name: "User", optional: true
 
     enum :event_type,
          {
@@ -18,12 +18,13 @@ module Marketplace
          },
          scopes: false
 
-    validates :offer, :actor, :event_type, presence: true
+    validates :offer, :event_type, presence: true
     validates :amount_cents,
               numericality: { only_integer: true, greater_than: 0 },
               allow_nil: true
     validates :currency, length: { is: 3 }, allow_nil: true
     validate :actor_is_participant
+    validate :human_events_require_actor
 
     private
 
@@ -32,6 +33,13 @@ module Marketplace
       return if offer.participant?(actor_id)
 
       errors.add(:actor_id, "must be an offer participant")
+    end
+
+    def human_events_require_actor
+      return if expired?
+      return if actor_id.present?
+
+      errors.add(:actor_id, "is required for user-authored offer events")
     end
   end
 end
