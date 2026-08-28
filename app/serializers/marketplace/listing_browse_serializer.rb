@@ -16,7 +16,8 @@ module Marketplace
                :stock_sold,
                :expires_at,
                :expired,
-               :purchasable
+               :purchasable,
+               :favorited
 
     has_one :seller, serializer: BasicUserSerializer, embed: :objects
     has_one :category, serializer: Marketplace::CategorySerializer, embed: :objects
@@ -27,6 +28,10 @@ module Marketplace
 
     def purchasable
       object.purchasable?
+    end
+
+    def favorited
+      !!object.instance_variable_get(:@marketplace_favorited_by_viewer)
     end
   end
 end
