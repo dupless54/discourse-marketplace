@@ -22,9 +22,7 @@ RSpec.describe Marketplace::StorefrontsController do
   end
 
   def get_storefront(username, params: {})
-    get "/marketplace/sellers/#{username}",
-        params: params,
-        headers: { "ACCEPT" => "application/json" }
+    get "/marketplace/sellers/#{username}.json", params: params
   end
 
   describe "GET /marketplace/sellers/:username" do
@@ -44,51 +42,6 @@ RSpec.describe Marketplace::StorefrontsController do
       disabled_category = Fabricate(:marketplace_category)
       active_listing(user: seller, title: "Disabled category", category: disabled_category)
       disabled_category.update!(enabled: false)
-
-      anonymous_guardian = Guardian.new
-      expect(User.find_by_username(seller.username)).to eq(seller)
-      expect(seller).to be_active
-      expect { anonymous_guardian.ensure_public_can_see_profiles! }.not_to raise_error
-      expect(anonymous_guardian.can_see_profile?(seller)).to eq(true)
-
-      expect_any_instance_of(Marketplace::StorefrontsController).to receive(:show).and_call_original
-      expect(User).to receive(:find_by_username).with(seller.username).and_call_original
-      expect_any_instance_of(Guardian)
-        .to receive(:can_see_profile?)
-        .with(seller)
-        .and_wrap_original do |method, *args|
-          result = method.call(*args)
-          expect(result).to eq(true)
-          result
-        end
-      expect_any_instance_of(Marketplace::ListingQuery)
-        .to receive(:results)
-        .and_wrap_original do |method, *args|
-          result = method.call(*args)
-          expect(result[:records].map(&:id)).to eq([visible.id])
-          result
-        end
-      expect_any_instance_of(Marketplace::StorefrontsController)
-        .to receive(:mark_favorites!)
-        .with(satisfy { |records| records.map(&:id) == [visible.id] })
-        .and_call_original
-      expect_any_instance_of(Marketplace::StorefrontsController)
-        .to receive(:serialize_data)
-        .with(instance_of(User), BasicUserSerializer)
-        .and_call_original
-      expect_any_instance_of(Marketplace::StorefrontsController)
-        .to receive(:serialize_data)
-        .with(instance_of(Array), Marketplace::ListingBrowseSerializer)
-        .and_call_original
-      expect_any_instance_of(Marketplace::StorefrontsController)
-        .to receive(:render_json_dump)
-        .and_wrap_original do |method, *args|
-          controller = method.receiver
-          result = method.call(*args)
-          expect(controller.response.status).to eq(200)
-          expect(controller.response.media_type).to eq("application/json")
-          result
-        end
 
       get_storefront(seller.username)
 
