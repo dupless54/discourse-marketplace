@@ -53,8 +53,35 @@ RSpec.describe Marketplace::StorefrontsController do
 
       expect_any_instance_of(Marketplace::StorefrontsController).to receive(:show).and_call_original
       expect(User).to receive(:find_by_username).with(seller.username).and_call_original
-      expect_any_instance_of(Guardian).to receive(:can_see_profile?).with(seller).and_call_original
-      expect_any_instance_of(Marketplace::ListingQuery).to receive(:results).and_call_original
+      expect_any_instance_of(Guardian)
+        .to receive(:can_see_profile?)
+        .with(seller)
+        .and_wrap_original do |method, *args|
+          result = method.call(*args)
+          expect(result).to eq(true)
+          result
+        end
+      expect_any_instance_of(Marketplace::ListingQuery)
+        .to receive(:results)
+        .and_wrap_original do |method, *args|
+          result = method.call(*args)
+          expect(result[:records].map(&:id)).to eq([visible.id])
+          result
+        end
+      allow_any_instance_of(Marketplace::StorefrontsController)
+        .to receive(:serialize_data)
+        .and_wrap_original do |method, *args|
+          method.call(*args)
+        rescue Discourse::NotFound => e
+          raise "storefront serialize_data #{args[1]} raised NotFound: #{e.message}"
+        end
+      allow_any_instance_of(Marketplace::StorefrontsController)
+        .to receive(:render_json_dump)
+        .and_wrap_original do |method, *args|
+          method.call(*args)
+        rescue Discourse::NotFound => e
+          raise "storefront render_json_dump raised NotFound: #{e.message}"
+        end
 
       get_storefront(seller.username)
 
