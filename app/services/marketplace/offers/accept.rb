@@ -24,6 +24,7 @@ module Marketplace
       only_if(:not_replay) do
         policy :can_respond_marketplace_offer
         step :validate_buyer_and_listing
+        step :validate_current_terms
         step :reject_existing_pending_transaction
         model :transaction_candidate, :build_transaction
         step :save_transaction
@@ -78,6 +79,11 @@ module Marketplace
     def validate_buyer_and_listing(offer:, listing:)
       buyer_guardian = Guardian.new(offer.buyer)
       context.fail!(listing_unavailable: true) if !buyer_guardian.can_create_marketplace_transaction?(listing)
+    end
+
+    def validate_current_terms(offer:, listing:)
+      context.fail!(offer_currency_changed: true) if offer.currency != listing.currency
+      context.fail!(offer_above_asking_price: true) if offer.amount_cents > listing.price_cents
     end
 
     def reject_existing_pending_transaction(offer:, listing:)
