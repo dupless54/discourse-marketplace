@@ -5,6 +5,7 @@ module Marketplace
     DEFAULT_PER_PAGE = 20
     MAX_PER_PAGE = 50
     SORTS = %w[newest price_asc price_desc].freeze
+    MAX_STRUCTURED_FILTERS = 30
 
     def initialize(params: {})
       @params = params
@@ -13,6 +14,7 @@ module Marketplace
     def results
       scope = base_scope
       scope = filter_by_category(scope)
+      scope = filter_by_structured_fields(scope)
       scope = filter_by_currency(scope)
       scope = filter_by_price(scope)
       scope = filter_by_query(scope)
@@ -52,9 +54,33 @@ module Marketplace
     end
 
     def filter_by_category(scope)
-      return scope if params[:category_id].blank?
+      return scope if selected_category_id.nil?
 
-      scope.where(category_id: positive_integer(params[:category_id], :category_id))
+      scope.where(category_id: selected_category_id)
+    end
+
+    def filter_by_structured_fields(scope)
+      raw_filters = params[:field_filters]
+      return scope if raw_filters.blank?
+      raise Discourse::InvalidParameters.new(:field_filters) if selected_category_id.nil?
+
+      filters = normalize_structured_filters(raw_filters)
+      return scope if filters.empty?
+      raise Discourse::InvalidParameters.new(:field_filters) if filters.length > MAX_STRUCTURED_FILTERS
+
+      definitions =
+        Marketplace::CategoryFieldDefinition
+          .enabled
+          .where(category_id: selected_category_id, key: filters.keys)
+          .index_by(&:key)
+
+      raise Discourse::InvalidParameters.new(:field_filters) if definitions.length != filters.length
+
+      filters.each do |key, raw_value|
+        scope = apply_structured_filter(scope, definitions.fetch(key), raw_value)
+      end
+
+      scope
     end
 
     def filter_by_currency(scope)
@@ -112,6 +138,136 @@ module Marketplace
       end
     end
 
+    def selected_category_id
+      return @selected_category_id if defined?(@selected_category_id)
+
+      @selected_category_id =
+        if params[:category_id].blank?
+          nil
+        else
+          positive_integer(params[:category_id], :category_id)
+        end
+    end
+
+    def normalize_structured_filters(raw_filters)
+      raw_filters = raw_filters.to_unsafe_h if raw_filters.respond_to?(:to_unsafe_h)
+      raise Discourse::InvalidParameters.new(:field_filters) if !raw_filters.is_a?(Hash)
+
+      raw_filters.each_with_object({}) do |(raw_key, raw_value), normalized|
+        key = raw_key.to_s
+        if !key.match?(Marketplace::CategoryFieldDefinition::KEY_FORMAT)
+          raise Discourse::InvalidParameters.new(:field_filters)
+        end
+
+        normalized[key] = raw_value
+      end
+    end
+
+    def apply_structured_filter(scope, definition, raw_value)
+      case definition.field_type
+      when "integer"
+        apply_integer_structured_filter(scope, definition, raw_value)
+      when "boolean"
+        apply_boolean_structured_filter(scope, definition, raw_value)
+      when "select"
+        apply_select_structured_filter(scope, definition, raw_value)
+      when "text", "textarea"
+        apply_text_structured_filter(scope, definition, raw_value)
+      else
+        raise Discourse::InvalidParameters.new(:field_filters)
+      end
+    end
+
+    def apply_text_structured_filter(scope, definition, raw_value)
+      value = scalar_structured_filter(raw_value).strip
+      return scope if value.blank?
+
+      maximum =
+        definition.field_type == "textarea" ? Marketplace::Listing::MAX_TEXTAREA_LENGTH : Marketplace::Listing::MAX_TEXT_LENGTH
+      raise Discourse::InvalidParameters.new(:field_filters) if value.length > maximum
+
+      term = "%#{ActiveRecord::Base.sanitize_sql_like(value)}%"
+      matching_ids =
+        Marketplace::ListingFieldValue
+          .where(field_definition_id: definition.id)
+          .where("marketplace_listing_field_values.value ILIKE ?", term)
+          .select(:listing_id)
+
+      scope.where(id: matching_ids)
+    end
+
+    def apply_select_structured_filter(scope, definition, raw_value)
+      value = scalar_structured_filter(raw_value)
+      return scope if value.blank?
+
+      allowed_values = definition.choices.map { |choice| choice["value"] || choice[:value] }
+      raise Discourse::InvalidParameters.new(:field_filters) if !allowed_values.include?(value)
+
+      scope.where(id: exact_structured_value_ids(definition, value))
+    end
+
+    def apply_boolean_structured_filter(scope, definition, raw_value)
+      value =
+        case raw_value
+        when true, "true"
+          "true"
+        when false, "false"
+          "false"
+        when nil, ""
+          return scope
+        else
+          raise Discourse::InvalidParameters.new(:field_filters)
+        end
+
+      scope.where(id: exact_structured_value_ids(definition, value))
+    end
+
+    def apply_integer_structured_filter(scope, definition, raw_value)
+      range = parameter_hash(raw_value)
+      if range.nil?
+        value = signed_integer(raw_value, :field_filters, allow_blank: true)
+        return scope if value.nil?
+
+        return scope.where(id: exact_structured_value_ids(definition, value.to_s))
+      end
+
+      normalized_range = range.transform_keys(&:to_s)
+      raise Discourse::InvalidParameters.new(:field_filters) if (normalized_range.keys - %w[min max]).present?
+
+      min = signed_integer(normalized_range["min"], :field_filters, allow_blank: true)
+      max = signed_integer(normalized_range["max"], :field_filters, allow_blank: true)
+      return scope if min.nil? && max.nil?
+      raise Discourse::InvalidParameters.new(:field_filters) if min && max && min > max
+
+      numeric_value =
+        "CASE WHEN marketplace_listing_field_values.value ~ '^-{0,1}[0-9]+$' " \
+          "THEN marketplace_listing_field_values.value::numeric END"
+      matching_values = Marketplace::ListingFieldValue.where(field_definition_id: definition.id)
+      matching_values = matching_values.where("#{numeric_value} >= ?", min) if min
+      matching_values = matching_values.where("#{numeric_value} <= ?", max) if max
+
+      scope.where(id: matching_values.select(:listing_id))
+    end
+
+    def exact_structured_value_ids(definition, value)
+      Marketplace::ListingFieldValue
+        .where(field_definition_id: definition.id, value: value)
+        .select(:listing_id)
+    end
+
+    def scalar_structured_filter(value)
+      if value.is_a?(Hash) || value.is_a?(Array) || value.respond_to?(:to_unsafe_h)
+        raise Discourse::InvalidParameters.new(:field_filters)
+      end
+
+      value.to_s
+    end
+
+    def parameter_hash(value)
+      value = value.to_unsafe_h if value.respond_to?(:to_unsafe_h)
+      value.is_a?(Hash) ? value : nil
+    end
+
     def fetch_page
       return 1 if params[:page].blank?
 
@@ -138,6 +294,17 @@ module Marketplace
       raise Discourse::InvalidParameters.new(key) if !str.match?(/\A(?:0|[1-9]\d*)\z/)
 
       str.to_i
+    end
+
+    def signed_integer(value, key, allow_blank: false)
+      str = value.to_s.strip
+      return nil if allow_blank && str.blank?
+      raise Discourse::InvalidParameters.new(key) if !str.match?(/\A-?\d+\z/)
+
+      integer = Integer(str, 10)
+      raise Discourse::InvalidParameters.new(key) if !Marketplace::Listing::INTEGER_RANGE.cover?(integer)
+
+      integer
     end
   end
 end

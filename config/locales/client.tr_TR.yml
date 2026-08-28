@@ -151,6 +151,12 @@ tr_TR:
         search_button: "Ara"
         load_more: "Daha fazla yükle"
         empty: "İlan bulunamadı."
+        dynamic_filters: "İlan özellikleri"
+        clear_filters: "Filtreleri temizle"
+        filter_any: "Fark etmez"
+        integer_min: "En az"
+        integer_max: "En fazla"
+        text_filter_placeholder: "İçeren…"
 
       form:
         new_title: "Yeni İlan"

@@ -11,6 +11,7 @@ enabled_site_setting :marketplace_enabled
 register_asset "stylesheets/common/marketplace.scss"
 register_asset "stylesheets/common/marketplace-favorites.scss"
 register_asset "stylesheets/common/marketplace-offers.scss"
+register_asset "stylesheets/common/marketplace-dynamic-filters.scss"
 
 module ::Marketplace
   PLUGIN_NAME = "discourse-marketplace"

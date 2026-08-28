@@ -1,8 +1,10 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
+import { fn } from "@ember/helper";
 import { action } from "@ember/object";
 import { on } from "@ember/modifier";
 import { ajax } from "discourse/lib/ajax";
+import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import MarketplaceListingCard from "./marketplace-listing-card";
 import MarketplaceNav from "./marketplace-nav";
@@ -15,6 +17,7 @@ export default class MarketplaceBrowse extends Component {
   @tracked categoryId = "";
   @tracked query = "";
   @tracked sort = "newest";
+  @tracked fieldFilters = {};
 
   get sorts() {
     return [
@@ -27,6 +30,43 @@ export default class MarketplaceBrowse extends Component {
     ];
   }
 
+  get selectedCategory() {
+    return this.args.categories.find(
+      (category) => category.id === Number(this.categoryId)
+    );
+  }
+
+  get structuredFiltersForForm() {
+    return (this.selectedCategory?.field_definitions ?? []).map((field) => {
+      const current = this.fieldFilters[field.key];
+
+      if (field.type === "integer") {
+        return {
+          ...field,
+          minValue: current?.min ?? "",
+          maxValue: current?.max ?? "",
+        };
+      }
+
+      return { ...field, value: current ?? "" };
+    });
+  }
+
+  addStructuredFilters(params) {
+    for (const field of this.structuredFiltersForForm) {
+      if (field.type === "integer") {
+        if (field.minValue !== "") {
+          params[`field_filters[${field.key}][min]`] = field.minValue;
+        }
+        if (field.maxValue !== "") {
+          params[`field_filters[${field.key}][max]`] = field.maxValue;
+        }
+      } else if (field.value !== "") {
+        params[`field_filters[${field.key}]`] = field.value;
+      }
+    }
+  }
+
   async fetchListings(page) {
     this.loading = true;
     try {
@@ -37,6 +77,7 @@ export default class MarketplaceBrowse extends Component {
       if (this.query) {
         params.q = this.query;
       }
+      this.addStructuredFilters(params);
 
       const result = await ajax("/marketplace/listings", { data: params });
 
@@ -56,13 +97,37 @@ export default class MarketplaceBrowse extends Component {
 
   @action
   updateCategory(event) {
-    this.categoryId = event.target.value;
+    this.categoryId = event.target.value ? Number(event.target.value) : "";
+    this.fieldFilters = {};
     this.fetchListings(1);
   }
 
   @action
   updateSort(event) {
     this.sort = event.target.value;
+    this.fetchListings(1);
+  }
+
+  @action
+  updateStructuredFilter(field, event) {
+    this.fieldFilters = {
+      ...this.fieldFilters,
+      [field.key]: event.target.value,
+    };
+  }
+
+  @action
+  updateIntegerStructuredFilter(field, bound, event) {
+    const current = this.fieldFilters[field.key] ?? {};
+    this.fieldFilters = {
+      ...this.fieldFilters,
+      [field.key]: { ...current, [bound]: event.target.value },
+    };
+  }
+
+  @action
+  clearStructuredFilters() {
+    this.fieldFilters = {};
     this.fetchListings(1);
   }
 
@@ -86,29 +151,139 @@ export default class MarketplaceBrowse extends Component {
       </div>
 
       <form class="marketplace-browse__filters" {{on "submit" this.search}}>
-        <input
-          type="text"
-          placeholder={{i18n "marketplace.browse.search_placeholder"}}
-          value={{this.query}}
-          {{on "input" this.updateQuery}}
-        />
+        <div class="marketplace-browse__primary-filters">
+          <input
+            type="text"
+            class="marketplace-browse__search"
+            placeholder={{i18n "marketplace.browse.search_placeholder"}}
+            value={{this.query}}
+            {{on "input" this.updateQuery}}
+          />
 
-        <select {{on "change" this.updateCategory}}>
-          <option value="">{{i18n "marketplace.browse.category_all"}}</option>
-          {{#each @categories as |category|}}
-            <option value={{category.id}}>{{category.name}}</option>
-          {{/each}}
-        </select>
+          <select
+            class="marketplace-browse__category"
+            {{on "change" this.updateCategory}}
+          >
+            <option value="">{{i18n "marketplace.browse.category_all"}}</option>
+            {{#each @categories as |category|}}
+              <option
+                value={{category.id}}
+                selected={{eq category.id this.categoryId}}
+              >{{category.name}}</option>
+            {{/each}}
+          </select>
 
-        <select {{on "change" this.updateSort}}>
-          {{#each this.sorts as |sortOption|}}
-            <option value={{sortOption.value}}>{{sortOption.label}}</option>
-          {{/each}}
-        </select>
+          <select
+            class="marketplace-browse__sort"
+            {{on "change" this.updateSort}}
+          >
+            {{#each this.sorts as |sortOption|}}
+              <option
+                value={{sortOption.value}}
+                selected={{eq sortOption.value this.sort}}
+              >{{sortOption.label}}</option>
+            {{/each}}
+          </select>
 
-        <button type="submit" class="btn">{{i18n
-            "marketplace.browse.search_button"
-          }}</button>
+          <button type="submit" class="btn btn-primary" disabled={{this.loading}}>
+            {{i18n "marketplace.browse.search_button"}}
+          </button>
+        </div>
+
+        {{#if this.structuredFiltersForForm.length}}
+          <section class="marketplace-browse__dynamic-filters">
+            <div class="marketplace-browse__dynamic-filters-header">
+              <h2>{{i18n "marketplace.browse.dynamic_filters"}}</h2>
+              <button
+                type="button"
+                class="btn btn-flat marketplace-browse__clear-filters"
+                disabled={{this.loading}}
+                {{on "click" this.clearStructuredFilters}}
+              >
+                {{i18n "marketplace.browse.clear_filters"}}
+              </button>
+            </div>
+
+            <div class="marketplace-browse__dynamic-filter-grid">
+              {{#each this.structuredFiltersForForm as |field|}}
+                <div
+                  class="marketplace-browse__dynamic-filter"
+                  data-filter-key={{field.key}}
+                >
+                  <label class="marketplace-browse__dynamic-filter-label">
+                    {{field.label}}
+                  </label>
+
+                  {{#if (eq field.type "integer")}}
+                    <div class="marketplace-browse__integer-range">
+                      <label>
+                        <span>{{i18n "marketplace.browse.integer_min"}}</span>
+                        <input
+                          type="number"
+                          step="1"
+                          value={{field.minValue}}
+                          {{on
+                            "input"
+                            (fn this.updateIntegerStructuredFilter field "min")
+                          }}
+                        />
+                      </label>
+                      <label>
+                        <span>{{i18n "marketplace.browse.integer_max"}}</span>
+                        <input
+                          type="number"
+                          step="1"
+                          value={{field.maxValue}}
+                          {{on
+                            "input"
+                            (fn this.updateIntegerStructuredFilter field "max")
+                          }}
+                        />
+                      </label>
+                    </div>
+                  {{else if (eq field.type "select")}}
+                    <select
+                      {{on "change" (fn this.updateStructuredFilter field)}}
+                    >
+                      <option value="">{{i18n
+                          "marketplace.browse.filter_any"
+                        }}</option>
+                      {{#each field.choices as |choice|}}
+                        <option
+                          value={{choice.value}}
+                          selected={{eq choice.value field.value}}
+                        >{{choice.label}}</option>
+                      {{/each}}
+                    </select>
+                  {{else if (eq field.type "boolean")}}
+                    <select
+                      {{on "change" (fn this.updateStructuredFilter field)}}
+                    >
+                      <option value="">{{i18n
+                          "marketplace.browse.filter_any"
+                        }}</option>
+                      <option value="true" selected={{eq field.value "true"}}>
+                        {{i18n "marketplace.listing.boolean_yes"}}
+                      </option>
+                      <option value="false" selected={{eq field.value "false"}}>
+                        {{i18n "marketplace.listing.boolean_no"}}
+                      </option>
+                    </select>
+                  {{else}}
+                    <input
+                      type="text"
+                      value={{field.value}}
+                      placeholder={{i18n
+                        "marketplace.browse.text_filter_placeholder"
+                      }}
+                      {{on "input" (fn this.updateStructuredFilter field)}}
+                    />
+                  {{/if}}
+                </div>
+              {{/each}}
+            </div>
+          </section>
+        {{/if}}
       </form>
 
       {{#if this.listings.length}}
