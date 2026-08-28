@@ -59,3 +59,8 @@ Fabricator(:marketplace_transaction, class_name: "Marketplace::Transaction") do
   seller { |attrs| attrs[:listing].seller }
   status Marketplace::Transaction.statuses[:pending]
 end
+
+Fabricator(:marketplace_favorite, class_name: "Marketplace::Favorite") do
+  user { Fabricate(:user) }
+  listing { Fabricate(:marketplace_listing) }
+end

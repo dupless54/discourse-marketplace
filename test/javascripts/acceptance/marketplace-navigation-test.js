@@ -20,6 +20,7 @@ function stubMarketplaceEndpoints(server, helper) {
   server.get("/marketplace/listings/mine", () =>
     helper.response(EMPTY_LISTINGS)
   );
+  server.get("/marketplace/favorites", () => helper.response(EMPTY_LISTINGS));
   server.get("/marketplace/transactions/mine", () =>
     helper.response(EMPTY_TRANSACTIONS)
   );
@@ -41,7 +42,10 @@ acceptance("Marketplace | navigation | anonymous", function (needs) {
     assert.dom(".marketplace-nav").exists("the shared nav renders");
     assert
       .dom(".marketplace-nav li")
-      .exists({ count: 1 }, "New Listing/My Listings/My Transactions are hidden");
+      .exists(
+        { count: 1 },
+        "authenticated Marketplace destinations are hidden"
+      );
     assert.strictEqual(activeHref(assert), "/marketplace");
 
     // Semantic structure: a real <nav> landmark with real links, not divs
@@ -56,10 +60,10 @@ acceptance("Marketplace | navigation | logged in", function (needs) {
   needs.settings({ marketplace_enabled: true });
   needs.pretender(stubMarketplaceEndpoints);
 
-  test("shows all four nav items with Marketplace active on /marketplace", async function (assert) {
+  test("shows all five nav items with Marketplace active on /marketplace", async function (assert) {
     await visit("/marketplace");
 
-    assert.dom(".marketplace-nav li").exists({ count: 4 });
+    assert.dom(".marketplace-nav li").exists({ count: 5 });
     assert.strictEqual(activeHref(assert), "/marketplace");
   });
 
@@ -73,6 +77,12 @@ acceptance("Marketplace | navigation | logged in", function (needs) {
     await visit("/marketplace/mine");
 
     assert.strictEqual(activeHref(assert), "/marketplace/mine");
+  });
+
+  test("marks Favorites active on /marketplace/favorites", async function (assert) {
+    await visit("/marketplace/favorites");
+
+    assert.strictEqual(activeHref(assert), "/marketplace/favorites");
   });
 
   test("marks My Transactions active on /marketplace/transactions", async function (assert) {

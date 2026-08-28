@@ -9,6 +9,7 @@
 enabled_site_setting :marketplace_enabled
 
 register_asset "stylesheets/common/marketplace.scss"
+register_asset "stylesheets/common/marketplace-favorites.scss"
 
 module ::Marketplace
   PLUGIN_NAME = "discourse-marketplace"

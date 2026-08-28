@@ -1,9 +1,11 @@
 import Component from "@glimmer/component";
+import { tracked } from "@glimmer/tracking";
 import { concat } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
+import { ajax } from "discourse/lib/ajax";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 
@@ -11,13 +13,13 @@ function formatPrice(cents, currency) {
   return `${(cents / 100).toFixed(2)} ${currency}`;
 }
 
-// Shared card used by both Browse and My Listings so the two surfaces never
-// drift apart. Which action row renders is driven entirely by whether the
-// viewer is the listing's seller -- computed here, once, from currentUser
-// vs. listing.seller.id, rather than passed in by each caller.
 export default class MarketplaceListingCard extends Component {
   @service currentUser;
   @service composer;
+
+  @tracked favorited = !!this.args.listing.favorited;
+  @tracked favoriteBusy = false;
+  @tracked favoriteError = null;
 
   get listing() {
     return this.args.listing;
@@ -47,10 +49,14 @@ export default class MarketplaceListingCard extends Component {
     return i18n(`marketplace.listing.status.${this.listing.status}`);
   }
 
-  // Only rendered for active listings (status already covers draft/
-  // reserved/sold/archived via the status badge) -- expired and
-  // out-of-stock are states an "active" listing can still be in, so they
-  // need their own indicator alongside the status badge.
+  get favoriteLabel() {
+    return i18n(
+      this.favorited
+        ? "marketplace.favorites.remove"
+        : "marketplace.favorites.add"
+    );
+  }
+
   get availabilityLabel() {
     if (this.listing.status !== "active") {
       return null;
@@ -79,6 +85,29 @@ export default class MarketplaceListingCard extends Component {
         listing_title: this.listing.title,
       }),
     });
+  }
+
+  @action
+  async toggleFavorite() {
+    if (this.favoriteBusy) {
+      return;
+    }
+
+    this.favoriteBusy = true;
+    this.favoriteError = null;
+    try {
+      const result = await ajax(
+        `/marketplace/listings/${this.listing.id}/favorite`,
+        { type: this.favorited ? "DELETE" : "POST" }
+      );
+      this.favorited = !!result.favorited;
+      this.listing.favorited = this.favorited;
+      this.args.onFavoriteChange?.(this.listing.id, this.favorited);
+    } catch (_error) {
+      this.favoriteError = i18n("marketplace.favorites.error");
+    } finally {
+      this.favoriteBusy = false;
+    }
   }
 
   <template>
@@ -132,6 +161,19 @@ export default class MarketplaceListingCard extends Component {
       </LinkTo>
 
       <span class="marketplace-listing-card__actions">
+        {{#if this.currentUser}}
+          <button
+            type="button"
+            class="btn btn-default btn-small marketplace-listing-card__favorite"
+            aria-pressed={{this.favorited}}
+            disabled={{this.favoriteBusy}}
+            {{on "click" this.toggleFavorite}}
+          >
+            {{dIcon "heart"}}
+            {{this.favoriteLabel}}
+          </button>
+        {{/if}}
+
         {{#if this.isSeller}}
           <LinkTo
             @route="marketplace.listing.edit"
@@ -161,6 +203,9 @@ export default class MarketplaceListingCard extends Component {
           {{/if}}
         {{/if}}
       </span>
+      {{#if this.favoriteError}}
+        <span class="marketplace-listing-card__favorite-error">{{this.favoriteError}}</span>
+      {{/if}}
     </div>
   </template>
 }

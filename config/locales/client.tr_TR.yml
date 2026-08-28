@@ -73,6 +73,14 @@ tr_TR:
         empty: "Henüz herhangi bir ilan oluşturmadınız."
         load_more: "Daha fazla yükle"
 
+      favorites:
+        title: "Favorilerim"
+        add: "Favorilere Ekle"
+        remove: "Favorilerden Çıkar"
+        empty: "Henüz favorilerinize herhangi bir ilan eklemediniz."
+        load_more: "Daha fazla yükle"
+        error: "Favori durumu güncellenemedi. Lütfen tekrar deneyin."
+
       browse:
         sort_newest: "En yeni"
         sort_price_asc: "Fiyat: Düşükten yükseğe"

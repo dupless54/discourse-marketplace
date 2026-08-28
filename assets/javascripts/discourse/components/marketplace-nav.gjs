@@ -4,18 +4,10 @@ import DHorizontalOverflowNav from "discourse/ui-kit/d-horizontal-overflow-nav";
 import DNavItem from "discourse/ui-kit/d-nav-item";
 import { i18n } from "discourse-i18n";
 
-// One compact nav, reused at the top of every top-level Marketplace page
-// (Browse, New Listing, My Listings, Transaction Center) instead of each
-// page hand-rolling its own header links. DHorizontalOverflowNav is core's
-// own mobile-safe scrollable nav shell (see e.g. templates/review/index.gjs)
-// -- it already handles narrow-viewport overflow, so there is no custom
-// mobile nav framework here. DNavItem's default active-state (no
-// `@currentWhen` override) is core's own router.isActive(route) check: each
-// of these four routes is a leaf with no children of its own, so exactly
-// one item is active at a time and none of them light up on a listing's
-// detail/edit page -- the sensible default for pages that aren't part of
-// this tab set (they get their own "back to Marketplace" link instead, see
-// marketplace-listing-detail.gjs).
+// One compact nav, reused at the top of every top-level Marketplace page.
+// DHorizontalOverflowNav is core's mobile-safe scrollable nav shell, so the
+// added Favorites destination stays usable on narrow viewports without a
+// separate custom navigation system.
 export default class MarketplaceNav extends Component {
   @service currentUser;
 
@@ -35,6 +27,11 @@ export default class MarketplaceNav extends Component {
           @route="marketplace.mine"
           @label="marketplace.my_listings"
           @icon="list"
+        />
+        <DNavItem
+          @route="marketplace.favorites"
+          @label="marketplace.favorites.title"
+          @icon="heart"
         />
         <DNavItem
           @route="marketplace.transactions"
