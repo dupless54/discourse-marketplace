@@ -72,7 +72,9 @@ class CreateMarketplaceOffers < ActiveRecord::Migration[8.0]
 
     create_table :marketplace_offer_events do |t|
       t.bigint :offer_id, null: false
-      t.integer :actor_id, null: false
+      # NULL means a server-authored transition such as expiry, never an
+      # anonymous user action. Human actions always record their actor.
+      t.integer :actor_id
       t.integer :event_type, null: false
       t.bigint :amount_cents
       t.string :currency, limit: 3
