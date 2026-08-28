@@ -56,7 +56,7 @@ module Marketplace
         seller_id: guardian.user.id,
         title: params.title,
         raw: params.raw,
-        cooked: PrettyText.cook(params.raw),
+        cooked: Marketplace::Listing.cook(params.raw),
         category_id: category.id,
         price_cents: params.price_cents,
         currency: params.currency,

@@ -94,6 +94,7 @@ en:
         message_seller_button: "Message Seller"
         message_seller_subject: "About your listing: %{listing_title}"
         back_to_marketplace: "Back to Marketplace"
+        description_heading: "Listing Description"
         status:
           draft: "Draft"
           active: "Active"

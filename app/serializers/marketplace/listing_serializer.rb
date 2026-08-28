@@ -21,6 +21,7 @@ module Marketplace
                :purchasable
 
     has_one :seller, serializer: BasicUserSerializer, embed: :objects
+    has_one :category, serializer: Marketplace::CategorySerializer, embed: :objects
 
     def expired
       object.expired?

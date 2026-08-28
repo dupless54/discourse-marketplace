@@ -45,6 +45,39 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
     assert.dom(".marketplace-listing-card__edit").doesNotExist();
   });
 
+  test("shows a category badge when the listing has a category", async function (assert) {
+    this.listing = {
+      id: 20,
+      title: "Vintage Synthesizer",
+      status: "active",
+      price_cents: 15000,
+      currency: "USD",
+      category: { id: 4, name: "Electronics", slug: "electronics" },
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+
+    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+
+    assert
+      .dom(".marketplace-listing-card__category-badge")
+      .hasText("Electronics");
+  });
+
+  test("shows no category badge when the listing has none", async function (assert) {
+    this.listing = {
+      id: 21,
+      title: "Uncategorized listing",
+      status: "active",
+      price_cents: 500,
+      currency: "USD",
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+
+    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+
+    assert.dom(".marketplace-listing-card__category-badge").doesNotExist();
+  });
+
   test("shows a placeholder instead of an image when there is no thumbnail", async function (assert) {
     this.listing = {
       id: 2,
@@ -74,7 +107,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
 
     await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
 
-    assert.dom(".marketplace-listing-card__edit").exists("an owner edit action is shown");
+    assert
+      .dom(".marketplace-listing-card__edit")
+      .hasAttribute("href", "/marketplace/listings/3/edit");
     assert.dom(".marketplace-listing-card__buy").doesNotExist();
     assert.dom(".marketplace-listing-card__message").doesNotExist();
   });

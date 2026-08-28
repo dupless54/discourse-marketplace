@@ -164,17 +164,35 @@
   }
 }
 
+.marketplace-listing-card__category-badge {
+  position: absolute;
+  top: 0.5em;
+  left: 0.5em;
+  max-width: calc(100% - 1em);
+  padding: 0.15em 0.6em;
+  border-radius: 1em;
+  font-size: $font-down-2;
+  font-weight: 600;
+  background: var(--secondary);
+  color: var(--primary-medium);
+  border: 1px solid var(--primary-low);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .marketplace-listing-card__body {
   display: flex;
   flex-direction: column;
-  gap: 0.2em;
+  gap: 0.15em;
   padding: 0.75em 0.9em;
 }
 
 .marketplace-listing-card__price {
-  font-size: $font-up-1;
-  font-weight: bold;
+  font-size: $font-up-2;
+  font-weight: 700;
   color: var(--tertiary);
+  line-height: 1.2;
 }
 
 .marketplace-listing-card__title {
@@ -182,7 +200,9 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  font-weight: 600;
+  font-size: $font-0;
+  font-weight: 500;
+  color: var(--primary-high);
   line-height: 1.3;
 }
 
@@ -220,6 +240,34 @@
 
 .marketplace-listing-detail__content {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+// The hero image, shown first and prominently -- see marketplace.listing.
+// cook, which wraps it (and any image inside the description body below)
+// in the same lightbox markup core's own post-processing produces, so
+// clicking it opens the standard PhotoSwipe zoom/gallery view.
+.marketplace-listing-detail__hero-link {
+  display: block;
+  border-radius: var(--d-border-radius, 8px);
+  overflow: hidden;
+  background: var(--primary-very-low);
+  line-height: 0;
+}
+
+.marketplace-listing-detail__hero-image {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  background: var(--primary-very-low);
+}
+
+.marketplace-listing-detail__description-heading {
+  margin: 0 0 0.5em;
+  font-size: $font-up-1;
 }
 
 // Cooked listing content can contain user-uploaded images. Without this,
@@ -249,7 +297,14 @@
   top: 1em;
 }
 
-.marketplace-listing-detail__status {
+.marketplace-listing-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.marketplace-listing-detail__status,
+.marketplace-listing-detail__category {
   align-self: flex-start;
   padding: 0.15em 0.6em;
   border-radius: 1em;
@@ -257,6 +312,11 @@
   font-weight: bold;
   background: var(--primary-low);
   color: var(--primary-medium);
+}
+
+.marketplace-listing-detail__category {
+  background: var(--secondary);
+  border: 1px solid var(--primary-low);
 }
 
 .marketplace-listing-detail__title {

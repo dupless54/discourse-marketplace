@@ -38,6 +38,18 @@ describe Marketplace::Listings::Update do
     expect(updated.currency).to eq("EUR")
   end
 
+  it "cooks the new raw through Listing.cook, so an embedded image is lightbox-wrapped" do
+    upload = Fabricate(:upload)
+    result =
+      call_service(
+        guardian: guardian,
+        params: params.merge(raw: "Updated photo: #{upload.short_url}"),
+      )
+
+    expect(result).to be_success
+    expect(result.listing.cooked).to include("lightbox-wrapper")
+  end
+
   it "regenerates cooked from raw" do
     result = call_service(guardian: guardian, params: params)
 

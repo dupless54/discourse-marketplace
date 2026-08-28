@@ -148,6 +148,7 @@ describe "GET /marketplace/listings" do
         "published_at",
         "thumbnail_url",
         "seller",
+        "category",
         "inventory_mode",
         "stock_quantity",
         "stock_available",
@@ -156,6 +157,17 @@ describe "GET /marketplace/listings" do
         "expired",
         "purchasable",
       )
+    end
+
+    it "serializes the category with id, name, slug, and position" do
+      make_listing
+      get_listings
+
+      category_json = response.parsed_body["listings"].first["category"]
+
+      expect(category_json["id"]).to eq(category.id)
+      expect(category_json["name"]).to eq(category.name)
+      expect(category_json["slug"]).to eq(category.slug)
     end
 
     it "never exposes raw, cooked, closed_at, created_at, updated_at, can_edit, or seller_id" do

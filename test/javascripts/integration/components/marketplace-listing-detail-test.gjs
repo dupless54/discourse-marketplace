@@ -55,6 +55,115 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
     assert.true(openedWith.title.includes("Vintage Synthesizer"));
   });
 
+  test("shows the hero image before the description section, with a lightbox link, and a category badge", async function (assert) {
+    this.listing = {
+      id: 30,
+      title: "Photographed item",
+      status: "active",
+      price_cents: 1000,
+      currency: "USD",
+      cooked: "<p>Full description text.</p>",
+      thumbnail_url: "/uploads/default/original/1X/photo.png",
+      category: { id: 7, name: "Electronics", slug: "electronics" },
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+    this.transactions = [];
+
+    await render(
+      <template>
+        <MarketplaceListingDetail
+          @listing={{this.listing}}
+          @transactions={{this.transactions}}
+        />
+      </template>
+    );
+
+    const content = document.querySelector(
+      ".marketplace-listing-detail__content"
+    );
+    const hero = content.querySelector(
+      ".marketplace-listing-detail__hero-link"
+    );
+    const description = content.querySelector(
+      ".marketplace-listing-detail__description"
+    );
+
+    assert.ok(hero, "the hero image link is rendered");
+    assert.ok(description, "the description section is rendered");
+    assert.true(
+      !!(
+        hero.compareDocumentPosition(description) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+      ),
+      "the hero image comes before the description section, not after it"
+    );
+
+    assert
+      .dom(".marketplace-listing-detail__hero-link")
+      .hasAttribute("href", "/uploads/default/original/1X/photo.png");
+    assert.dom(".marketplace-listing-detail__hero-link").hasClass("lightbox");
+    assert
+      .dom(".marketplace-listing-detail__description-heading")
+      .hasText("Listing Description");
+    assert
+      .dom(".marketplace-listing-detail__category")
+      .hasText("Electronics");
+  });
+
+  test("renders no hero image or category badge when the listing has neither", async function (assert) {
+    this.listing = {
+      id: 31,
+      title: "Plain listing",
+      status: "active",
+      price_cents: 1000,
+      currency: "USD",
+      cooked: "<p>Just text, no photo.</p>",
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+    this.transactions = [];
+
+    await render(
+      <template>
+        <MarketplaceListingDetail
+          @listing={{this.listing}}
+          @transactions={{this.transactions}}
+        />
+      </template>
+    );
+
+    assert.dom(".marketplace-listing-detail__hero-link").doesNotExist();
+    assert.dom(".marketplace-listing-detail__category").doesNotExist();
+    assert
+      .dom(".marketplace-listing-detail__description")
+      .exists("the description section still renders on its own");
+  });
+
+  test("the Edit link on the owner's own listing routes to the correct edit URL", async function (assert) {
+    this.listing = {
+      id: 32,
+      title: "My own listing",
+      status: "draft",
+      price_cents: 500,
+      currency: "USD",
+      cooked: "<p>Description</p>",
+      seller: { id: this.currentUser.id, username: this.currentUser.username },
+    };
+    this.transactions = [];
+
+    await render(
+      <template>
+        <MarketplaceListingDetail
+          @listing={{this.listing}}
+          @transactions={{this.transactions}}
+        />
+      </template>
+    );
+
+    assert
+      .dom(".marketplace-listing-detail__edit")
+      .hasAttribute("href", "/marketplace/listings/32/edit");
+  });
+
   test("does not offer Message Seller to the listing's own seller", async function (assert) {
     this.listing = {
       id: 2,

@@ -140,6 +140,25 @@ describe Marketplace::ListingsController do
       expect(json_body).not_to have_key("raw")
     end
 
+    it "serializes the category with id, name, and slug" do
+      listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:active],
+        )
+      get "/marketplace/listings/#{listing.id}.json"
+
+      expect(response.status).to eq(200)
+      expect(json_body["category"]).to eq(
+        "id" => category.id,
+        "name" => category.name,
+        "slug" => category.slug,
+        "position" => category.position,
+      )
+    end
+
     it "includes raw for the owner viewing their own listing" do
       listing =
         Fabricate(

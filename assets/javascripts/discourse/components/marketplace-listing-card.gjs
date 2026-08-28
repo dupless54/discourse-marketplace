@@ -101,6 +101,11 @@ export default class MarketplaceListingCard extends Component {
               {{dIcon "image"}}
             </span>
           {{/if}}
+          {{#if this.listing.category}}
+            <span class="marketplace-listing-card__category-badge">
+              {{this.listing.category.name}}
+            </span>
+          {{/if}}
           <span
             class={{concat
               "marketplace-listing-card__status-badge marketplace-listing-card__status-badge--"

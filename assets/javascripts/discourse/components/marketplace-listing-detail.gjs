@@ -3,6 +3,7 @@ import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
 import { concat, fn } from "@ember/helper";
 import { on } from "@ember/modifier";
+import didInsert from "@ember/render-modifiers/modifiers/did-insert";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
 import { htmlSafe } from "@ember/template";
@@ -10,6 +11,7 @@ import PluginOutlet from "discourse/components/plugin-outlet";
 import lazyHash from "discourse/helpers/lazy-hash";
 import { and, eq, not } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
+import lightbox from "discourse/lib/lightbox";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 
@@ -135,6 +137,22 @@ export default class MarketplaceListingDetail extends Component {
     }
   }
 
+  // The hero image and the cooked description body are siblings inside
+  // one container (see the template), so a single lightbox() call covers
+  // both as one PhotoSwipe gallery. Listing#cook (server-side) already
+  // wraps every embedded image in the same div.lightbox-wrapper > a.lightbox
+  // markup core's own CookedPostProcessor#add_lightbox! produces, so this
+  // is the same client-side activation core itself uses for post content
+  // (see instance-initializers/post-decorations.js) -- just triggered from
+  // this component's own render instead of the post-decoration pipeline,
+  // since a listing isn't a Post. Fires once per component lifetime: the
+  // element isn't re-created by the availability refreshes below (those
+  // never change `cooked`), so nothing here has to re-run.
+  @action
+  setupLightbox(element) {
+    lightbox(element);
+  }
+
   @action
   messageSeller() {
     this.composer.openNewMessage({
@@ -258,18 +276,46 @@ export default class MarketplaceListingDetail extends Component {
       </LinkTo>
 
       <div class="marketplace-listing-detail__layout">
-        <div class="marketplace-listing-detail__content">
+        <div
+          class="marketplace-listing-detail__content"
+          {{didInsert this.setupLightbox}}
+        >
+          {{#if this.listing.thumbnail_url}}
+            <a
+              href={{this.listing.thumbnail_url}}
+              class="lightbox marketplace-listing-detail__hero-link"
+            >
+              <img
+                src={{this.listing.thumbnail_url}}
+                alt={{this.listing.title}}
+                class="marketplace-listing-detail__hero-image"
+              />
+            </a>
+          {{/if}}
+
           {{#if this.listing.cooked}}
-            <div class="marketplace-listing-detail__body">{{htmlSafe
-                this.listing.cooked
-              }}</div>
+            <section class="marketplace-listing-detail__description">
+              <h2 class="marketplace-listing-detail__description-heading">
+                {{i18n "marketplace.listing.description_heading"}}
+              </h2>
+              <div class="marketplace-listing-detail__body">{{htmlSafe
+                  this.listing.cooked
+                }}</div>
+            </section>
           {{/if}}
         </div>
 
         <div class="marketplace-listing-detail__panel">
-          <span class="marketplace-listing-detail__status">{{i18n
-              (concat "marketplace.listing.status." this.listing.status)
-            }}</span>
+          <div class="marketplace-listing-detail__badges">
+            <span class="marketplace-listing-detail__status">{{i18n
+                (concat "marketplace.listing.status." this.listing.status)
+              }}</span>
+            {{#if this.listing.category}}
+              <span class="marketplace-listing-detail__category">
+                {{this.listing.category.name}}
+              </span>
+            {{/if}}
+          </div>
           <h1 class="marketplace-listing-detail__title">{{this.listing.title}}</h1>
           <span class="marketplace-listing-detail__price">{{this.formattedPrice}}</span>
           {{#if this.availabilityLabel}}
@@ -289,7 +335,11 @@ export default class MarketplaceListingDetail extends Component {
           <div class="marketplace-listing-detail__cta">
             {{#if this.isSeller}}
               <div class="marketplace-listing-detail__seller-actions">
-                <LinkTo @route="marketplace.listing.edit" class="btn">
+                <LinkTo
+                  @route="marketplace.listing.edit"
+                  @model={{this.listing.id}}
+                  class="btn marketplace-listing-detail__edit"
+                >
                   {{i18n "marketplace.listing.edit_button"}}
                 </LinkTo>
                 {{#if (eq this.listing.status "draft")}}

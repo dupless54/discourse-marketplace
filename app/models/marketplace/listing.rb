@@ -79,7 +79,7 @@ module Marketplace
     # Images/attachments use the standard Discourse mechanism: they are
     # embedded in `raw` markdown (the same `upload://<short-url>` syntax the
     # composer inserts everywhere else) and rendered into `cooked` by
-    # PrettyText.cook, already done by Listings::Create/Update. This hook
+    # .cook (below), already done by Listings::Create/Update. This hook
     # only does the housekeeping every other Discourse model with
     # user-suppliable upload references does (see e.g. core's Draft#save,
     # Badge#save): associate any uploads newly referenced in `raw` so they
@@ -89,6 +89,49 @@ module Marketplace
       if saved_change_to_raw?
         UploadReference.ensure_exist!(upload_ids: Upload.extract_upload_ids(raw), target: self)
       end
+    end
+
+    # Listings/Create and Listings/Update both cook `raw` through this
+    # rather than calling PrettyText.cook directly, so every listing's
+    # embedded images are clickable to a lightbox/zoom view.
+    #
+    # Core only wraps an image in the lightbox markup
+    # (CookedProcessorMixin#add_lightbox!) as part of CookedPostProcessor,
+    # which is a background pass tied to a real Post/Topic (needs
+    # post.topic_id, post.should_secure_uploads?, post.post_analyzer, ...)
+    # that a Marketplace listing has no equivalent of and has no safe way to
+    # fabricate. So this reproduces only the minimal, verified structural
+    # subset PhotoSwipe's client-side discourse/lib/lightbox actually reads
+    # -- `div.lightbox-wrapper > a.lightbox[href] > img`, built with the same
+    # add_next_sibling/add_child moves add_lightbox! itself uses -- and skips
+    # the Post-specific extras (secure-uploads variants, the filename/size
+    # meta overlay, the download link): those degrade gracefully when absent
+    # (see initLightbox's optional chaining / `if (!href) hide` handling),
+    # so omitting them is a smaller surface, not a broken one.
+    def self.cook(raw)
+      cooked = PrettyText.cook(raw)
+      fragment = Nokogiri::HTML5.fragment(cooked)
+
+      fragment.css("img").each do |img|
+        next if img.ancestors("a").any?
+        next if img["class"].to_s.split(" ").include?("emoji")
+
+        src = img["src"]
+        next if src.blank?
+
+        wrapper = Nokogiri::XML::Node.new("div", fragment)
+        wrapper["class"] = "lightbox-wrapper"
+        img.add_next_sibling(wrapper)
+        wrapper.add_child(img)
+
+        link = Nokogiri::XML::Node.new("a", fragment)
+        link["class"] = "lightbox"
+        link["href"] = src
+        img.add_next_sibling(link)
+        link.add_child(img)
+      end
+
+      fragment.to_html
     end
 
     # Card thumbnail, derived from the already-persisted `cooked` column --

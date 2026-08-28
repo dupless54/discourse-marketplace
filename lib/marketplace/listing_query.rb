@@ -37,7 +37,7 @@ module Marketplace
     # accepted here, so there is no code path that could branch into a bypass.
     def base_scope
       Marketplace::Listing
-        .includes(:seller)
+        .includes(:seller, :category)
         .joins(:category)
         .where(marketplace_listings: { status: Marketplace::Listing.statuses[:active] })
         .where(marketplace_categories: { enabled: true })
