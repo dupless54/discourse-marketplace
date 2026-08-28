@@ -10,6 +10,7 @@ module Marketplace
 
     def index
       result = Marketplace::ListingQuery.new(params: params).results
+      mark_favorites!(result[:records])
 
       render_json_dump(
         listings: serialize_data(result[:records], Marketplace::ListingBrowseSerializer),
@@ -21,15 +22,6 @@ module Marketplace
       )
     end
 
-    # Returns the current user's own listings across every status (draft,
-    # active, reserved, sold, archived) so a seller can find a listing again
-    # after leaving its detail page -- the public #index intentionally never
-    # returns anything but active/enabled-category listings, so this is the
-    # only way an owner can rediscover a draft or archived listing of theirs.
-    # Scoped entirely by the WHERE clause on the current user's id, the same
-    # reasoning already used by #transaction: no separate Guardian predicate
-    # is needed, since no row outside the viewer's own listings can ever be
-    # returned.
     def mine
       page = positive_integer_param(params[:page], :page, default: 1)
       per_page =
@@ -51,6 +43,7 @@ module Marketplace
       records = scope.limit(per_page + 1).offset((page - 1) * per_page).to_a
       has_more = records.size > per_page
       records = records.first(per_page)
+      mark_favorites!(records)
 
       render_json_dump(
         listings: serialize_data(records, Marketplace::ListingBrowseSerializer),
@@ -65,6 +58,7 @@ module Marketplace
     def create
       Marketplace::Listings::Create.call(service_params) do |result|
         on_success do |listing:|
+          mark_favorites!([listing])
           render_serialized(
             listing,
             Marketplace::ListingDetailSerializer,
@@ -90,14 +84,6 @@ module Marketplace
       end
     end
 
-    # This path is both the Ember listing-detail route and the JSON API a
-    # listing's viewer fetches from -- resolved by request format, the same
-    # convention core itself uses (e.g. UsersController#show,
-    # BadgesController#index), rather than by a second, competing route.
-    # Direct navigation/F5 (Accept: text/html) gets the SPA shell with no
-    # data access at all; Ember then re-requests this same URL itself via
-    # ajax() (Accept: application/json), which reaches the json branch below
-    # completely unchanged from before.
     def show
       respond_to do |format|
         format.html { render "default/empty" }
@@ -106,6 +92,7 @@ module Marketplace
           raise Discourse::NotFound if listing.blank?
           raise Discourse::NotFound if !guardian.can_see_marketplace_listing?(listing)
 
+          mark_favorites!([listing])
           render_serialized(listing, Marketplace::ListingDetailSerializer, root: "listing")
         end
       end
@@ -116,6 +103,7 @@ module Marketplace
         service_params.deep_merge(params: { listing_id: params[:id] }),
       ) do |result|
         on_success do |listing:|
+          mark_favorites!([listing])
           render_serialized(listing, Marketplace::ListingDetailSerializer, root: "listing")
         end
         on_failure { render(json: failed_json, status: :unprocessable_entity) }
@@ -137,12 +125,6 @@ module Marketplace
       end
     end
 
-    # Participant-scoped transaction history for one listing. A listing's
-    # seller sees every transaction for that listing; every other user sees
-    # only rows where they are the buyer. An explicit transaction_id is an
-    # exact selector for notification links, never an authorization input:
-    # it is applied only after the participant scope and returns the same
-    # masked 404 for a missing or another buyer's transaction.
     def transactions
       listing = Marketplace::Listing.find_by(id: params[:id])
       raise Discourse::NotFound if listing.blank?
@@ -214,6 +196,7 @@ module Marketplace
         ),
       ) do |result|
         on_success do |listing:|
+          mark_favorites!([listing])
           render_serialized(listing, Marketplace::ListingDetailSerializer, root: "listing")
         end
         on_failure { render(json: failed_json, status: :unprocessable_entity) }
@@ -239,9 +222,23 @@ module Marketplace
 
     private
 
-    # Strict, matching Marketplace::ListingQuery: only digit strings are
-    # accepted, so "abc", "1.5", "-1", and "" all raise rather than silently
-    # coercing to 0/1 via to_i.
+    def mark_favorites!(listings)
+      return if current_user.blank? || listings.blank?
+
+      favorite_ids =
+        Marketplace::Favorite
+          .where(user_id: current_user.id, listing_id: listings.map(&:id))
+          .pluck(:listing_id)
+          .to_set
+
+      listings.each do |listing|
+        listing.instance_variable_set(
+          :@marketplace_favorited_by_viewer,
+          favorite_ids.include?(listing.id),
+        )
+      end
+    end
+
     def positive_integer_param(value, key, default: nil)
       return default if value.blank?
 
