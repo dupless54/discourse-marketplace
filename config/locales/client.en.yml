@@ -27,7 +27,7 @@ en:
         categories:
           short_title: "Categories"
           title: "Marketplace Categories"
-          description: "Create, order, and enable or disable the categories used by marketplace listings."
+          description: "Create, order, enable, disable, or remove the categories used by marketplace listings."
           new_title: "New category"
           name: "Name"
           slug: "Slug"
@@ -35,8 +35,10 @@ en:
           enabled: "Enabled"
           create: "Create category"
           save: "Save"
+          delete: "Delete"
+          delete_confirm: "Permanently delete %{name}? Categories that are still used by listings cannot be deleted."
           empty: "No marketplace categories have been created yet."
-          error: "The category could not be saved. Check the values and try again."
+          error: "The category change could not be completed. Check the values and try again."
           fields:
             title: "Listing fields"
             add: "Add field"

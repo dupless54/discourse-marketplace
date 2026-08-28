@@ -6,6 +6,7 @@ en:
   marketplace:
     errors:
       category_disabled: "is disabled and cannot be used for listings"
+      category_in_use: "This category cannot be deleted because marketplace listings still use it. Disable it instead, or move those listings to another category first."
       stock_exceeded: "must be at least the number of units already reserved or sold"
       inventory_mode_locked: "cannot be changed after the listing has any transaction history"
       too_many_category_fields: "A category cannot have more than 30 listing fields"

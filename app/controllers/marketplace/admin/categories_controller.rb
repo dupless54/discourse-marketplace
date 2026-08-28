@@ -70,6 +70,29 @@ module Marketplace
           end
         end
       end
+
+      def destroy
+        Marketplace::Categories::Destroy.call(
+          service_params.deep_merge(params: { category_id: params[:id] }),
+        ) do
+          on_success { head :no_content }
+          on_failure { render(json: failed_json, status: :unprocessable_entity) }
+          on_failed_contract do |contract|
+            render(
+              json: failed_json.merge(errors: contract.errors.full_messages),
+              status: :bad_request,
+            )
+          end
+          on_failed_policy(:admin) { raise Discourse::InvalidAccess }
+          on_failed_policy(:unused) do
+            render(
+              json: failed_json.merge(errors: [I18n.t("marketplace.errors.category_in_use")]),
+              status: :conflict,
+            )
+          end
+          on_model_not_found(:category) { raise Discourse::NotFound }
+        end
+      end
     end
   end
 end

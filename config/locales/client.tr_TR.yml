@@ -27,7 +27,7 @@ tr_TR:
         categories:
           short_title: "Kategoriler"
           title: "Pazar Yeri Kategorileri"
-          description: "Pazar yeri ilanlarında kullanılan kategorileri oluşturun, sıralayın, etkinleştirin veya devre dışı bırakın."
+          description: "Pazar yeri ilanlarında kullanılan kategorileri oluşturun, sıralayın, etkinleştirin, devre dışı bırakın veya kaldırın."
           new_title: "Yeni kategori"
           name: "Ad"
           slug: "Slug"
@@ -35,8 +35,10 @@ tr_TR:
           enabled: "Etkin"
           create: "Kategori oluştur"
           save: "Kaydet"
+          delete: "Sil"
+          delete_confirm: "%{name} kategorisi kalıcı olarak silinsin mi? Hâlâ ilanlarda kullanılan kategoriler silinemez."
           empty: "Henüz herhangi bir pazar yeri kategorisi oluşturulmadı."
-          error: "Kategori kaydedilemedi. Değerleri kontrol edip tekrar deneyin."
+          error: "Kategori değişikliği tamamlanamadı. Değerleri kontrol edip tekrar deneyin."
           fields:
             title: "Özellik Alanları"
             add: "Alan Ekle"

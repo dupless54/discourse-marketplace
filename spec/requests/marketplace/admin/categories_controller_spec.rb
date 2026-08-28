@@ -6,6 +6,16 @@ describe Marketplace::Admin::CategoriesController do
 
   before { SiteSetting.marketplace_enabled = true }
 
+  describe "GET /admin/plugins/discourse-marketplace/categories" do
+    it "serves the admin application on a direct browser reload" do
+      sign_in(admin)
+
+      get "/admin/plugins/discourse-marketplace/categories"
+
+      expect(response.status).to eq(200)
+    end
+  end
+
   describe "GET /marketplace/admin/categories" do
     fab!(:first_category) { Fabricate(:marketplace_category, position: 1, enabled: false) }
     fab!(:second_category) { Fabricate(:marketplace_category, position: 2) }
@@ -152,6 +162,60 @@ describe Marketplace::Admin::CategoriesController do
             position: 0,
             enabled: true,
           }
+
+      expect(response.status).to eq(404)
+    end
+  end
+
+  describe "DELETE /marketplace/admin/categories/:id" do
+    it "deletes an unused category and its field definitions" do
+      sign_in(admin)
+      category = Fabricate(:marketplace_category)
+      field = Fabricate(:marketplace_category_field_definition, category: category)
+
+      expect do
+        delete "/marketplace/admin/categories/#{category.id}.json"
+      end.to change { Marketplace::Category.count }.by(-1).and(
+        change { Marketplace::CategoryFieldDefinition.count }.by(-1),
+      )
+
+      expect(response.status).to eq(204)
+      expect(Marketplace::CategoryFieldDefinition.exists?(field.id)).to eq(false)
+    end
+
+    it "refuses to delete a category that is still used by a listing" do
+      sign_in(admin)
+      category = Fabricate(:marketplace_category)
+      listing = Fabricate(:marketplace_listing, category: category)
+
+      expect do
+        delete "/marketplace/admin/categories/#{category.id}.json"
+      end.not_to change { Marketplace::Category.count }
+
+      expect(response.status).to eq(409)
+      expect(response.parsed_body["errors"]).to include(
+        I18n.t("marketplace.errors.category_in_use"),
+      )
+      expect(category.reload).to be_present
+      expect(listing.reload.category_id).to eq(category.id)
+    end
+
+    it "does not let a non-admin delete a category" do
+      sign_in(user)
+      category = Fabricate(:marketplace_category)
+
+      expect do
+        delete "/marketplace/admin/categories/#{category.id}.json"
+      end.not_to change { Marketplace::Category.count }
+
+      expect(response.status).to eq(403)
+      expect(category.reload).to be_present
+    end
+
+    it "returns 404 for an unknown category" do
+      sign_in(admin)
+
+      delete "/marketplace/admin/categories/999999.json"
 
       expect(response.status).to eq(404)
     end
