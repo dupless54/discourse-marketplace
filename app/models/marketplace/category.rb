@@ -9,7 +9,8 @@ module Marketplace
     has_many :field_definitions,
              -> { order(:position, :id) },
              class_name: "Marketplace::CategoryFieldDefinition",
-             inverse_of: :category
+             inverse_of: :category,
+             dependent: :destroy
 
     validates :name, presence: true, length: { maximum: 100 }
     validates :slug,
