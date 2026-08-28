@@ -43,3 +43,24 @@ module Marketplace
     end
   end
 end
+
+# == Schema Information
+#
+# Table name: marketplace_offer_events
+#
+#  id           :bigint           not null, primary key
+#  amount_cents :bigint
+#  currency     :string(3)
+#  event_type   :integer          not null
+#  created_at   :datetime         not null
+#  actor_id     :integer
+#  offer_id     :bigint           not null
+#
+# Indexes
+#
+#  idx_marketplace_offer_events_offer_id  (offer_id,id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (offer_id => marketplace_offers.id) ON DELETE => cascade
+#
