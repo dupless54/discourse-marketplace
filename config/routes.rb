@@ -9,6 +9,7 @@ Marketplace::Engine.routes.draw do
   get "new" => "static#index"
   get "mine" => "static#index"
   get "listings/:id/edit" => "static#index", constraints: { id: /\d+/ }
+  get "transactions" => "static#index"
 
   get "categories" => "categories#index"
 
@@ -24,6 +25,7 @@ Marketplace::Engine.routes.draw do
   put "listings/:id/status" => "listings#update_status", constraints: { id: /\d+/ }
   get "listings/:id/transactions" => "listings#transactions", constraints: { id: /\d+/ }
 
+  get "transactions/mine" => "transactions#mine"
   post "transactions" => "transactions#create"
   get "transactions/:id" => "transactions#show", constraints: { id: /\d+/ }
   post "transactions/:id/confirm" => "transactions#confirm", constraints: { id: /\d+/ }

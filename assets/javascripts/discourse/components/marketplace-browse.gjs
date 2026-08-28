@@ -88,6 +88,9 @@ export default class MarketplaceBrowse extends Component {
           <LinkTo @route="marketplace.mine" class="btn">
             {{i18n "marketplace.my_listings"}}
           </LinkTo>
+          <LinkTo @route="marketplace.transactions" class="btn">
+            {{i18n "marketplace.my_transactions"}}
+          </LinkTo>
           <LinkTo @route="marketplace.new" class="btn btn-primary">
             {{i18n "marketplace.new_listing"}}
           </LinkTo>

@@ -17,6 +17,7 @@ en:
       title: "Marketplace"
       new_listing: "New Listing"
       my_listings: "My Listings"
+      my_transactions: "My Transactions"
 
       admin:
         title: "Marketplace"
@@ -103,6 +104,15 @@ en:
         expires:
           label: "Expires %{date}"
           expired: "Expired"
+
+      transactions:
+        title: "My Transactions"
+        tabs:
+          buyer: "My Purchases"
+          seller: "My Sales"
+        filters:
+          all: "All"
+        empty: "No transactions found."
 
       transaction:
         seller_heading: "Transactions"

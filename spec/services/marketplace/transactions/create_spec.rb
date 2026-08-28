@@ -68,6 +68,51 @@ describe Marketplace::Transactions::Create do
     end
   end
 
+  describe "snapshot" do
+    it "captures the listing's title, price, and currency at creation time" do
+      listing = build_listing(title: "Widget", price_cents: 2500, currency: "USD")
+      result = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(result).to be_success
+      expect(result.transaction.listing_title_snapshot).to eq("Widget")
+      expect(result.transaction.price_cents_snapshot).to eq(2500)
+      expect(result.transaction.currency_snapshot).to eq("USD")
+    end
+
+    it "does not rewrite the snapshot on a same-buyer replay, even if the listing changed since" do
+      listing = build_listing(title: "Widget", price_cents: 2500, currency: "USD")
+      first = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      listing.update!(title: "Widget 2", price_cents: 5000)
+
+      second = call_service(guardian: buyer.guardian, listing_id: listing.id)
+
+      expect(second.transaction.id).to eq(first.transaction.id)
+      expect(second.transaction.listing_title_snapshot).to eq("Widget")
+      expect(second.transaction.price_cents_snapshot).to eq(2500)
+      expect(second.transaction.currency_snapshot).to eq("USD")
+    end
+
+    it "ignores client-provided snapshot fields" do
+      listing = build_listing(title: "Widget", price_cents: 2500, currency: "USD")
+      result =
+        described_class.call(
+          guardian: buyer.guardian,
+          params: {
+            listing_id: listing.id,
+            listing_title_snapshot: "Hacked",
+            price_cents_snapshot: 1,
+            currency_snapshot: "XXX",
+          },
+        )
+
+      expect(result).to be_success
+      expect(result.transaction.listing_title_snapshot).to eq("Widget")
+      expect(result.transaction.price_cents_snapshot).to eq(2500)
+      expect(result.transaction.currency_snapshot).to eq("USD")
+    end
+  end
+
   describe "eligibility" do
     it "rejects self-trade" do
       listing = build_listing

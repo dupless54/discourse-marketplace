@@ -7,7 +7,8 @@
 .marketplace-my-listings,
 .marketplace-listing-detail,
 .marketplace-new,
-.marketplace-listing-edit {
+.marketplace-listing-edit,
+.marketplace-transaction-center {
   max-width: 1100px;
   margin: 0 auto;
   padding: 1em;
@@ -282,6 +283,153 @@
   .marketplace-listing-detail__panel {
     position: static;
   }
+}
+
+// --- Transaction Center ---------------------------------------------------
+
+.marketplace-transaction-center__tabs {
+  display: flex;
+  gap: 0.5em;
+  margin: 1em 0;
+}
+
+.marketplace-transaction-center__tab--active {
+  background: var(--tertiary);
+  color: var(--secondary);
+}
+
+.marketplace-transaction-center__filters {
+  margin-bottom: 1em;
+}
+
+.marketplace-transaction-center__error {
+  color: var(--danger);
+  margin-bottom: 1em;
+}
+
+.marketplace-transaction-center__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1em;
+}
+
+.marketplace-transaction-center__card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius, 8px);
+  overflow: hidden;
+  background: var(--secondary);
+}
+
+.marketplace-transaction-center__card-link {
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.marketplace-transaction-center__media {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--primary-very-low);
+  overflow: hidden;
+}
+
+.marketplace-transaction-center__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.marketplace-transaction-center__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--primary-medium);
+
+  .d-icon {
+    width: 2.5em;
+    height: 2.5em;
+  }
+}
+
+.marketplace-transaction-center__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  padding: 0.75em 0.9em;
+}
+
+.marketplace-transaction-center__price {
+  font-size: $font-up-1;
+  font-weight: bold;
+  color: var(--tertiary);
+}
+
+.marketplace-transaction-center__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.marketplace-transaction-center__status-badge {
+  align-self: flex-start;
+  padding: 0.15em 0.6em;
+  border-radius: 1em;
+  font-size: $font-down-2;
+  font-weight: bold;
+  background: var(--primary-low);
+  color: var(--primary-medium);
+
+  &--completed {
+    background: var(--success-low, var(--primary-low));
+    color: var(--success, var(--primary));
+  }
+
+  &--cancelled {
+    background: var(--love-low, var(--primary-low));
+    color: var(--love, var(--primary));
+  }
+}
+
+.marketplace-transaction-center__counterparty,
+.marketplace-transaction-center__date {
+  font-size: $font-down-1;
+  color: var(--primary-medium);
+}
+
+.marketplace-transaction-center__actions {
+  display: flex;
+  gap: 0.5em;
+  padding: 0 0.9em 0.9em;
+  margin-top: auto;
+
+  .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+.marketplace-transaction-center__load-more {
+  margin-top: 1em;
+}
+
+.marketplace-transaction-center__empty {
+  color: var(--primary-medium);
 }
 
 // --- New/Edit listing form ----------------------------------------------
