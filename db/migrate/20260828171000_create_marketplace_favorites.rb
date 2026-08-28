@@ -18,6 +18,10 @@ class CreateMarketplaceFavorites < ActiveRecord::Migration[8.0]
               %i[user_id created_at id],
               name: "idx_marketplace_favorites_user_created"
 
+    add_index :marketplace_favorites,
+              :listing_id,
+              name: "idx_marketplace_favorites_listing"
+
     add_foreign_key :marketplace_favorites,
                     :marketplace_listings,
                     column: :listing_id,
