@@ -70,6 +70,11 @@ function offer(overrides = {}) {
 }
 
 function stubListing(server, helper) {
+  // The Marketplace parent route can settle through the browse model while
+  // entering a listing child route directly, so stub both parent requests.
+  server.get("/marketplace/categories", () =>
+    helper.response({ categories: [] })
+  );
   server.get("/marketplace/listings", () => helper.response(EMPTY_LISTINGS));
   server.get("/marketplace/listings/42", () =>
     helper.response({ listing: LISTING })
