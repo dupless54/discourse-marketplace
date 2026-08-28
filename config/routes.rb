@@ -5,10 +5,11 @@ Marketplace::Engine.routes.draw do
   # no JSON behavior and never should. listings/:id is deliberately absent
   # here: it is both an Ember route and the JSON API below, resolved by
   # format inside ListingsController#show, not by a second route.
+  # Favorites is also absent: FavoritesController#index already serves both
+  # the SPA shell and its JSON collection at the same path via respond_to.
   root to: "static#index"
   get "new" => "static#index"
   get "mine" => "static#index"
-  get "favorites" => "static#index"
   get "offers" => "static#index"
   get "listings/:id/edit" => "static#index", constraints: { id: /\d+/ }
   get "transactions" => "static#index"
