@@ -5,6 +5,7 @@ export default function () {
     this.route("favorites");
     this.route("offers");
     this.route("transactions");
+    this.route("seller", { path: "/sellers/:username" });
     this.route("listing", { path: "/listings/:listing_id" }, function () {
       this.route("edit");
     });
