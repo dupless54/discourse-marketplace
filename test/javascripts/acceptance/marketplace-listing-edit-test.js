@@ -45,12 +45,18 @@ const LISTING = {
   custom_fields: [],
 };
 
+const EMPTY_LISTINGS = {
+  listings: [],
+  pagination: { page: 1, per_page: 20, has_more: false },
+};
+
 const EMPTY_TRANSACTIONS = {
   transactions: [],
   pagination: { page: 1, per_page: 20, has_more: false },
 };
 
 function stubListingEditEndpoints(server, helper) {
+  server.get("/marketplace/listings", () => helper.response(EMPTY_LISTINGS));
   server.get("/marketplace/listings/42", () =>
     helper.response({ listing: LISTING })
   );
