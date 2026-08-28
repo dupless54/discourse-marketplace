@@ -51,6 +51,11 @@ RSpec.describe Marketplace::StorefrontsController do
       expect { anonymous_guardian.ensure_public_can_see_profiles! }.not_to raise_error
       expect(anonymous_guardian.can_see_profile?(seller)).to eq(true)
 
+      expect_any_instance_of(Marketplace::StorefrontsController).to receive(:show).and_call_original
+      expect(User).to receive(:find_by_username).with(seller.username).and_call_original
+      expect_any_instance_of(Guardian).to receive(:can_see_profile?).with(seller).and_call_original
+      expect_any_instance_of(Marketplace::ListingQuery).to receive(:results).and_call_original
+
       get_storefront(seller.username)
 
       expect(response.status).to eq(200), response.body
