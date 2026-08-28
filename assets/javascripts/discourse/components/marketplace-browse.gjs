@@ -97,7 +97,7 @@ export default class MarketplaceBrowse extends Component {
 
   @action
   updateCategory(event) {
-    this.categoryId = event.target.value;
+    this.categoryId = event.target.value ? Number(event.target.value) : "";
     this.fieldFilters = {};
     this.fetchListings(1);
   }
@@ -168,7 +168,7 @@ export default class MarketplaceBrowse extends Component {
             {{#each @categories as |category|}}
               <option
                 value={{category.id}}
-                selected={{eq category.id (Number this.categoryId)}}
+                selected={{eq category.id this.categoryId}}
               >{{category.name}}</option>
             {{/each}}
           </select>
@@ -243,7 +243,6 @@ export default class MarketplaceBrowse extends Component {
                     </div>
                   {{else if (eq field.type "select")}}
                     <select
-                      value={{field.value}}
                       {{on "change" (fn this.updateStructuredFilter field)}}
                     >
                       <option value="">{{i18n
@@ -258,7 +257,6 @@ export default class MarketplaceBrowse extends Component {
                     </select>
                   {{else if (eq field.type "boolean")}}
                     <select
-                      value={{field.value}}
                       {{on "change" (fn this.updateStructuredFilter field)}}
                     >
                       <option value="">{{i18n
