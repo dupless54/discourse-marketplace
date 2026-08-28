@@ -5,6 +5,7 @@ import { on } from "@ember/modifier";
 import { ajax } from "discourse/lib/ajax";
 import { i18n } from "discourse-i18n";
 import MarketplaceListingCard from "./marketplace-listing-card";
+import MarketplaceNav from "./marketplace-nav";
 
 export default class MarketplaceMyListings extends Component {
   @tracked listings = this.args.initialListingsResult.listings;
@@ -35,6 +36,8 @@ export default class MarketplaceMyListings extends Component {
 
   <template>
     <div class="marketplace-my-listings">
+      <MarketplaceNav />
+
       <h1>{{i18n "marketplace.mine.title"}}</h1>
 
       {{#if this.listings.length}}

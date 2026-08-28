@@ -10,6 +10,7 @@ import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { eq } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import { i18n } from "discourse-i18n";
+import MarketplaceNav from "./marketplace-nav";
 
 const ROLES = ["buyer", "seller"];
 const STATUSES = ["all", "pending", "completed", "cancelled"];
@@ -192,6 +193,8 @@ export default class MarketplaceTransactionCenter extends Component {
 
   <template>
     <div class="marketplace-transaction-center">
+      <MarketplaceNav />
+
       <h1>{{i18n "marketplace.transactions.title"}}</h1>
 
       <div class="marketplace-transaction-center__tabs">

@@ -12,6 +12,7 @@ import UppyUpload from "discourse/lib/uppy/uppy-upload";
 import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
+import MarketplaceNav from "./marketplace-nav";
 
 // Converts an ISO8601 string (as returned by the API) into the value a
 // <input type="datetime-local"> expects (local time, no seconds/zone), and
@@ -170,6 +171,8 @@ export default class MarketplaceListingForm extends Component {
   }
 
   <template>
+    <MarketplaceNav />
+
     <form class="marketplace-listing-form" {{on "submit" this.submit}}>
       <h1 class="marketplace-listing-form__heading">
         {{#if this.isEdit}}
