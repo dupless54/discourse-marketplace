@@ -45,9 +45,15 @@ RSpec.describe Marketplace::StorefrontsController do
       active_listing(user: seller, title: "Disabled category", category: disabled_category)
       disabled_category.update!(enabled: false)
 
+      anonymous_guardian = Guardian.new
+      expect(User.find_by_username(seller.username)).to eq(seller)
+      expect(seller).to be_active
+      expect { anonymous_guardian.ensure_public_can_see_profiles! }.not_to raise_error
+      expect(anonymous_guardian.can_see_profile?(seller)).to eq(true)
+
       get_storefront(seller.username)
 
-      expect(response.status).to eq(200)
+      expect(response.status).to eq(200), response.body
       expect(response.parsed_body.dig("seller", "id")).to eq(seller.id)
       expect(response.parsed_body.dig("seller", "username")).to eq(seller.username)
       expect(response.parsed_body.fetch("seller")).not_to include("email", "trust_level", "admin", "moderator")
@@ -60,7 +66,7 @@ RSpec.describe Marketplace::StorefrontsController do
 
       get_storefront(seller.username, params: { page: 1, per_page: 1 })
 
-      expect(response.status).to eq(200)
+      expect(response.status).to eq(200), response.body
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([newer.id])
       expect(response.parsed_body.fetch("pagination")).to eq(
         "page" => 1,
@@ -70,7 +76,7 @@ RSpec.describe Marketplace::StorefrontsController do
 
       get_storefront(seller.username, params: { page: 2, per_page: 1 })
 
-      expect(response.status).to eq(200)
+      expect(response.status).to eq(200), response.body
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([older.id])
       expect(response.parsed_body.dig("pagination", "has_more")).to eq(false)
     end
