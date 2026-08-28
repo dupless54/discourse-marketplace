@@ -64,3 +64,27 @@ Fabricator(:marketplace_favorite, class_name: "Marketplace::Favorite") do
   user { Fabricate(:user) }
   listing { Fabricate(:marketplace_listing) }
 end
+
+Fabricator(:marketplace_offer, class_name: "Marketplace::Offer") do
+  listing do
+    Fabricate(
+      :marketplace_listing,
+      status: Marketplace::Listing.statuses[:active],
+    )
+  end
+  buyer { Fabricate(:user) }
+  seller { |attrs| attrs[:listing].seller }
+  proposed_by { |attrs| attrs[:buyer] }
+  status Marketplace::Offer.statuses[:pending]
+  amount_cents 800
+  currency { |attrs| attrs[:listing].currency }
+  expires_at { 48.hours.from_now }
+end
+
+Fabricator(:marketplace_offer_event, class_name: "Marketplace::OfferEvent") do
+  offer { Fabricate(:marketplace_offer) }
+  actor { |attrs| attrs[:offer].proposed_by }
+  event_type Marketplace::OfferEvent.event_types[:proposed]
+  amount_cents { |attrs| attrs[:offer].amount_cents }
+  currency { |attrs| attrs[:offer].currency }
+end
