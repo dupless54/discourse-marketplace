@@ -15,6 +15,17 @@ describe Marketplace::StaticController do
       expect(response.media_type).to eq("text/html")
     end
 
+    it "returns the SPA shell for a direct GET on /marketplace/transactions" do
+      get "/marketplace/transactions"
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
+
+      sign_in(Fabricate(:user))
+      get "/marketplace/transactions"
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
+    end
+
     # A "returns 404 when the plugin is disabled" example (matching the
     # convention every other Marketplace controller spec uses) was tried
     # here through three different, source-verified approaches -- a bare

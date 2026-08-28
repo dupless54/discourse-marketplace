@@ -2,9 +2,10 @@
 
 module Marketplace
   # Serves the Discourse SPA shell for Marketplace's pure-frontend (Ember)
-  # routes: /marketplace, /marketplace/new, /marketplace/mine, and
-  # /marketplace/listings/:id/edit. None of these paths has -- or should ever
-  # gain -- a JSON representation of its own, so there is no format branching
+  # routes: /marketplace, /marketplace/new, /marketplace/mine,
+  # /marketplace/transactions, and /marketplace/listings/:id/edit. None of
+  # these paths has -- or should ever gain -- a JSON representation of its
+  # own, so there is no format branching
   # here (contrast ListingsController#show, which serves both an Ember route
   # and a JSON API at the same path). Direct navigation and a browser refresh
   # (F5) on any of these URLs land here first; Ember then boots from the

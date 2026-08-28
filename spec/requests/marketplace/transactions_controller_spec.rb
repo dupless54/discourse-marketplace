@@ -78,6 +78,10 @@ describe Marketplace::TransactionsController do
         "cancelled_by_id",
         "created_at",
         "updated_at",
+        "listing_title_snapshot",
+        "price_cents_snapshot",
+        "currency_snapshot",
+        "snapshot_captured",
         "buyer",
         "seller",
       )
@@ -89,6 +93,10 @@ describe Marketplace::TransactionsController do
       expect(json_body["seller"]["id"]).to eq(listing.seller_id)
       expect(json_body["status"]).to eq("pending")
       expect(listing.reload.status).to eq("reserved")
+      expect(json_body["listing_title_snapshot"]).to eq(listing.title)
+      expect(json_body["price_cents_snapshot"]).to eq(listing.price_cents)
+      expect(json_body["currency_snapshot"]).to eq(listing.currency)
+      expect(json_body["snapshot_captured"]).to eq(true)
     end
 
     it "returns the same transaction on a same-buyer replay without creating a second one" do
@@ -260,6 +268,24 @@ describe Marketplace::TransactionsController do
       expect(response.status).to eq(200)
       expect(json_body["status"]).to eq("completed")
     end
+
+    it "falls back to the listing's current title/price/currency for a legacy row with no captured snapshot" do
+      transaction = build_transaction
+      transaction.update_columns(
+        listing_title_snapshot: nil,
+        price_cents_snapshot: nil,
+        currency_snapshot: nil,
+      )
+      sign_in(buyer)
+
+      get "/marketplace/transactions/#{transaction.id}.json"
+
+      expect(response.status).to eq(200)
+      expect(json_body["listing_title_snapshot"]).to eq(transaction.listing.title)
+      expect(json_body["price_cents_snapshot"]).to eq(transaction.listing.price_cents)
+      expect(json_body["currency_snapshot"]).to eq(transaction.listing.currency)
+      expect(json_body["snapshot_captured"]).to eq(false)
+    end
   end
 
   describe "#confirm" do
@@ -400,6 +426,42 @@ describe Marketplace::TransactionsController do
 
       expect(response.status).to eq(404)
       expect(response.body).not_to include(transaction.id.to_s)
+    end
+  end
+
+  describe "immutable transaction snapshot" do
+    it "keeps a transaction's historical title/price/currency after the seller later edits the listing" do
+      listing = build_listing(title: "Ürün A", price_cents: 10_000, currency: "USD")
+      sign_in(buyer)
+
+      post "/marketplace/transactions.json", params: { listing_id: listing.id }
+      first_transaction_id = json_body["id"]
+      expect(json_body["listing_title_snapshot"]).to eq("Ürün A")
+      expect(json_body["price_cents_snapshot"]).to eq(10_000)
+      expect(json_body["currency_snapshot"]).to eq("USD")
+
+      listing.update!(title: "Ürün B", price_cents: 15_000)
+
+      get "/marketplace/transactions/#{first_transaction_id}.json"
+
+      expect(json_body["listing_title_snapshot"]).to eq("Ürün A")
+      expect(json_body["price_cents_snapshot"]).to eq(10_000)
+      expect(json_body["currency_snapshot"]).to eq("USD")
+    end
+
+    it "captures the listing's new terms on a genuinely new later transaction, for SINGLE inventory mode" do
+      listing = build_listing(title: "Ürün A", price_cents: 10_000, currency: "USD")
+      sign_in(buyer)
+
+      post "/marketplace/transactions.json", params: { listing_id: listing.id }
+      post "/marketplace/transactions/#{json_body["id"]}/cancel.json"
+
+      listing.update!(title: "Ürün B", price_cents: 15_000)
+
+      post "/marketplace/transactions.json", params: { listing_id: listing.id }
+
+      expect(json_body["listing_title_snapshot"]).to eq("Ürün B")
+      expect(json_body["price_cents_snapshot"]).to eq(15_000)
     end
   end
 

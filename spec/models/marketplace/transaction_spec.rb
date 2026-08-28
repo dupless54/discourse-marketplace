@@ -64,6 +64,42 @@ describe Marketplace::Transaction do
     end
   end
 
+  describe "transaction snapshot" do
+    it "captures the listing's title/price/currency at creation time" do
+      transaction = build_transaction
+      transaction.save!
+
+      expect(transaction.listing_title_snapshot).to eq(listing.title)
+      expect(transaction.price_cents_snapshot).to eq(listing.price_cents)
+      expect(transaction.currency_snapshot).to eq(listing.currency)
+    end
+
+    it "ignores a pre-assigned snapshot value, always deriving it from the listing" do
+      transaction =
+        build_transaction(
+          listing_title_snapshot: "Hacked",
+          price_cents_snapshot: 1,
+          currency_snapshot: "XXX",
+        )
+      transaction.save!
+
+      expect(transaction.listing_title_snapshot).to eq(listing.title)
+      expect(transaction.price_cents_snapshot).to eq(listing.price_cents)
+      expect(transaction.currency_snapshot).to eq(listing.currency)
+    end
+
+    it "does not recapture the snapshot when an already-persisted row is saved again" do
+      transaction = persist_valid_pending
+      original_title = transaction.listing_title_snapshot
+
+      listing.update!(title: "A brand new title")
+      transaction.update_columns(buyer_confirmed_at: Time.zone.now)
+      transaction.save!
+
+      expect(transaction.reload.listing_title_snapshot).to eq(original_title)
+    end
+  end
+
   describe "self-trade validation" do
     it "rejects buyer == seller at the model level" do
       transaction = build_transaction(seller: buyer)

@@ -134,7 +134,25 @@ Real, merged schema (`db/migrate/20260826034000_create_marketplace_transactions.
 | `completed_at` | timestamptz NULL | |
 | `cancelled_at` | timestamptz NULL | |
 | `cancelled_by_id` | integer NULL | participant or staff who cancelled |
+| `listing_title_snapshot` | varchar(255) NULL | captured from `listing.title` at creation, immutable after |
+| `price_cents_snapshot` | bigint NULL | captured from `listing.price_cents` at creation, immutable after |
+| `currency_snapshot` | varchar(3) NULL | captured from `listing.currency` at creation, immutable after |
 | `created_at` / `updated_at` | timestamptz NOT NULL | |
+
+**Transaction snapshot (Transaction Center, post-V1).** A seller may edit a finite/unlimited
+listing's `title`/`price_cents`/`currency` after buyers already hold transactions against it,
+so transaction history must not display the listing's *current* (possibly since-edited)
+values as if they were what the buyer agreed to. `Marketplace::Transaction#capture_
+transaction_snapshot` (a `before_validation on: :create` callback) unconditionally copies
+`listing.title`/`price_cents`/`currency` into the three snapshot columns whenever a NEW
+transaction row is created -- never on a later `save!` (replay, confirm, cancel), and never
+from a client-supplied value. The columns are nullable with no backfill: a row created before
+this migration has no reliable record of what the listing looked like at its own creation
+time (it may have been edited since, with no audit trail), so leaving it `NULL` is the honest
+choice rather than writing a guess into a column named "snapshot".
+`Marketplace::TransactionSerializer` falls back to the listing's current values for a `NULL`
+snapshot and exposes `snapshot_captured: false` so a caller can tell a real captured value
+from a legacy display fallback.
 
 Status enum: `pending=0, completed=10, cancelled=20`. There is no `disputed` status and no
 `initiated_by_id`, `reason`, `disputed_at`, or `disputed_by_id` column — none of these were
@@ -160,12 +178,16 @@ Integrity constraints — load-bearing, all enforced at the database, not just i
   - `cancelled`: `cancelled_at` and `cancelled_by_id` present; `completed_at` NULL. Prior
     confirmation timestamps (0 or 1 of them) are left untouched as audit history.
 
-Indexes actually present: only the partial unique index above (plus the implicit primary
-key on `id`). **There is no index on `buyer_id`, `seller_id`, or `completed_at` alone.**
-Earlier drafts of this document assumed `(buyer_id, status, created_at DESC)`,
-`(seller_id, status, created_at DESC)`, and `(status, completed_at DESC)` — none of these
-were migrated. Any future "my transactions" listing endpoint (§6) or a Trade Reputation
-scan over completed transactions will need one of these added first; tracked in §11.
+Indexes actually present: the pending-only partial unique index on `(listing_id, buyer_id)`
+(§2 above, renamed from the original `(listing_id)` open-transaction index during the PR #23
+multi-transaction fix); `idx_marketplace_transactions_listing_status_created` on `(listing_id,
+status, created_at DESC, id DESC)`, serving the listing-scoped transaction collection (§6);
+and, added for the Transaction Center "mine" endpoint (§6),
+`idx_marketplace_transactions_buyer_status_created` on `(buyer_id, status, created_at DESC, id
+DESC)` and `idx_marketplace_transactions_seller_status_created` on the same shape keyed by
+`seller_id`. **There is still no index on `completed_at` alone** — a Trade Reputation scan
+over completed transactions, should one ever be added, would still need one; `TradeContract`
+itself is point-lookup-only and doesn't need it.
 
 No feedback table here. Trade Feedback is owned by the reputation plugin and keys off
 `transaction_id` via `Marketplace::TradeContract` (§7) only — never a direct reference to
@@ -312,16 +334,17 @@ PUT    /marketplace/listings/:id
 PUT    /marketplace/listings/:id/status
 GET    /marketplace/listings/:id/transaction
 
+GET    /marketplace/transactions/mine   current user's own transactions, role=buyer|seller (login required)
 POST   /marketplace/transactions        { listing_id }
 GET    /marketplace/transactions/:id
 POST   /marketplace/transactions/:id/confirm
 POST   /marketplace/transactions/:id/cancel
 ```
 
-There is no `POST .../reject`, `POST .../dispute`, or general `GET /marketplace/transactions`
-index/list route -- a full "my transactions" listing endpoint is still a plausible future
-addition (would need the indexes noted in §11 first) but is not built. `GET
-/marketplace/listings/:id/transaction` (Phase 3) is narrower and does not need those indexes:
+There is no `POST .../reject` or `POST .../dispute`. `GET
+/marketplace/listings/:id/transaction` (Phase 3) is narrower than `GET
+/marketplace/transactions/mine` (Transaction Center, post-V1) and does not need the
+buyer/seller indexes added for it (§2):
 it returns only the current user's own **open, non-cancelled** transaction on that one
 listing, scoped entirely by `listing_id` plus a `buyer_id = :uid OR seller_id = :uid` WHERE
 clause. The existing partial unique index on `(listing_id) WHERE status <> 20` serves the
@@ -343,11 +366,30 @@ serialized with the existing `ListingBrowseSerializer`.
 `TransactionSerializer` (`app/serializers/marketplace/transaction_serializer.rb`) emits:
 `id, listing_id, listing_title, buyer_id, seller_id, status, buyer_confirmed_at,
 seller_confirmed_at, completed_at, cancelled_at, cancelled_by_id, created_at, updated_at,
-buyer, seller` (Phase 3 added `listing_title` and nested `buyer`/`seller`
-`BasicUserSerializer` objects -- public profile fields only, and only ever reachable by a
-participant or staff via the existing `can_see_marketplace_transaction?` gate, so this is not
-a new privacy surface). It does not emit `viewer_role` or `can_confirm`/`can_cancel`
-booleans -- those remain a plausible future addition, not present today.
+listing_title_snapshot, price_cents_snapshot, currency_snapshot, snapshot_captured, buyer,
+seller` (Phase 3 added `listing_title` and nested `buyer`/`seller` `BasicUserSerializer`
+objects -- public profile fields only, and only ever reachable by a participant or staff via
+the existing `can_see_marketplace_transaction?` gate, so this is not a new privacy surface;
+Transaction Center added the four `*_snapshot`/`snapshot_captured` fields, see §2). It does
+not emit `viewer_role` or `can_confirm`/`can_cancel` booleans on the base serializer -- those
+remain a plausible future addition there, not present today.
+
+`GET /marketplace/transactions/mine` (Transaction Center, post-V1, login required) is the
+current user's own transaction history: `role=buyer` (default) scopes to `buyer_id =
+current_user.id`, `role=seller` to `seller_id = current_user.id` -- both directly in the WHERE
+clause, so (like `#mine`/`#transaction` above) no separate Guardian predicate is needed and no
+row outside the caller's own participation can ever be returned. Optional `status=pending|
+completed|cancelled` filters further; both `role` and `status` are validated against a fixed
+allowlist (400 for anything else). Paginated the same shape as every other Marketplace
+collection (`page`/`per_page`/`has_more`, `per_page` clamped to 50), ordered
+`created_at DESC, id DESC`, served by the new `idx_marketplace_transactions_{buyer,
+seller}_status_created` indexes (§2). Serialized with
+`Marketplace::TransactionSummarySerializer < TransactionSerializer`
+(`app/serializers/marketplace/transaction_summary_serializer.rb`), which adds two
+viewer-scoped fields the base serializer doesn't need: `role` (`"buyer"`/`"seller"`, derived
+from `scope.user.id` vs. `buyer_id`/`seller_id` -- unambiguous because the `#mine` query
+already guarantees the viewer is one or the other) and `listing_thumbnail_url` (from the
+already-`includes`d `listing`, no extra query).
 
 ## 7. Trade Reputation contract (the small public surface)
 
@@ -595,12 +637,13 @@ in this section.
 
 ```
 marketplace-route-map.js                      auto-discovered by filename convention
-routes/marketplace/{index,new,listing,mine}.js
+routes/marketplace/{index,new,listing,mine,transactions}.js
 routes/marketplace/listing/edit.js
-templates/marketplace/{index,new,listing,mine}.gjs  route-template .gjs files (receive @controller)
+templates/marketplace/{index,new,listing,mine,transactions}.gjs  route-template .gjs files (receive @controller)
 templates/marketplace/listing/edit.gjs
-components/marketplace-browse.gjs              search/filter/sort + pagination + listing cards; links to "My Listings" (Phase 4)
+components/marketplace-browse.gjs              search/filter/sort + pagination + listing cards; links to "My Listings"/"My Transactions"
 components/marketplace-my-listings.gjs         Phase 4: current user's own listings, every status, paginated
+components/marketplace-transaction-center.gjs  Transaction Center (post-V1): buyer/seller tabs, status filter, snapshot fields, confirm/cancel, PluginOutlet (§7)
 components/marketplace-listing-form.gjs        shared create/edit form; Phase 4: image/attachment upload UI
 components/marketplace-listing-detail.gjs      listing detail + transaction actions/state; PluginOutlet (§7)
 ```
@@ -610,11 +653,17 @@ params via component-local `@tracked` state, not URL query params -- a deliberat
 scope cut), `/marketplace/new` (create), `/marketplace/listings/:listing_id` (detail;
 `model()` also probes `GET .../transaction`, §6, to render transaction state for a returning
 participant -- a 404 there is the common/expected case, handled locally, not surfaced),
-`/marketplace/listings/:listing_id/edit`, and `/marketplace/mine` (Phase 4: the current
-user's own listings across every status, via `GET .../listings/mine`, §6; redirects to
-`/marketplace` if not logged in; linked from a "My Listings" button in the browse header,
-shown only when logged in). All calls go through the existing JSON API (§6) via `ajax()`; no
-backend surface beyond what's documented in §6. `cooked` is rendered as trusted HTML
+`/marketplace/listings/:listing_id/edit`, `/marketplace/mine` (Phase 4: the current user's own
+listings across every status, via `GET .../listings/mine`, §6; redirects to `/marketplace` if
+not logged in; linked from a "My Listings" button in the browse header, shown only when logged
+in), and `/marketplace/transactions` (Transaction Center, post-V1: the current user's own
+buyer/seller transaction history, via `GET .../transactions/mine`, §6; same not-logged-in
+redirect and browse-header link pattern as `/marketplace/mine`). Clicking a Transaction
+Center card reuses the exact-transaction navigation contract PR #23 established for
+notifications (§8): `LinkTo @route="marketplace.listing" @model={{listingId}} @query={{hash
+transaction_id=id}}`, never a bare listing link that could resolve to the wrong transaction.
+All calls go through the existing JSON API (§6) via `ajax()`; no backend surface beyond what's
+documented in §6. `cooked` is rendered as trusted HTML
 (`htmlSafe`), matching how Discourse renders `cooked` content everywhere else -- safe because
 `PrettyText.cook` already sanitized it server-side.
 
@@ -638,14 +687,15 @@ navigation chrome). Each remains a deliberate scope cut, not a correctness gap.
 
 ## 11. Risks and compatibility
 
-- **Missing supporting indexes (new, Phase 2A).** `marketplace_transactions` has only the
-  one partial unique index (§2) — no index on `buyer_id`, `seller_id`, or `completed_at`.
-  A future "my transactions" endpoint (§6) or a Trade Reputation scan over completed
-  transactions (should one ever be added — `TradeContract` itself is point-lookup-only and
-  doesn't need this) will need a migration adding at least `(buyer_id, status)` and
-  `(seller_id, status)` before shipping, per CLAUDE.md's N+1/indexing guidance. Still
-  flagged; Phase 3's one-listing open-transaction lookup is served by the existing partial
-  `listing_id` index and does not justify a general participant-history index yet.
+- **Missing supporting indexes (Phase 2A, resolved for Transaction Center).** Flagged in
+  Phase 2A that a future "my transactions" endpoint would need `(buyer_id, status)`/
+  `(seller_id, status)` indexes first; `20260828090100_add_participant_indexes_to_
+  marketplace_transactions.rb` added exactly those (as `(buyer_id, status, created_at DESC,
+  id DESC)` / `(seller_id, status, created_at DESC, id DESC)`, matching the listing-scoped
+  collection index's shape) when `GET /marketplace/transactions/mine` was built (§2, §6).
+  **There is still no index on `completed_at` alone** — a Trade Reputation scan over
+  completed transactions, should one ever be added, would still need one; `TradeContract`
+  itself is point-lookup-only and doesn't need it.
 - **Completion event delivery is best-effort (Phase 2B).** `DB.after_commit` proves
   ordering (fires only after the true outermost commit) and rollback-safety (never fires on
   rollback, per core's own `mini_sql_multisite_connection_spec.rb`), but not delivery

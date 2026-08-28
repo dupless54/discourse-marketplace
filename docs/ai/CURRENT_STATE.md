@@ -17,5 +17,19 @@ Inventory/lifetime work (post-V1): listings now carry `inventory_mode` (single/f
 unlimited), `stock_quantity`/`stock_reserved`/`stock_sold`, and optional `expires_at`. See
 `docs/ai/DECISIONS.md` for the design summary. `Marketplace::TradeContract` is unchanged.
 
+PR #23 fixed multi-transaction listing semantics (pending-only listing+buyer uniqueness,
+concurrent buyers on finite/unlimited listings, exact transaction selection via
+`listing_id` + `transaction_id`).
+
+Transaction Center (post-V1, this change): `marketplace_transactions` now carries an
+immutable snapshot (`listing_title_snapshot`/`price_cents_snapshot`/`currency_snapshot`,
+nullable, captured only on creation, no backfill for pre-existing rows -- see
+`docs/MARKETPLACE_ARCHITECTURE.md` §2). `GET /marketplace/transactions/mine`
+(`Marketplace::TransactionSummarySerializer`) is the current user's own buyer/seller
+transaction history, and `/marketplace/transactions` is the corresponding SPA route
+("İşlemlerim" / "My Transactions"), linked from the Marketplace browse header. Still not
+built: URL-addressable browse/search state and a main-nav/sidebar entry point to
+`/marketplace` itself (Transaction Center is discoverable only from inside `/marketplace`).
+
 Current source/tests and current GitHub state override this checkpoint if they ever disagree
 with it.
