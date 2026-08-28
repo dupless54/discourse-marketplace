@@ -40,8 +40,6 @@ module Marketplace
           .includes(:buyer, :seller, :listing, :accepted_transaction)
           .where(listing_id: listing.id)
 
-      # Seller/staff may inspect the listing's negotiations. Everyone else is
-      # scoped to their own buyer row by construction, preventing IDOR.
       if current_user.id != listing.seller_id && !guardian.is_staff?
         scope = scope.where(buyer_id: current_user.id)
       end
@@ -129,12 +127,17 @@ module Marketplace
           offer_not_below_asking_price
           offer_above_asking_price
           offer_amount_unchanged
+          offer_currency_changed
         ].find { |key| result[key] }
 
       status =
-        if %i[offer_already_pending buyer_has_pending_transaction listing_unavailable offer_expired].include?(
-             error_type,
-           )
+        if %i[
+             offer_already_pending
+             buyer_has_pending_transaction
+             listing_unavailable
+             offer_expired
+             offer_currency_changed
+           ].include?(error_type)
           :conflict
         else
           :unprocessable_entity
