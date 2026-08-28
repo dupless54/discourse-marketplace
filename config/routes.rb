@@ -12,6 +12,7 @@ Marketplace::Engine.routes.draw do
   get "transactions" => "static#index"
 
   get "categories" => "categories#index"
+  get "favorites" => "favorites#index"
 
   namespace :admin do
     resources :categories, only: %i[index create update destroy] do
@@ -26,6 +27,8 @@ Marketplace::Engine.routes.draw do
   put "listings/:id" => "listings#update", constraints: { id: /\d+/ }
   put "listings/:id/status" => "listings#update_status", constraints: { id: /\d+/ }
   get "listings/:id/transactions" => "listings#transactions", constraints: { id: /\d+/ }
+  post "listings/:listing_id/favorite" => "favorites#create", constraints: { listing_id: /\d+/ }
+  delete "listings/:listing_id/favorite" => "favorites#destroy", constraints: { listing_id: /\d+/ }
 
   get "transactions/mine" => "transactions#mine"
   post "transactions" => "transactions#create"
