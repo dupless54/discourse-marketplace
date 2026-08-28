@@ -12,6 +12,38 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 1em;
+
+  // One consistent heading rhythm below the shared nav across every
+  // Marketplace page, rather than each page tuning its own header spacing.
+  > h1 {
+    margin: 0.3em 0 1em;
+  }
+}
+
+// --- Shared internal nav (marketplace-nav.gjs) --------------------------
+
+.marketplace-nav {
+  margin-bottom: 1em;
+
+  // DHorizontalOverflowNav already renders core's own .nav-pills.action-list
+  // <ul>; only the bottom spacing above is Marketplace-specific.
+}
+
+.marketplace-listing-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  margin-bottom: 1em;
+  color: var(--primary-medium);
+
+  &:hover {
+    color: var(--primary);
+  }
+
+  .d-icon {
+    width: 0.85em;
+    height: 0.85em;
+  }
 }
 
 .marketplace-browse__header {
@@ -20,7 +52,6 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5em;
-  margin-bottom: 1em;
 }
 
 .marketplace-browse__filters {
@@ -30,12 +61,23 @@
   margin-bottom: 1.5em;
 }
 
+// --- Shared empty states (Browse, My Listings, Transaction Center) ------
+
+.marketplace-browse__empty,
+.marketplace-my-listings__empty,
+.marketplace-transaction-center__empty {
+  color: var(--primary-medium);
+  padding: 2em 0;
+  text-align: center;
+}
+
 // --- Shared listing-card grid (Browse + My Listings) ------------------
 
 .marketplace-listings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1em;
+  margin-top: 0.5em;
 }
 
 .marketplace-listing-card {
@@ -283,12 +325,22 @@
   .marketplace-listing-detail__panel {
     position: static;
   }
+
+  .marketplace-browse__filters,
+  .marketplace-transaction-center__filters {
+    input,
+    select {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
+  }
 }
 
 // --- Transaction Center ---------------------------------------------------
 
 .marketplace-transaction-center__tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5em;
   margin: 1em 0;
 }
@@ -300,6 +352,10 @@
 
 .marketplace-transaction-center__filters {
   margin-bottom: 1em;
+
+  select {
+    max-width: 100%;
+  }
 }
 
 .marketplace-transaction-center__error {
@@ -311,6 +367,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1em;
+  margin-top: 0.5em;
 }
 
 .marketplace-transaction-center__card {

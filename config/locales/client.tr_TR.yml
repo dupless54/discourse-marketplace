@@ -19,6 +19,9 @@ tr_TR:
       my_listings: "İlanlarım"
       my_transactions: "İşlemlerim"
 
+      nav:
+        aria_label: "Pazar Yeri"
+
       admin:
         title: "Pazar Yeri"
         categories:
@@ -90,6 +93,7 @@ tr_TR:
         buy_button: "Satın Al"
         message_seller_button: "Satıcıya Mesaj Gönder"
         message_seller_subject: "İlanınız hakkında: %{listing_title}"
+        back_to_marketplace: "Pazar Yerine Dön"
         status:
           draft: "Taslak"
           active: "Yayında"

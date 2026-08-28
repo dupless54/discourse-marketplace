@@ -10,6 +10,7 @@ import PluginOutlet from "discourse/components/plugin-outlet";
 import lazyHash from "discourse/helpers/lazy-hash";
 import { and, eq, not } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 
 export default class MarketplaceListingDetail extends Component {
@@ -248,6 +249,14 @@ export default class MarketplaceListingDetail extends Component {
 
   <template>
     <div class="marketplace-listing-detail">
+      <LinkTo
+        @route="marketplace.index"
+        class="marketplace-listing-detail__back"
+      >
+        {{dIcon "arrow-left"}}
+        {{i18n "marketplace.listing.back_to_marketplace"}}
+      </LinkTo>
+
       <div class="marketplace-listing-detail__layout">
         <div class="marketplace-listing-detail__content">
           {{#if this.listing.cooked}}

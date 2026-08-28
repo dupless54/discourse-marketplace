@@ -19,6 +19,9 @@ en:
       my_listings: "My Listings"
       my_transactions: "My Transactions"
 
+      nav:
+        aria_label: "Marketplace"
+
       admin:
         title: "Marketplace"
         categories:
@@ -90,6 +93,7 @@ en:
         buy_button: "Buy"
         message_seller_button: "Message Seller"
         message_seller_subject: "About your listing: %{listing_title}"
+        back_to_marketplace: "Back to Marketplace"
         status:
           draft: "Draft"
           active: "Active"

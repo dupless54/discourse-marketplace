@@ -2,15 +2,12 @@ import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
 import { on } from "@ember/modifier";
-import { LinkTo } from "@ember/routing";
-import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { i18n } from "discourse-i18n";
 import MarketplaceListingCard from "./marketplace-listing-card";
+import MarketplaceNav from "./marketplace-nav";
 
 export default class MarketplaceBrowse extends Component {
-  @service currentUser;
-
   @tracked listings = this.args.initialListingsResult.listings;
   @tracked hasMore = this.args.initialListingsResult.pagination.has_more;
   @tracked page = this.args.initialListingsResult.pagination.page;
@@ -82,19 +79,10 @@ export default class MarketplaceBrowse extends Component {
 
   <template>
     <div class="marketplace-browse">
+      <MarketplaceNav />
+
       <div class="marketplace-browse__header">
         <h1>{{i18n "marketplace.title"}}</h1>
-        {{#if this.currentUser}}
-          <LinkTo @route="marketplace.mine" class="btn">
-            {{i18n "marketplace.my_listings"}}
-          </LinkTo>
-          <LinkTo @route="marketplace.transactions" class="btn">
-            {{i18n "marketplace.my_transactions"}}
-          </LinkTo>
-          <LinkTo @route="marketplace.new" class="btn btn-primary">
-            {{i18n "marketplace.new_listing"}}
-          </LinkTo>
-        {{/if}}
       </div>
 
       <form class="marketplace-browse__filters" {{on "submit" this.search}}>
