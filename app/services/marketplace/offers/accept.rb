@@ -62,9 +62,7 @@ module Marketplace
         return
       end
 
-      if Marketplace::Offers::Helpers.expire_if_needed!(offer)
-        context.fail!(offer_expired: true)
-      end
+      context.fail!(offer_expired: true) if offer.effectively_expired?
       context.fail!(offer_not_pending: true) if !offer.pending?
       context[:replay] = false
     end
