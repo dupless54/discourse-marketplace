@@ -69,7 +69,7 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
     set_value(unrelated, edition, "Collector Edition")
 
     records =
-      query(category_id: category.id, field_filters: { edition: "100%" })
+      query(category_id: category.id, field_filters: { edition: "collector 100%" })
 
     expect(records).to contain_exactly(matching)
   end
