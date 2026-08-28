@@ -14,6 +14,19 @@ class AddParticipantIndexesToMarketplaceTransactions < ActiveRecord::Migration[8
   SELLER_INDEX = "idx_marketplace_transactions_seller_status_created"
 
   def up
+    # Rails refuses `add_index ... algorithm: :concurrently` unless the same
+    # migration first drops the index (belt-and-suspenders against a prior
+    # failed concurrent build left behind in an "invalid" state -- see
+    # Postgres docs on CREATE INDEX CONCURRENTLY). These are brand-new
+    # indexes, so each remove_index is a guaranteed no-op (if_exists: true),
+    # matching the same pattern already used by
+    # 20260827230100_replace_marketplace_transactions_listing_unique_index.rb
+    # and 20260828080000_scope_marketplace_transaction_uniqueness_to_pending.rb.
+    remove_index :marketplace_transactions,
+                 name: BUYER_INDEX,
+                 algorithm: :concurrently,
+                 if_exists: true
+
     add_index :marketplace_transactions,
               %i[buyer_id status created_at id],
               order: {
@@ -22,6 +35,11 @@ class AddParticipantIndexesToMarketplaceTransactions < ActiveRecord::Migration[8
               },
               name: BUYER_INDEX,
               algorithm: :concurrently
+
+    remove_index :marketplace_transactions,
+                 name: SELLER_INDEX,
+                 algorithm: :concurrently,
+                 if_exists: true
 
     add_index :marketplace_transactions,
               %i[seller_id status created_at id],
