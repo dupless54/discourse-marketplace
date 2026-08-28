@@ -68,19 +68,26 @@ RSpec.describe Marketplace::StorefrontsController do
           expect(result[:records].map(&:id)).to eq([visible.id])
           result
         end
-      allow_any_instance_of(Marketplace::StorefrontsController)
+      expect_any_instance_of(Marketplace::StorefrontsController)
+        .to receive(:mark_favorites!)
+        .with(satisfy { |records| records.map(&:id) == [visible.id] })
+        .and_call_original
+      expect_any_instance_of(Marketplace::StorefrontsController)
         .to receive(:serialize_data)
-        .and_wrap_original do |method, *args|
-          method.call(*args)
-        rescue Discourse::NotFound => e
-          raise "storefront serialize_data #{args[1]} raised NotFound: #{e.message}"
-        end
-      allow_any_instance_of(Marketplace::StorefrontsController)
+        .with(instance_of(User), BasicUserSerializer)
+        .and_call_original
+      expect_any_instance_of(Marketplace::StorefrontsController)
+        .to receive(:serialize_data)
+        .with(instance_of(Array), Marketplace::ListingBrowseSerializer)
+        .and_call_original
+      expect_any_instance_of(Marketplace::StorefrontsController)
         .to receive(:render_json_dump)
         .and_wrap_original do |method, *args|
-          method.call(*args)
-        rescue Discourse::NotFound => e
-          raise "storefront render_json_dump raised NotFound: #{e.message}"
+          controller = method.receiver
+          result = method.call(*args)
+          expect(controller.response.status).to eq(200)
+          expect(controller.response.media_type).to eq("application/json")
+          result
         end
 
       get_storefront(seller.username)
