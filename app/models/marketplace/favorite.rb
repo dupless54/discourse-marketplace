@@ -7,7 +7,10 @@ module Marketplace
     belongs_to :user, class_name: "::User"
     belongs_to :listing, class_name: "Marketplace::Listing"
 
-    validates :user_id, uniqueness: { scope: :listing_id }
+    # Uniqueness is intentionally enforced by the database index rather than
+    # an ActiveRecord uniqueness validation. Favorites::Add uses
+    # create_or_find_by!, which relies on the unique index to resolve
+    # concurrent/replayed inserts safely and idempotently.
   end
 end
 
