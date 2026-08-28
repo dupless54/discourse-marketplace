@@ -21,6 +21,12 @@ RSpec.describe Marketplace::StorefrontsController do
     )
   end
 
+  def get_storefront(username, params: {})
+    get "/marketplace/sellers/#{username}",
+        params: params,
+        headers: { "ACCEPT" => "application/json" }
+  end
+
   describe "GET /marketplace/sellers/:username" do
     it "returns only the seller's publicly browseable listings and BasicUser fields" do
       visible = active_listing(user: seller, title: "Visible", published_at: 2.hours.ago)
@@ -39,7 +45,7 @@ RSpec.describe Marketplace::StorefrontsController do
       active_listing(user: seller, title: "Disabled category", category: disabled_category)
       disabled_category.update!(enabled: false)
 
-      get "/marketplace/sellers/#{seller.username}.json"
+      get_storefront(seller.username)
 
       expect(response.status).to eq(200)
       expect(response.parsed_body.dig("seller", "id")).to eq(seller.id)
@@ -52,7 +58,7 @@ RSpec.describe Marketplace::StorefrontsController do
       older = active_listing(user: seller, title: "Older", published_at: 2.hours.ago)
       newer = active_listing(user: seller, title: "Newer", published_at: 1.hour.ago)
 
-      get "/marketplace/sellers/#{seller.username}.json", params: { page: 1, per_page: 1 }
+      get_storefront(seller.username, params: { page: 1, per_page: 1 })
 
       expect(response.status).to eq(200)
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([newer.id])
@@ -62,7 +68,7 @@ RSpec.describe Marketplace::StorefrontsController do
         "has_more" => true,
       )
 
-      get "/marketplace/sellers/#{seller.username}.json", params: { page: 2, per_page: 1 }
+      get_storefront(seller.username, params: { page: 2, per_page: 1 })
 
       expect(response.status).to eq(200)
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([older.id])
@@ -73,7 +79,7 @@ RSpec.describe Marketplace::StorefrontsController do
       SiteSetting.hide_user_profiles_from_public = true
       active_listing(user: seller, title: "Public listing")
 
-      get "/marketplace/sellers/#{seller.username}.json"
+      get_storefront(seller.username)
 
       expect(response.status).to eq(404)
       expect(response.body).not_to include(seller.username)
@@ -86,14 +92,14 @@ RSpec.describe Marketplace::StorefrontsController do
       sign_in(viewer)
       active_listing(user: seller, title: "Still public listing")
 
-      get "/marketplace/sellers/#{seller.username}.json"
+      get_storefront(seller.username)
 
       expect(response.status).to eq(404)
       expect(response.body).not_to include(seller.username)
     end
 
     it "returns 404 for an unknown seller without leaking profile data" do
-      get "/marketplace/sellers/definitely-missing-user.json"
+      get_storefront("definitely-missing-user")
 
       expect(response.status).to eq(404)
       expect(response.body).not_to include("definitely-missing-user")
