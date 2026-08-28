@@ -96,3 +96,36 @@ module Marketplace
     end
   end
 end
+
+# == Schema Information
+#
+# Table name: marketplace_offers
+#
+#  id                      :bigint           not null, primary key
+#  amount_cents            :bigint           not null
+#  currency                :string(3)        not null
+#  expires_at              :datetime         not null
+#  responded_at            :datetime
+#  status                  :integer          default("pending"), not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  accepted_transaction_id :bigint
+#  buyer_id                :integer          not null
+#  listing_id              :bigint           not null
+#  proposed_by_id          :integer          not null
+#  responded_by_id         :integer
+#  seller_id               :integer          not null
+#
+# Indexes
+#
+#  idx_marketplace_offers_accepted_transaction    (accepted_transaction_id) UNIQUE WHERE (accepted_transaction_id IS NOT NULL)
+#  idx_marketplace_offers_buyer_status_updated    (buyer_id,status,updated_at DESC,id DESC)
+#  idx_marketplace_offers_listing_buyer_pending   (listing_id,buyer_id) UNIQUE WHERE (status = 0)
+#  idx_marketplace_offers_listing_status_updated  (listing_id,status,updated_at DESC,id DESC)
+#  idx_marketplace_offers_seller_status_updated   (seller_id,status,updated_at DESC,id DESC)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (accepted_transaction_id => marketplace_transactions.id) ON DELETE => restrict
+#  fk_rails_...  (listing_id => marketplace_listings.id) ON DELETE => restrict
+#
