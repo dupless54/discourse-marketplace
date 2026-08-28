@@ -47,7 +47,7 @@ acceptance("Marketplace | seller storefront", function (needs) {
         pagination: { page: 1, per_page: 20, has_more: false },
       })
     );
-    server.get("/marketplace/sellers/seller", (request) => {
+    server.get("/marketplace/sellers/seller.json", (request) => {
       if (request.queryParams.page === "2") {
         return helper.response({
           seller: SELLER,
