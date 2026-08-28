@@ -130,7 +130,7 @@ describe Marketplace::FavoritesController do
   end
 
   describe "favorite state on listing APIs" do
-    it "marks favorited listings on browse and detail without affecting anonymous viewers" do
+    it "marks the current user's favorite on browse and detail" do
       Fabricate(:marketplace_favorite, user: user, listing: listing)
       sign_in(user)
 
@@ -142,9 +142,14 @@ describe Marketplace::FavoritesController do
       get "/marketplace/listings/#{listing.id}.json"
       expect(response.status).to eq(200)
       expect(response.parsed_body["listing"]["favorited"]).to eq(true)
+    end
 
-      sign_out
+    it "does not expose another user's favorite state to an anonymous viewer" do
+      Fabricate(:marketplace_favorite, user: user, listing: listing)
+
       get "/marketplace/listings.json"
+
+      expect(response.status).to eq(200)
       anonymous = response.parsed_body["listings"].find { |item| item["id"] == listing.id }
       expect(anonymous["favorited"]).to eq(false)
     end
