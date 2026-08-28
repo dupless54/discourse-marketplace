@@ -14,7 +14,7 @@ Marketplace::Engine.routes.draw do
   get "categories" => "categories#index"
 
   namespace :admin do
-    resources :categories, only: %i[index create update] do
+    resources :categories, only: %i[index create update destroy] do
       resources :fields, only: %i[create update], controller: "category_fields"
     end
   end
