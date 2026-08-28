@@ -62,7 +62,7 @@ describe Marketplace::Admin::CategoryFieldsController do
       )
 
       [
-        field_params(key: "Unsafe key"),
+        field_params(key: "9unsafe"),
         field_params(key: "bad_type", type: "code", choices: []),
         field_params(key: "existing_key", type: "text", choices: []),
         field_params(key: "empty_select", choices: []),
@@ -107,7 +107,7 @@ describe Marketplace::Admin::CategoryFieldsController do
               enabled: false,
             )
 
-      expect(response.status).to eq(200)
+      expect(response.status).to eq(200), response.parsed_body.inspect
       expect(field.reload).to have_attributes(
         key: "mileage",
         label: "Odometer",
@@ -142,7 +142,7 @@ describe Marketplace::Admin::CategoryFieldsController do
       put "/marketplace/admin/categories/#{category.id}/fields/#{field.id}.json",
           params: field_params(type: "integer", choices: [], enabled: false)
 
-      expect(response.status).to eq(200)
+      expect(response.status).to eq(200), response.parsed_body.inspect
       expect(value.reload.value).to eq("125000")
     end
 

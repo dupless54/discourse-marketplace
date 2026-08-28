@@ -89,9 +89,10 @@ describe Marketplace::CategoryFieldDefinition do
   end
 
   it "limits the number of fields in one category" do
-    stub_const("Marketplace::CategoryFieldDefinition::MAX_FIELDS_PER_CATEGORY", 1)
-    Fabricate(:marketplace_category_field_definition, category: category)
+    stub_const(Marketplace::CategoryFieldDefinition, :MAX_FIELDS_PER_CATEGORY, 1) do
+      Fabricate(:marketplace_category_field_definition, category: category)
 
-    expect(build_field(key: "another")).not_to be_valid
+      expect(build_field(key: "another")).not_to be_valid
+    end
   end
 end

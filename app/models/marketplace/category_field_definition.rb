@@ -147,3 +147,31 @@ module Marketplace
     end
   end
 end
+
+# == Schema Information
+#
+# Table name: marketplace_category_field_definitions
+#
+#  id          :bigint           not null, primary key
+#  choices     :jsonb            not null
+#  enabled     :boolean          default(TRUE), not null
+#  field_type  :string(20)       not null
+#  help_text   :string(500)
+#  key         :string(50)       not null
+#  label       :string(100)      not null
+#  placeholder :string(150)
+#  position    :integer          default(0), not null
+#  required    :boolean          default(FALSE), not null
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  category_id :bigint           not null
+#
+# Indexes
+#
+#  idx_marketplace_category_fields_order       (category_id,position,id)
+#  idx_marketplace_category_fields_unique_key  (category_id,key) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (category_id => marketplace_categories.id) ON DELETE => restrict
+#
