@@ -33,6 +33,18 @@ describe Marketplace::Listings::Create do
     expect(listing.cooked).to be_present
   end
 
+  it "cooks raw through Listing.cook, so an embedded image is lightbox-wrapped" do
+    upload = Fabricate(:upload)
+    result =
+      call_service(
+        guardian: guardian,
+        params: params.merge(raw: "![photo](#{upload.short_url})"),
+      )
+
+    expect(result).to be_success
+    expect(result.listing.cooked).to include("lightbox-wrapper")
+  end
+
   it "ignores a client-supplied seller_id and status" do
     other_user = Fabricate(:user)
     result =

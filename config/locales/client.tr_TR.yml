@@ -94,6 +94,7 @@ tr_TR:
         message_seller_button: "Satıcıya Mesaj Gönder"
         message_seller_subject: "İlanınız hakkında: %{listing_title}"
         back_to_marketplace: "Pazar Yerine Dön"
+        description_heading: "İlan Açıklaması"
         status:
           draft: "Taslak"
           active: "Yayında"

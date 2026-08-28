@@ -273,4 +273,46 @@ describe Marketplace::Listing do
       expect(listing.thumbnail_url).to be_nil
     end
   end
+
+  describe ".cook" do
+    it "wraps an embedded image in the lightbox markup PhotoSwipe activates client-side" do
+      upload = Fabricate(:upload)
+      cooked = Marketplace::Listing.cook("![photo](#{upload.short_url})")
+      fragment = Nokogiri::HTML5.fragment(cooked)
+
+      wrapper = fragment.at_css("div.lightbox-wrapper")
+      expect(wrapper).to be_present
+
+      link = wrapper.at_css("a.lightbox")
+      expect(link).to be_present
+      expect(link["href"]).to eq(upload.url)
+      expect(link.at_css("img")).to be_present
+    end
+
+    it "does not double-wrap an image the markdown already linked" do
+      cooked =
+        Marketplace::Listing.cook(
+          "[![alt](https://example.com/photo.png)](https://example.com/full.png)",
+        )
+      fragment = Nokogiri::HTML5.fragment(cooked)
+
+      expect(fragment.css("div.lightbox-wrapper")).to be_empty
+      expect(fragment.css("a.lightbox")).to be_empty
+      # the original hand-authored link survives untouched
+      expect(fragment.at_css("a img")).to be_present
+    end
+
+    it "does not wrap emoji images" do
+      cooked = Marketplace::Listing.cook("Nice deal! :+1:")
+      fragment = Nokogiri::HTML5.fragment(cooked)
+
+      expect(fragment.css("div.lightbox-wrapper")).to be_empty
+    end
+
+    it "leaves plain text content with no image untouched" do
+      cooked = Marketplace::Listing.cook("Just a text description, no photo.")
+
+      expect(cooked).not_to include("lightbox")
+    end
+  end
 end
