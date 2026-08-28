@@ -37,6 +37,24 @@ tr_TR:
           save: "Kaydet"
           empty: "Henüz herhangi bir pazar yeri kategorisi oluşturulmadı."
           error: "Kategori kaydedilemedi. Değerleri kontrol edip tekrar deneyin."
+          fields:
+            title: "Özellik Alanları"
+            add: "Alan Ekle"
+            save: "Alanı Kaydet"
+            empty: "Bu kategoride henüz özellik alanı yok."
+            key: "Alan Anahtarı"
+            label: "Alan Adı"
+            type: "Alan Türü"
+            required: "Zorunlu"
+            placeholder: "Yer tutucu"
+            help_text: "Yardım metni"
+            choices: "Seçenekler (her satıra değer | Etiket)"
+            types:
+              text: "Metin"
+              textarea: "Uzun Metin"
+              integer: "Sayı"
+              boolean: "Evet/Hayır"
+              select: "Seçim"
 
       notifications:
         transaction_started: "%{username} %{listing_title} ilanını satın almak istiyor"
@@ -70,6 +88,8 @@ tr_TR:
         description_label: "Açıklama"
         category_label: "Kategori"
         category_placeholder: "Bir kategori seçin"
+        structured_fields_heading: "İlan Özellikleri"
+        select_placeholder: "Bir seçenek belirleyin"
         upload_button: "Görsel veya dosya ekle"
         upload_uploading: "Yükleniyor…"
         price_label: "Fiyat"
@@ -95,6 +115,9 @@ tr_TR:
         message_seller_subject: "İlanınız hakkında: %{listing_title}"
         back_to_marketplace: "Pazar Yerine Dön"
         description_heading: "İlan Açıklaması"
+        details_heading: "İlan Özellikleri"
+        boolean_yes: "Evet"
+        boolean_no: "Hayır"
         status:
           draft: "Taslak"
           active: "Yayında"

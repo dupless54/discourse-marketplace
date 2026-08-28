@@ -99,6 +99,35 @@ describe Marketplace::ListingsController do
 
       expect(response.status).to eq(400)
     end
+
+    it "accepts valid category-defined fields and rejects unknown client keys" do
+      Fabricate(
+        :marketplace_category_field_definition,
+        category: category,
+        key: "platform",
+        label: "Platform",
+        required: true,
+      )
+      sign_in(seller)
+
+      post "/marketplace/listings.json",
+           params: create_params(custom_fields: { platform: "Steam" })
+      expect(response.status).to eq(201)
+      expect(json_body["custom_fields"].first).to include(
+        "key" => "platform",
+        "value" => "Steam",
+      )
+
+      post "/marketplace/listings.json",
+           params:
+             create_params(
+               custom_fields: {
+                 platform: "Steam",
+                 javascript: "<script>alert(1)</script>",
+               },
+             )
+      expect(response.status).to eq(422)
+    end
   end
 
   describe "#show" do
@@ -156,6 +185,70 @@ describe Marketplace::ListingsController do
         "name" => category.name,
         "slug" => category.slug,
         "position" => category.position,
+      )
+    end
+
+    it "serializes only current-category structured values in definition order" do
+      listing =
+        Fabricate(
+          :marketplace_listing,
+          seller: seller,
+          category: category,
+          status: Marketplace::Listing.statuses[:active],
+        )
+      fuel =
+        Fabricate(
+          :marketplace_category_field_definition,
+          category: category,
+          key: "fuel",
+          label: "Fuel",
+          field_type: "select",
+          choices: [{ "value" => "diesel", "label" => "Diesel" }],
+          position: 2,
+        )
+      mileage =
+        Fabricate(
+          :marketplace_category_field_definition,
+          category: category,
+          key: "mileage",
+          label: "Mileage",
+          field_type: "integer",
+          position: 1,
+        )
+      Fabricate(
+        :marketplace_listing_field_value,
+        listing: listing,
+        field_definition: fuel,
+        value: "diesel",
+      )
+      Fabricate(
+        :marketplace_listing_field_value,
+        listing: listing,
+        field_definition: mileage,
+        value: "125000",
+      )
+      fuel.update!(enabled: false)
+
+      get "/marketplace/listings/#{listing.id}.json"
+
+      expect(response.status).to eq(200)
+      expect(json_body["custom_fields"]).to eq(
+        [
+          {
+            "key" => "mileage",
+            "label" => "Mileage",
+            "type" => "integer",
+            "value" => "125000",
+            "display_value" => "125000",
+          },
+          {
+            "key" => "fuel",
+            "label" => "Fuel",
+            "type" => "select",
+            "value" => "diesel",
+            "display_value" => "Diesel",
+          },
+        ],
       )
     end
 

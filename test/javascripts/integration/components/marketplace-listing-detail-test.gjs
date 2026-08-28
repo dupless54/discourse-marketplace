@@ -138,6 +138,66 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
       .exists("the description section still renders on its own");
   });
 
+  test("renders a specification grid, omits blanks server-side, and localizes booleans", async function (assert) {
+    this.listing = {
+      id: 33,
+      title: "BMW 320d",
+      status: "active",
+      price_cents: 1500000,
+      currency: "USD",
+      cooked: "<p>Car description.</p>",
+      custom_fields: [
+        {
+          key: "mileage",
+          label: "Mileage",
+          type: "integer",
+          value: "125000",
+          display_value: "125000",
+        },
+        {
+          key: "fuel",
+          label: "Fuel",
+          type: "select",
+          value: "diesel",
+          display_value: "Diesel",
+        },
+        {
+          key: "trade_available",
+          label: "Trade available",
+          type: "boolean",
+          value: "true",
+          display_value: "true",
+        },
+        {
+          key: "instant_delivery",
+          label: "Instant delivery",
+          type: "boolean",
+          value: "false",
+          display_value: "false",
+        },
+      ],
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+    this.transactions = [];
+
+    await render(
+      <template>
+        <MarketplaceListingDetail
+          @listing={{this.listing}}
+          @transactions={{this.transactions}}
+        />
+      </template>
+    );
+
+    assert
+      .dom(".marketplace-listing-detail__specifications-heading")
+      .hasText("Listing Details");
+    assert.dom(".marketplace-listing-detail__specification").exists({ count: 4 });
+    assert.dom('[data-field-key="fuel"] dd').hasText("Diesel");
+    assert.dom('[data-field-key="trade_available"] dd').hasText("Yes");
+    assert.dom('[data-field-key="instant_delivery"] dd').hasText("No");
+  });
+
   test("the Edit link on the owner's own listing routes to the correct edit URL", async function (assert) {
     this.listing = {
       id: 32,
