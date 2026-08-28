@@ -238,7 +238,7 @@ describe Marketplace::Transaction do
   # Re-scoped from (listing_id) to (listing_id, buyer_id) to support finite/
   # unlimited listings, where multiple different buyers legitimately hold
   # concurrent open transactions on the same listing -- see
-  # db/migrate/20260828020000_replace_marketplace_transactions_listing_unique_index.rb.
+  # db/migrate/20260827230100_replace_marketplace_transactions_listing_unique_index.rb.
   # A single buyer still cannot open a second pending transaction on a
   # listing they already have one on, at the database level.
   describe "partial unique index on (listing_id, buyer_id)" do
