@@ -37,9 +37,7 @@ module Marketplace
     end
 
     def ensure_actionable(offer:)
-      if Marketplace::Offers::Helpers.expire_if_needed!(offer)
-        context.fail!(offer_expired: true)
-      end
+      context.fail!(offer_expired: true) if offer.effectively_expired?
       context.fail!(offer_not_pending: true) if !offer.pending?
     end
 
