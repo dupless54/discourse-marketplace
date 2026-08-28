@@ -373,86 +373,157 @@ describe Marketplace::ListingsController do
     end
   end
 
-  describe "#transaction" do
+  describe "#transactions" do
     fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
+    fab!(:other_buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
     fab!(:unrelated_user) { Fabricate(:user, trust_level: TrustLevel[1]) }
 
-    def build_listing(status: :reserved, **overrides)
+    def build_listing(**overrides)
       Fabricate(
         :marketplace_listing,
         seller: seller,
         category: category,
-        status: Marketplace::Listing.statuses[status],
+        status: Marketplace::Listing.statuses[:active],
+        inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+        stock_quantity: 10,
         **overrides,
       )
     end
 
-    it "returns the current user's open transaction on the listing" do
-      listing = build_listing
-      transaction =
-        Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
-      sign_in(buyer)
-
-      get "/marketplace/listings/#{listing.id}/transaction.json"
-
-      expect(response.status).to eq(200)
-      expect(response.parsed_body["transaction"]["id"]).to eq(transaction.id)
-    end
-
-    it "works the same for the seller side of the same transaction" do
-      listing = build_listing
-      transaction =
-        Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
-      sign_in(seller)
-
-      get "/marketplace/listings/#{listing.id}/transaction.json"
-
-      expect(response.status).to eq(200)
-      expect(response.parsed_body["transaction"]["id"]).to eq(transaction.id)
-    end
-
-    it "returns 404 when the current user has no transaction on the listing" do
-      listing = build_listing
-      sign_in(buyer)
-
-      get "/marketplace/listings/#{listing.id}/transaction.json"
-
-      expect(response.status).to eq(404)
-    end
-
-    it "returns 404 for a cancelled transaction so a new purchase can start" do
-      listing = build_listing(status: :active)
-      Fabricate(
-        :marketplace_transaction,
+    def build_transaction(listing:, buyer:, status: :pending, **overrides)
+      attributes = {
         listing: listing,
         buyer: buyer,
         seller: seller,
-        status: Marketplace::Transaction.statuses[:cancelled],
-        cancelled_at: Time.current,
-        cancelled_by_id: buyer.id,
-      )
-      sign_in(buyer)
+        status: Marketplace::Transaction.statuses[status],
+      }
+      now = Time.current
+      if status == :completed
+        attributes.merge!(
+          buyer_confirmed_at: now,
+          seller_confirmed_at: now,
+          completed_at: now,
+        )
+      elsif status == :cancelled
+        attributes.merge!(cancelled_at: now, cancelled_by_id: buyer.id)
+      end
 
-      get "/marketplace/listings/#{listing.id}/transaction.json"
-
-      expect(response.status).to eq(404)
+      Fabricate(:marketplace_transaction, **attributes, **overrides)
     end
 
-    it "never returns another user's transaction on the same listing (non-enumerable)" do
-      listing = build_listing
-      Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
-      sign_in(unrelated_user)
+    def transaction_ids
+      response.parsed_body["transactions"].map { |transaction| transaction["id"] }
+    end
 
-      get "/marketplace/listings/#{listing.id}/transaction.json"
+    it "lets the seller discover both buyers' pending transactions in deterministic order" do
+      listing = build_listing(stock_reserved: 2, stock_sold: 1)
+      first = build_transaction(listing: listing, buyer: buyer, created_at: 2.minutes.ago)
+      second = build_transaction(listing: listing, buyer: other_buyer, created_at: 1.minute.ago)
+      history = build_transaction(listing: listing, buyer: buyer, status: :completed)
+      sign_in(seller)
+
+      get "/marketplace/listings/#{listing.id}/transactions.json"
+
+      expect(response.status).to eq(200)
+      expect(transaction_ids).to eq([second.id, first.id, history.id])
+      expect(response.parsed_body["transactions"].map { |row| row.dig("buyer", "id") }).to eq(
+        [other_buyer.id, buyer.id, buyer.id],
+      )
+    end
+
+    it "keeps another buyer's pending transaction independently actionable after one completes" do
+      listing = build_listing(stock_reserved: 2)
+      first =
+        build_transaction(
+          listing: listing,
+          buyer: buyer,
+          buyer_confirmed_at: 1.minute.ago,
+        )
+      second = build_transaction(listing: listing, buyer: other_buyer)
+      sign_in(seller)
+
+      post "/marketplace/transactions/#{first.id}/confirm.json"
+      expect(response.status).to eq(200)
+      expect(response.parsed_body.dig("transaction", "status")).to eq("completed")
+
+      get "/marketplace/listings/#{listing.id}/transactions.json"
+      rows = response.parsed_body["transactions"].index_by { |row| row["id"] }
+      expect(rows[first.id]["status"]).to eq("completed")
+      expect(rows[second.id]["status"]).to eq("pending")
+      expect(listing.reload.stock_reserved).to eq(1)
+      expect(listing.stock_sold).to eq(1)
+    end
+
+    it "returns only the buyer's own history" do
+      listing = build_listing(stock_reserved: 1, stock_sold: 1)
+      completed = build_transaction(listing: listing, buyer: buyer, status: :completed)
+      cancelled = build_transaction(listing: listing, buyer: buyer, status: :cancelled)
+      build_transaction(listing: listing, buyer: other_buyer)
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transactions.json"
+
+      expect(response.status).to eq(200)
+      expect(transaction_ids).to eq([completed.id, cancelled.id])
+    end
+
+    it "does not expose another seller's listing transactions" do
+      other_seller = Fabricate(:user)
+      listing = build_listing(seller: other_seller, stock_reserved: 1)
+      build_transaction(listing: listing, buyer: other_buyer, seller: other_seller)
+      sign_in(seller)
+
+      get "/marketplace/listings/#{listing.id}/transactions.json"
+
+      expect(response.status).to eq(200)
+      expect(transaction_ids).to be_empty
+    end
+
+    it "selects an exact owned transaction for a notification link" do
+      listing = build_listing(stock_sold: 2)
+      older = build_transaction(listing: listing, buyer: buyer, status: :completed)
+      newer = build_transaction(listing: listing, buyer: buyer, status: :completed)
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transactions.json",
+          params: {
+            transaction_id: older.id,
+          }
+
+      expect(response.status).to eq(200)
+      expect(transaction_ids).to eq([older.id])
+      expect(transaction_ids).not_to include(newer.id)
+    end
+
+    it "returns a masked 404 when a buyer selects another buyer's transaction id" do
+      listing = build_listing(stock_reserved: 1)
+      other_transaction = build_transaction(listing: listing, buyer: other_buyer)
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transactions.json",
+          params: {
+            transaction_id: other_transaction.id,
+          }
 
       expect(response.status).to eq(404)
+      expect(response.body).not_to include(other_transaction.id.to_s)
+      expect(response.parsed_body.keys).not_to include("transactions")
+    end
+
+    it "returns an empty collection when the current buyer has no transaction" do
+      listing = build_listing
+      sign_in(buyer)
+
+      get "/marketplace/listings/#{listing.id}/transactions.json"
+
+      expect(response.status).to eq(200)
+      expect(transaction_ids).to be_empty
     end
 
     it "rejects anonymous access" do
       listing = build_listing
-      Fabricate(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller)
 
-      get "/marketplace/listings/#{listing.id}/transaction.json"
+      get "/marketplace/listings/#{listing.id}/transactions.json"
 
       expect(response.status).to eq(403)
     end
@@ -460,7 +531,7 @@ describe Marketplace::ListingsController do
     it "returns 404 for a missing listing" do
       sign_in(buyer)
 
-      get "/marketplace/listings/-1/transaction.json"
+      get "/marketplace/listings/-1/transactions.json"
 
       expect(response.status).to eq(404)
     end

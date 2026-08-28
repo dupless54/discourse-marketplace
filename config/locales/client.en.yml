@@ -105,6 +105,12 @@ en:
           expired: "Expired"
 
       transaction:
+        seller_heading: "Transactions"
+        pending_heading: "Pending"
+        history_heading: "History"
+        buyer: "Buyer: %{username}"
+        no_pending: "No pending transactions."
+        load_more: "Load more"
         confirm_button: "Confirm"
         cancel_button: "Cancel"
         error: "Something went wrong with this transaction. Please try again."

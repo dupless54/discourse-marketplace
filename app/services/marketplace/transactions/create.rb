@@ -125,9 +125,11 @@ module Marketplace
       )
     end
 
-    # The partial unique index on marketplace_transactions(listing_id,
-    # buyer_id) is the DB backstop behind the row lock. If it ever fires (a
-    # concurrent insert slipped past the lock somehow), we must not keep
+    # The pending-only partial unique index on
+    # marketplace_transactions(listing_id, buyer_id) is the DB backstop
+    # behind the row lock. Terminal history is deliberately outside it. If
+    # it ever fires (a concurrent pending insert slipped past the lock
+    # somehow), we must not keep
     # using a Postgres transaction that is now in an aborted state: catch
     # only the specific exception, immediately fail the context (which
     # raises and unwinds the enclosing transaction do...end, rolling

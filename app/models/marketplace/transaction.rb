@@ -46,7 +46,8 @@ end
 #
 # Indexes
 #
-#  idx_marketplace_transactions_listing_buyer_open  (listing_id,buyer_id) UNIQUE WHERE (status <> 20)
+#  idx_marketplace_transactions_listing_buyer_pending  (listing_id,buyer_id) UNIQUE WHERE (status = 0)
+#  idx_marketplace_transactions_listing_status_created  (listing_id,status,created_at DESC,id DESC)
 #
 # Foreign Keys
 #

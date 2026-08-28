@@ -253,6 +253,27 @@
   border-top: 1px solid var(--primary-low);
 }
 
+.marketplace-transactions {
+  margin-top: 1em;
+
+  h2,
+  h3 {
+    margin-bottom: 0.35em;
+  }
+}
+
+.marketplace-transaction__buyer {
+  font-weight: 600;
+}
+
+.marketplace-transaction--history {
+  color: var(--primary-medium);
+}
+
+.marketplace-transactions__load-more {
+  margin-top: 1em;
+}
+
 @media (max-width: 700px) {
   .marketplace-listing-detail__layout {
     grid-template-columns: 1fr;

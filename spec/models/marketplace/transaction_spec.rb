@@ -235,25 +235,46 @@ describe Marketplace::Transaction do
     end
   end
 
-  # Re-scoped from (listing_id) to (listing_id, buyer_id) to support finite/
-  # unlimited listings, where multiple different buyers legitimately hold
-  # concurrent open transactions on the same listing -- see
-  # db/migrate/20260827230100_replace_marketplace_transactions_listing_unique_index.rb.
-  # A single buyer still cannot open a second pending transaction on a
-  # listing they already have one on, at the database level.
-  describe "partial unique index on (listing_id, buyer_id)" do
+  # Pending-only uniqueness is the durable retry/idempotency backstop for
+  # finite/unlimited listings. Terminal rows remain immutable history and
+  # do not prevent a later purchase of the same listing by the same buyer.
+  describe "pending-only partial unique index on (listing_id, buyer_id)" do
+    it "has the exact expected columns and predicate" do
+      index =
+        Marketplace::Transaction.connection.indexes(:marketplace_transactions).find do |candidate|
+          candidate.name == "idx_marketplace_transactions_listing_buyer_pending"
+        end
+
+      expect(index).to be_present
+      expect(index.unique).to eq(true)
+      expect(index.columns).to eq(%w[listing_id buyer_id])
+      expect(index.where.delete("()")).to eq("status = 0")
+    end
+
+    it "indexes the participant collection's deterministic order" do
+      index =
+        Marketplace::Transaction.connection.indexes(:marketplace_transactions).find do |candidate|
+          candidate.name == "idx_marketplace_transactions_listing_status_created"
+        end
+
+      expect(index).to be_present
+      expect(index.columns).to eq(%w[listing_id status created_at id])
+      orders = index.orders.transform_values { |direction| direction.to_s.downcase }
+      expect(orders).to include("created_at" => "desc", "id" => "desc")
+    end
+
     it "allows the first pending transaction for a listing" do
       expect(persist_valid_pending).to be_persisted
     end
 
-    it "rejects a second non-cancelled transaction for the same buyer on the same listing" do
+    it "rejects a second pending transaction for the same buyer on the same listing" do
       persist_valid_pending
       second = build_transaction
 
       expect { second.save! }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
-    it "allows a second non-cancelled transaction for a different buyer on the same listing" do
+    it "allows a pending transaction for a different buyer on the same listing" do
       persist_valid_pending
       other_buyer = Fabricate(:user)
       second = build_transaction(buyer: other_buyer)
@@ -261,7 +282,7 @@ describe Marketplace::Transaction do
       expect(second.save!).to eq(true)
     end
 
-    it "still blocks a same-buyer replay attempt once the existing one is completed" do
+    it "allows a new pending transaction once the same buyer's existing one is completed" do
       first = persist_valid_pending
       now = Time.zone.now
       first.update_columns(
@@ -273,7 +294,7 @@ describe Marketplace::Transaction do
 
       second = build_transaction
 
-      expect { second.save! }.to raise_error(ActiveRecord::RecordNotUnique)
+      expect(second.save!).to eq(true)
     end
 
     it "allows a new pending transaction for the same buyer once the existing one is cancelled" do

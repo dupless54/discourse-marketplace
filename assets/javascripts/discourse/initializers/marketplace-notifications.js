@@ -53,9 +53,13 @@ export default {
           }
 
           get linkHref() {
-            if (this.isMarketplace && this.notification.data.listing_id) {
+            if (
+              this.isMarketplace &&
+              this.notification.data.listing_id &&
+              this.notification.data.transaction_id
+            ) {
               return getURL(
-                `/marketplace/listings/${this.notification.data.listing_id}`
+                `/marketplace/listings/${this.notification.data.listing_id}?transaction_id=${this.notification.data.transaction_id}`
               );
             }
             return super.linkHref;

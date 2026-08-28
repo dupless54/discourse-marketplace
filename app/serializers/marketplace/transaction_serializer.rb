@@ -19,9 +19,8 @@ module Marketplace
     has_one :buyer, serializer: BasicUserSerializer, embed: :objects
     has_one :seller, serializer: BasicUserSerializer, embed: :objects
 
-    # Only ever serializes a single record per request (show/create/confirm/
-    # cancel all return exactly one transaction), so this extra read is not
-    # an N+1: it never runs per-row inside a collection.
+    # Collection callers preload :listing; singular mutation/show callers
+    # naturally perform one association read at most.
     def listing_title
       object.listing.title
     end

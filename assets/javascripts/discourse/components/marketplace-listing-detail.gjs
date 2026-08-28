@@ -1,14 +1,14 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
-import { concat } from "@ember/helper";
+import { concat, fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
 import { htmlSafe } from "@ember/template";
 import PluginOutlet from "discourse/components/plugin-outlet";
 import lazyHash from "discourse/helpers/lazy-hash";
-import { eq } from "discourse/truth-helpers";
+import { and, eq, not } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import { i18n } from "discourse-i18n";
 
@@ -17,7 +17,9 @@ export default class MarketplaceListingDetail extends Component {
   @service composer;
 
   @tracked listing = this.args.listing;
-  @tracked transaction = this.args.transaction;
+  @tracked transactions = this.args.transactions || [];
+  @tracked transactionsPagination = this.args.transactionsPagination;
+  @tracked selectedTransactionId = this.args.selectedTransactionId;
   @tracked busy = false;
   @tracked errorMessage = null;
 
@@ -34,12 +36,41 @@ export default class MarketplaceListingDetail extends Component {
       this.currentUser &&
       !this.isSeller &&
       !!this.listing.purchasable &&
-      !this.transaction
+      this.pendingTransactions.length === 0
     );
   }
 
   get canMessageSeller() {
     return this.currentUser && !this.isSeller && this.listing.seller;
+  }
+
+  get pendingTransactions() {
+    return this.transactions.filter(
+      (transaction) => transaction.status === "pending"
+    );
+  }
+
+  get historyTransactions() {
+    return this.transactions.filter(
+      (transaction) => transaction.status !== "pending"
+    );
+  }
+
+  get transaction() {
+    if (this.selectedTransactionId) {
+      const selected = this.transactions.find(
+        (transaction) => transaction.id === this.selectedTransactionId
+      );
+      if (selected) {
+        return selected;
+      }
+    }
+
+    return this.pendingTransactions[0] || this.transactions[0] || null;
+  }
+
+  get hasMoreTransactions() {
+    return !!this.transactionsPagination?.has_more;
   }
 
   // Only rendered while the listing is still active -- draft/reserved/sold/
@@ -122,6 +153,20 @@ export default class MarketplaceListingDetail extends Component {
     this.listing = result.listing;
   }
 
+  replaceTransaction(updatedTransaction) {
+    const existing = this.transactions.some(
+      (transaction) => transaction.id === updatedTransaction.id
+    );
+
+    this.transactions = existing
+      ? this.transactions.map((transaction) =>
+          transaction.id === updatedTransaction.id
+            ? updatedTransaction
+            : transaction
+        )
+      : [updatedTransaction, ...this.transactions];
+  }
+
   @action
   buy() {
     this.runAction(async () => {
@@ -129,19 +174,21 @@ export default class MarketplaceListingDetail extends Component {
         type: "POST",
         data: { listing_id: this.listing.id },
       });
-      this.transaction = result.transaction;
+      this.replaceTransaction(result.transaction);
+      this.selectedTransactionId = result.transaction.id;
       await this.refreshListing();
     });
   }
 
   @action
-  confirm() {
+  confirm(transaction) {
     this.runAction(async () => {
       const result = await ajax(
-        `/marketplace/transactions/${this.transaction.id}/confirm`,
+        `/marketplace/transactions/${transaction.id}/confirm`,
         { type: "POST" }
       );
-      this.transaction = result.transaction;
+      this.replaceTransaction(result.transaction);
+      this.selectedTransactionId = result.transaction.id;
       if (result.transaction.status === "completed") {
         await this.refreshListing();
       }
@@ -149,14 +196,31 @@ export default class MarketplaceListingDetail extends Component {
   }
 
   @action
-  cancelTransaction() {
+  cancelTransaction(transaction) {
     this.runAction(async () => {
       const result = await ajax(
-        `/marketplace/transactions/${this.transaction.id}/cancel`,
+        `/marketplace/transactions/${transaction.id}/cancel`,
         { type: "POST" }
       );
-      this.transaction = result.transaction;
+      this.replaceTransaction(result.transaction);
+      this.selectedTransactionId = result.transaction.id;
       await this.refreshListing();
+    });
+  }
+
+  @action
+  loadMoreTransactions() {
+    this.runAction(async () => {
+      const nextPage = this.transactionsPagination.page + 1;
+      const result = await ajax(
+        `/marketplace/listings/${this.listing.id}/transactions?page=${nextPage}&per_page=${this.transactionsPagination.per_page}`
+      );
+      const ids = new Set(this.transactions.map((transaction) => transaction.id));
+      this.transactions = [
+        ...this.transactions,
+        ...result.transactions.filter((transaction) => !ids.has(transaction.id)),
+      ];
+      this.transactionsPagination = result.pagination;
     });
   }
 
@@ -256,8 +320,103 @@ export default class MarketplaceListingDetail extends Component {
             {{/if}}
           </div>
 
-          {{#if this.transaction}}
-            <div class="marketplace-transaction">
+          {{#if this.isSeller}}
+            <section class="marketplace-transactions">
+              <h2>{{i18n "marketplace.transaction.seller_heading"}}</h2>
+
+              {{#if this.pendingTransactions.length}}
+                <h3>{{i18n "marketplace.transaction.pending_heading"}}</h3>
+                {{#each this.pendingTransactions as |transaction|}}
+                  <article
+                    class="marketplace-transaction marketplace-transaction--pending"
+                    data-transaction-id={{transaction.id}}
+                  >
+                    <p class="marketplace-transaction__buyer">{{i18n
+                        "marketplace.transaction.buyer"
+                        username=transaction.buyer.username
+                      }}</p>
+                    <p>{{i18n
+                        (concat "marketplace.transaction.status." transaction.status)
+                      }}</p>
+
+                    {{#if
+                      (and
+                        (eq transaction.status "pending")
+                        (not transaction.seller_confirmed_at)
+                      )
+                    }}
+                      <button
+                        type="button"
+                        class="btn btn-primary marketplace-transaction__confirm"
+                        disabled={{this.busy}}
+                        {{on "click" (fn this.confirm transaction)}}
+                      >{{i18n "marketplace.transaction.confirm_button"}}</button>
+                    {{/if}}
+
+                    {{#if (eq transaction.status "pending")}}
+                      <button
+                        type="button"
+                        class="btn marketplace-transaction__cancel"
+                        disabled={{this.busy}}
+                        {{on "click" (fn this.cancelTransaction transaction)}}
+                      >{{i18n "marketplace.transaction.cancel_button"}}</button>
+                    {{/if}}
+
+                    <PluginOutlet
+                      @name="marketplace-transaction-after-actions"
+                      @outletArgs={{lazyHash
+                        listing=this.listing
+                        transaction=transaction
+                      }}
+                      @defaultGlimmer={{true}}
+                    />
+                  </article>
+                {{/each}}
+              {{else}}
+                <p>{{i18n "marketplace.transaction.no_pending"}}</p>
+              {{/if}}
+
+              {{#if this.historyTransactions.length}}
+                <h3>{{i18n "marketplace.transaction.history_heading"}}</h3>
+                {{#each this.historyTransactions as |transaction|}}
+                  <article
+                    class="marketplace-transaction marketplace-transaction--history"
+                    data-transaction-id={{transaction.id}}
+                  >
+                    <p class="marketplace-transaction__buyer">{{i18n
+                        "marketplace.transaction.buyer"
+                        username=transaction.buyer.username
+                      }}</p>
+                    <p>{{i18n
+                        (concat "marketplace.transaction.status." transaction.status)
+                      }}</p>
+
+                    <PluginOutlet
+                      @name="marketplace-transaction-after-actions"
+                      @outletArgs={{lazyHash
+                        listing=this.listing
+                        transaction=transaction
+                      }}
+                      @defaultGlimmer={{true}}
+                    />
+                  </article>
+                {{/each}}
+              {{/if}}
+
+              {{#if this.hasMoreTransactions}}
+                <button
+                  type="button"
+                  class="btn marketplace-transactions__load-more"
+                  disabled={{this.busy}}
+                  {{on "click" this.loadMoreTransactions}}
+                >{{i18n "marketplace.transaction.load_more"}}</button>
+              {{/if}}
+            </section>
+          {{else if this.transaction}}
+            <div
+              class="marketplace-transaction"
+              data-transaction-id={{this.transaction.id}}
+            >
               <p>{{i18n
                   (concat "marketplace.transaction.status." this.transaction.status)
                 }}</p>
@@ -267,7 +426,7 @@ export default class MarketplaceListingDetail extends Component {
                   type="button"
                   class="btn btn-primary"
                   disabled={{this.busy}}
-                  {{on "click" this.confirm}}
+                  {{on "click" (fn this.confirm this.transaction)}}
                 >{{i18n "marketplace.transaction.confirm_button"}}</button>
               {{/if}}
 
@@ -276,7 +435,7 @@ export default class MarketplaceListingDetail extends Component {
                   type="button"
                   class="btn"
                   disabled={{this.busy}}
-                  {{on "click" this.cancelTransaction}}
+                  {{on "click" (fn this.cancelTransaction this.transaction)}}
                 >{{i18n "marketplace.transaction.cancel_button"}}</button>
               {{/if}}
 

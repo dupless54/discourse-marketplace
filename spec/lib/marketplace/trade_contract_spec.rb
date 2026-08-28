@@ -180,6 +180,20 @@ describe Marketplace::TradeContract do
         expect(info.buyer_id).to eq(buyer.id)
         expect(info.completed_at).not_to eq(transaction.completed_at)
       end
+
+      it "resolves repeated purchases on the same listing independently" do
+        first = build_completed
+        second = build_completed
+
+        first_info = described_class.completed_transaction_info(first.id)
+        second_info = described_class.completed_transaction_info(second.id)
+
+        expect(first_info.transaction_id).to eq(first.id)
+        expect(second_info.transaction_id).to eq(second.id)
+        expect(first_info.transaction_id).not_to eq(second_info.transaction_id)
+        expect(first_info.listing_id).to eq(second_info.listing_id)
+        expect(first_info.buyer_id).to eq(second_info.buyer_id)
+      end
     end
   end
 
