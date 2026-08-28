@@ -240,7 +240,7 @@ module Marketplace
       raise Discourse::InvalidParameters.new(:field_filters) if min && max && min > max
 
       numeric_value =
-        "CASE WHEN marketplace_listing_field_values.value ~ '^-?[0-9]+$' " \
+        "CASE WHEN marketplace_listing_field_values.value ~ '^-{0,1}[0-9]+$' " \
           "THEN marketplace_listing_field_values.value::numeric END"
       matching_values = Marketplace::ListingFieldValue.where(field_definition_id: definition.id)
       matching_values = matching_values.where("#{numeric_value} >= ?", min) if min
