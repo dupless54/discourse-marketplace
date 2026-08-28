@@ -1,21 +1,12 @@
 # frozen_string_literal: true
 
 module Marketplace
-  # Listens for Marketplace's own transaction lifecycle events and creates
-  # in-forum notifications for the affected participant(s). Uses
-  # Notification.types[:custom] with topic_id/post_number left nil -- the
-  # verified, supported mechanism for a plugin that has no topic/post of its
-  # own to notify against (see plugins/discourse-solved in discourse/discourse
-  # core for the precedent this mirrors: Notification.create! with
-  # notification_type: :custom and a data.message/topic_title/display_username
-  # payload; topic_id/post_number are nullable columns on notifications).
-  #
-  # Each public method here is only ever invoked from a DiscourseEvent
-  # listener registered with continue_on_error: true (see plugin.rb), so a
-  # raise here is logged and swallowed by core rather than propagating into
-  # the triggering request -- matching the same best-effort posture already
-  # documented for :marketplace_transaction_completed in
-  # docs/MARKETPLACE_ARCHITECTURE.md §7.
+  # Creates best-effort in-forum notifications for Marketplace transaction
+  # and offer lifecycle events. Marketplace owns no topic/post, so these use
+  # Notification.types[:custom] with a plugin-specific message prefix. Every
+  # caller is registered through a DiscourseEvent listener with
+  # continue_on_error: true; notification delivery can never roll back a
+  # committed commerce transition.
   module Notifier
     def self.notify_transaction_created(transaction_id)
       transaction = find_transaction(transaction_id)
@@ -41,8 +32,6 @@ module Marketplace
         recipient_id = transaction.buyer_id
         actor = transaction.seller
       else
-        # Both or neither confirmed by the time this fired (e.g. the second
-        # confirmation already landed) -- nothing single-sided left to notify.
         return
       end
 
@@ -81,7 +70,6 @@ module Marketplace
         elsif canceller_id == transaction.seller_id
           [transaction.buyer]
         else
-          # Staff cancellation: neither participant acted, so notify both.
           [transaction.buyer, transaction.seller]
         end
 
@@ -98,18 +86,90 @@ module Marketplace
       end
     end
 
+    def self.notify_offer_created(offer_id)
+      offer = find_offer(offer_id)
+      return if offer.blank?
+
+      notify_offer_counterpart(offer, "marketplace.notifications.offer_received")
+    end
+
+    def self.notify_offer_countered(offer_id)
+      offer = find_offer(offer_id)
+      return if offer.blank?
+
+      notify_offer_counterpart(offer, "marketplace.notifications.offer_countered")
+    end
+
+    def self.notify_offer_accepted(offer_id)
+      offer = find_offer(offer_id)
+      return if offer.blank?
+
+      notify_offer_responder_counterpart(offer, "marketplace.notifications.offer_accepted")
+    end
+
+    def self.notify_offer_rejected(offer_id)
+      offer = find_offer(offer_id)
+      return if offer.blank?
+
+      notify_offer_responder_counterpart(offer, "marketplace.notifications.offer_rejected")
+    end
+
+    def self.notify_offer_withdrawn(offer_id)
+      offer = find_offer(offer_id)
+      return if offer.blank?
+
+      notify_offer_responder_counterpart(offer, "marketplace.notifications.offer_withdrawn")
+    end
+
     def self.find_transaction(transaction_id)
       Marketplace::Transaction.find_by(id: transaction_id)
     end
     private_class_method :find_transaction
 
-    # listing_id and transaction_id travel in the payload so the client can
-    # link back to the exact transaction on /marketplace/listings/:id (see
-    # the "custom" notification type renderer registered in
-    # assets/javascripts/discourse/initializers/marketplace-notifications.js).
-    # The recipient is always a transaction participant already, so this
-    # adds no exposure beyond what they can already reach.
-    def self.notify(recipient_id:, actor:, listing:, transaction_id:, message:)
+    def self.find_offer(offer_id)
+      Marketplace::Offer.includes(:buyer, :seller, :listing, :responded_by).find_by(id: offer_id)
+    end
+    private_class_method :find_offer
+
+    # After create/counter, proposed_by is the actor and recipient_id is the
+    # user now expected to respond.
+    def self.notify_offer_counterpart(offer, message)
+      actor = offer.proposed_by
+      notify(
+        recipient_id: offer.recipient_id,
+        actor: actor,
+        listing: offer.listing,
+        offer_id: offer.id,
+        message: message,
+      )
+    end
+    private_class_method :notify_offer_counterpart
+
+    # Terminal responses record responded_by_id, so notify only the other
+    # participant. This avoids self-notifications for accept/reject/withdraw.
+    def self.notify_offer_responder_counterpart(offer, message)
+      actor = offer.responded_by
+      return if actor.blank?
+
+      recipient_id = actor.id == offer.buyer_id ? offer.seller_id : offer.buyer_id
+      notify(
+        recipient_id: recipient_id,
+        actor: actor,
+        listing: offer.listing,
+        offer_id: offer.id,
+        message: message,
+      )
+    end
+    private_class_method :notify_offer_responder_counterpart
+
+    def self.notify(
+      recipient_id:,
+      actor:,
+      listing:,
+      message:,
+      transaction_id: nil,
+      offer_id: nil
+    )
       Notification.create!(
         notification_type: Notification.types[:custom],
         user_id: recipient_id,
@@ -119,8 +179,9 @@ module Marketplace
           topic_title: listing.title,
           listing_id: listing.id,
           transaction_id: transaction_id,
+          offer_id: offer_id,
           title: "#{message}_title",
-        }.to_json,
+        }.compact.to_json,
       )
     end
     private_class_method :notify

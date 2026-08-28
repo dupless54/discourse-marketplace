@@ -4,6 +4,13 @@ module Marketplace
   class Transaction < ActiveRecord::Base
     self.table_name = "marketplace_transactions"
 
+    # Offer acceptance is an internal transaction-creation path. The agreed
+    # price never comes from TransactionsController params; Offers::Accept
+    # sets this transient value immediately before save so the immutable
+    # transaction snapshot reflects the negotiated amount instead of the
+    # listing's public asking price.
+    attr_accessor :marketplace_agreed_price_cents
+
     belongs_to :listing, class_name: "Marketplace::Listing"
     belongs_to :buyer, class_name: "User"
     belongs_to :seller, class_name: "User"
@@ -27,21 +34,17 @@ module Marketplace
       errors.add(:buyer_id, "must be different from the seller")
     end
 
-    # Captures the listing's commercial terms at the moment a NEW
-    # transaction is created, unconditionally overwriting whatever the
-    # in-memory attributes currently hold -- there is no code path (client
-    # param, mass assignment, or otherwise) that can make this reflect
-    # anything other than the associated listing's state right now. Only
-    # runs on creation: a retried pending transaction and a confirm/cancel
-    # save both persist an already-created row, so this callback never
-    # touches it again, keeping the snapshot immutable for the lifetime of
-    # the transaction. See docs/MARKETPLACE_ARCHITECTURE.md §2 for the
-    # nullable-legacy-row rationale (no backfill, no invented history).
+    # Captures the commercial terms at the moment a NEW transaction is
+    # created. Direct purchases snapshot the listing price. An accepted
+    # Marketplace::Offer may supply a trusted, server-owned agreed price via
+    # #marketplace_agreed_price_cents; no public transaction API accepts that
+    # attribute. Only runs on creation, keeping the persisted snapshot
+    # immutable for the lifetime of the transaction.
     def capture_transaction_snapshot
       return if listing.blank?
 
       self.listing_title_snapshot = listing.title
-      self.price_cents_snapshot = listing.price_cents
+      self.price_cents_snapshot = marketplace_agreed_price_cents || listing.price_cents
       self.currency_snapshot = listing.currency
     end
   end

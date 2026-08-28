@@ -78,5 +78,37 @@ module Marketplace
 
       current_user.id == transaction.buyer_id || current_user.id == transaction.seller_id
     end
+
+    def can_create_marketplace_offer?(listing)
+      can_create_marketplace_transaction?(listing) && listing.price_cents.to_i > 1
+    end
+
+    def can_see_marketplace_offer?(offer)
+      return false if offer.blank?
+      return true if is_staff?
+      return false if !authenticated?
+
+      offer.participant?(current_user.id)
+    end
+
+    def can_respond_marketplace_offer?(offer)
+      return false if offer.blank?
+      return false if !authenticated?
+      return false if is_silenced?
+      return false if current_user.suspended?
+      return false if !offer.pending? || offer.effectively_expired?
+
+      offer.recipient?(current_user.id)
+    end
+
+    def can_withdraw_marketplace_offer?(offer)
+      return false if offer.blank?
+      return false if !authenticated?
+      return false if is_silenced?
+      return false if current_user.suspended?
+      return false if !offer.pending? || offer.effectively_expired?
+
+      offer.proposer?(current_user.id)
+    end
   end
 end

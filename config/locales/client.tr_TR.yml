@@ -12,6 +12,11 @@ tr_TR:
           transaction_confirmed: "pazar yeri"
           transaction_completed: "pazar yeri"
           transaction_cancelled: "pazar yeri"
+          offer_received: "pazar yeri"
+          offer_countered: "pazar yeri"
+          offer_accepted: "pazar yeri"
+          offer_rejected: "pazar yeri"
+          offer_withdrawn: "pazar yeri"
 
     marketplace:
       title: "Pazar Yeri"
@@ -67,6 +72,16 @@ tr_TR:
         transaction_completed_title: "Pazar Yeri işlemi tamamlandı"
         transaction_cancelled: "%{username} %{listing_title} işlemini iptal etti"
         transaction_cancelled_title: "Pazar Yeri işlemi iptal edildi"
+        offer_received: "%{username}, %{listing_title} ilanı için teklif gönderdi"
+        offer_received_title: "Yeni Pazar Yeri teklifi"
+        offer_countered: "%{username}, %{listing_title} ilanı için karşı teklif gönderdi"
+        offer_countered_title: "Pazar Yeri karşı teklifi"
+        offer_accepted: "%{username}, %{listing_title} ilanındaki teklifi kabul etti"
+        offer_accepted_title: "Pazar Yeri teklifi kabul edildi"
+        offer_rejected: "%{username}, %{listing_title} ilanındaki teklifi reddetti"
+        offer_rejected_title: "Pazar Yeri teklifi reddedildi"
+        offer_withdrawn: "%{username}, %{listing_title} ilanındaki teklifi geri çekti"
+        offer_withdrawn_title: "Pazar Yeri teklifi geri çekildi"
 
       mine:
         title: "İlanlarım"
@@ -80,6 +95,52 @@ tr_TR:
         empty: "Henüz favorilerinize herhangi bir ilan eklemediniz."
         load_more: "Daha fazla yükle"
         error: "Favori durumu güncellenemedi. Lütfen tekrar deneyin."
+
+      offers:
+        title: "Tekliflerim"
+        tabs:
+          buyer: "Gönderdiğim Teklifler"
+          seller: "Aldığım Teklifler"
+        filters:
+          all: "Tümü"
+        status_filter: "Teklifleri duruma göre filtrele"
+        empty: "Teklif bulunamadı."
+        load_more: "Daha fazla yükle"
+
+      offer:
+        panel_title: "Teklifler"
+        amount_label: "Teklif tutarı"
+        amount_placeholder: "Bir tutar girin"
+        submit: "Teklif Ver"
+        from_buyer: "%{username} kullanıcısından teklif"
+        counterparty: "%{username} ile"
+        asking_price: "İlan fiyatı: %{price}"
+        expires: "Sona erme: %{date}"
+        accept: "Kabul Et"
+        reject: "Reddet"
+        counter: "Karşı Teklif"
+        send_counter: "Karşı Teklifi Gönder"
+        withdraw: "Geri Çek"
+        cancel: "Vazgeç"
+        loading: "Teklifler yükleniyor…"
+        invalid_amount: "En fazla iki ondalık basamak içeren geçerli bir tutar girin."
+        error: "Teklif işlemi tamamlanamadı. Lütfen tekrar deneyin."
+        status:
+          pending: "Yanıt bekliyor"
+          accepted: "Kabul edildi"
+          rejected: "Reddedildi"
+          withdrawn: "Geri çekildi"
+          expired: "Süresi doldu"
+        errors:
+          offer_already_pending: "Bu ilan için zaten bekleyen bir teklifiniz var."
+          buyer_has_pending_transaction: "Bu ilan için zaten bekleyen bir satın alma işleminiz var."
+          listing_unavailable: "Bu ilan artık bu teklif için uygun değil."
+          offer_expired: "Bu teklifin süresi doldu."
+          offer_not_pending: "Bu teklif artık yanıt beklemiyor."
+          offer_not_below_asking_price: "İlk teklif ilan fiyatından düşük olmalıdır."
+          offer_above_asking_price: "Karşı teklif güncel ilan fiyatından yüksek olamaz."
+          offer_amount_unchanged: "Karşı teklif farklı bir tutar içermelidir."
+          offer_invalid: "Bu teklif geçerli değil."
 
       browse:
         sort_newest: "En yeni"

@@ -6,8 +6,8 @@ import { i18n } from "discourse-i18n";
 
 // One compact nav, reused at the top of every top-level Marketplace page.
 // DHorizontalOverflowNav is core's mobile-safe scrollable nav shell, so the
-// added Favorites destination stays usable on narrow viewports without a
-// separate custom navigation system.
+// V2 Favorites and Offers destinations stay usable on narrow viewports
+// without a separate custom navigation system.
 export default class MarketplaceNav extends Component {
   @service currentUser;
 
@@ -32,6 +32,11 @@ export default class MarketplaceNav extends Component {
           @route="marketplace.favorites"
           @label="marketplace.favorites.title"
           @icon="heart"
+        />
+        <DNavItem
+          @route="marketplace.offers"
+          @label="marketplace.offers.title"
+          @icon="handshake"
         />
         <DNavItem
           @route="marketplace.transactions"

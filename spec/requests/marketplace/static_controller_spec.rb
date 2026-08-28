@@ -15,15 +15,19 @@ describe Marketplace::StaticController do
       expect(response.media_type).to eq("text/html")
     end
 
-    it "returns the SPA shell for a direct GET on /marketplace/transactions" do
-      get "/marketplace/transactions"
-      expect(response.status).to eq(200)
-      expect(response.media_type).to eq("text/html")
+    it "returns the SPA shell for direct GETs on authenticated client routes" do
+      %w[/marketplace/offers /marketplace/transactions].each do |path|
+        get path
+        expect(response.status).to eq(200)
+        expect(response.media_type).to eq("text/html")
+      end
 
       sign_in(Fabricate(:user))
-      get "/marketplace/transactions"
-      expect(response.status).to eq(200)
-      expect(response.media_type).to eq("text/html")
+      %w[/marketplace/offers /marketplace/transactions].each do |path|
+        get path
+        expect(response.status).to eq(200)
+        expect(response.media_type).to eq("text/html")
+      end
     end
 
     # A "returns 404 when the plugin is disabled" example (matching the

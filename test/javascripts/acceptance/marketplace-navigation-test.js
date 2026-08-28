@@ -12,6 +12,11 @@ const EMPTY_TRANSACTIONS = {
   pagination: { page: 1, per_page: 20, has_more: false },
 };
 
+const EMPTY_OFFERS = {
+  offers: [],
+  pagination: { page: 1, per_page: 20, has_more: false },
+};
+
 function stubMarketplaceEndpoints(server, helper) {
   server.get("/marketplace/categories", () =>
     helper.response({ categories: [] })
@@ -21,6 +26,7 @@ function stubMarketplaceEndpoints(server, helper) {
     helper.response(EMPTY_LISTINGS)
   );
   server.get("/marketplace/favorites", () => helper.response(EMPTY_LISTINGS));
+  server.get("/marketplace/offers/mine", () => helper.response(EMPTY_OFFERS));
   server.get("/marketplace/transactions/mine", () =>
     helper.response(EMPTY_TRANSACTIONS)
   );
@@ -48,8 +54,6 @@ acceptance("Marketplace | navigation | anonymous", function (needs) {
       );
     assert.strictEqual(activeHref(assert), "/marketplace");
 
-    // Semantic structure: a real <nav> landmark with real links, not divs
-    // wired up by hand.
     assert.dom("nav.horizontal-overflow-nav[aria-label]").exists();
     assert.dom(".marketplace-nav a").exists();
   });
@@ -60,10 +64,10 @@ acceptance("Marketplace | navigation | logged in", function (needs) {
   needs.settings({ marketplace_enabled: true });
   needs.pretender(stubMarketplaceEndpoints);
 
-  test("shows all five nav items with Marketplace active on /marketplace", async function (assert) {
+  test("shows all six nav items with Marketplace active on /marketplace", async function (assert) {
     await visit("/marketplace");
 
-    assert.dom(".marketplace-nav li").exists({ count: 5 });
+    assert.dom(".marketplace-nav li").exists({ count: 6 });
     assert.strictEqual(activeHref(assert), "/marketplace");
   });
 
@@ -83,6 +87,13 @@ acceptance("Marketplace | navigation | logged in", function (needs) {
     await visit("/marketplace/favorites");
 
     assert.strictEqual(activeHref(assert), "/marketplace/favorites");
+  });
+
+  test("marks Offers active on /marketplace/offers", async function (assert) {
+    await visit("/marketplace/offers");
+
+    assert.strictEqual(activeHref(assert), "/marketplace/offers");
+    assert.dom(".marketplace-offer-center").exists();
   });
 
   test("marks My Transactions active on /marketplace/transactions", async function (assert) {

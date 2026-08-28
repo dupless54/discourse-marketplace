@@ -10,6 +10,7 @@ enabled_site_setting :marketplace_enabled
 
 register_asset "stylesheets/common/marketplace.scss"
 register_asset "stylesheets/common/marketplace-favorites.scss"
+register_asset "stylesheets/common/marketplace-offers.scss"
 
 module ::Marketplace
   PLUGIN_NAME = "discourse-marketplace"
@@ -37,4 +38,10 @@ after_initialize do
   on(:marketplace_transaction_first_confirmed) { |transaction_id| Marketplace::Notifier.notify_transaction_first_confirmed(transaction_id) }
   on(:marketplace_transaction_completed) { |transaction_id| Marketplace::Notifier.notify_transaction_completed(transaction_id) }
   on(:marketplace_transaction_cancelled) { |transaction_id| Marketplace::Notifier.notify_transaction_cancelled(transaction_id) }
+
+  on(:marketplace_offer_created) { |offer_id| Marketplace::Notifier.notify_offer_created(offer_id) }
+  on(:marketplace_offer_countered) { |offer_id| Marketplace::Notifier.notify_offer_countered(offer_id) }
+  on(:marketplace_offer_accepted) { |offer_id| Marketplace::Notifier.notify_offer_accepted(offer_id) }
+  on(:marketplace_offer_rejected) { |offer_id| Marketplace::Notifier.notify_offer_rejected(offer_id) }
+  on(:marketplace_offer_withdrawn) { |offer_id| Marketplace::Notifier.notify_offer_withdrawn(offer_id) }
 end
