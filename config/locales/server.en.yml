@@ -3,6 +3,7 @@ en:
     marketplace_enabled: "Enable the marketplace plugin"
     marketplace_min_trust_level: "Minimum trust level required to create marketplace listings"
     marketplace_allowed_currencies: "Currency codes (ISO 4217) sellers may use for listings"
+    marketplace_offer_expiry_hours: "Number of hours before a Marketplace offer or counteroffer expires"
   marketplace:
     errors:
       category_disabled: "is disabled and cannot be used for listings"
