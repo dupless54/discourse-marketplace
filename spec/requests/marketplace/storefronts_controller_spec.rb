@@ -5,6 +5,11 @@ RSpec.describe Marketplace::StorefrontsController do
   fab!(:other_seller) { Fabricate(:user, trust_level: TrustLevel[2]) }
   fab!(:category) { Fabricate(:marketplace_category) }
 
+  before do
+    SiteSetting.hide_user_profiles_from_public = false
+    SiteSetting.hide_new_user_profiles = false
+  end
+
   def active_listing(user:, title:, category: self.category, published_at: Time.current)
     Fabricate(
       :marketplace_listing,
@@ -30,8 +35,9 @@ RSpec.describe Marketplace::StorefrontsController do
         published_at: 3.hours.ago,
         expires_at: 1.hour.ago,
       )
-      disabled_category = Fabricate(:marketplace_category, enabled: false)
+      disabled_category = Fabricate(:marketplace_category)
       active_listing(user: seller, title: "Disabled category", category: disabled_category)
+      disabled_category.update!(enabled: false)
 
       get "/marketplace/sellers/#{seller.username}.json"
 
@@ -61,6 +67,16 @@ RSpec.describe Marketplace::StorefrontsController do
       expect(response.status).to eq(200)
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([older.id])
       expect(response.parsed_body.dig("pagination", "has_more")).to eq(false)
+    end
+
+    it "respects the global public-profile visibility setting for anonymous viewers" do
+      SiteSetting.hide_user_profiles_from_public = true
+      active_listing(user: seller, title: "Public listing")
+
+      get "/marketplace/sellers/#{seller.username}.json"
+
+      expect(response.status).to eq(404)
+      expect(response.body).not_to include(seller.username)
     end
 
     it "masks a seller whose profile the viewer cannot see" do
