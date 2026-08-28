@@ -70,6 +70,13 @@ tr_TR:
         upload_uploading: "Yükleniyor…"
         price_label: "Fiyat"
         currency_label: "Para birimi"
+        inventory_mode_label: "Satış türü"
+        inventory_mode_single: "Tek ürün"
+        inventory_mode_finite: "Stoklu"
+        inventory_mode_unlimited: "Sınırsız"
+        stock_quantity_label: "Stok adedi"
+        expires_at_label: "İlan bitiş tarihi (opsiyonel)"
+        expires_at_hint: "Süresiz için boş bırakın"
         submit_create: "İlan Oluştur"
         submit_save: "Değişiklikleri Kaydet"
         error: "Bir sorun oluştu. Lütfen ilanınızı kontrol edip tekrar deneyin."
@@ -88,6 +95,14 @@ tr_TR:
           reserved: "Rezerve"
           sold: "Satıldı"
           archived: "Arşivlendi"
+        stock:
+          unlimited: "Sınırsız stok"
+          remaining: "%{count} adet kaldı"
+          out_of_stock: "Stok tükendi"
+          sold_count: "%{count} satıldı"
+        expires:
+          label: "Bitiş: %{date}"
+          expired: "Süresi doldu"
 
       transaction:
         confirm_button: "Onayla"

@@ -141,6 +141,42 @@ describe Marketplace::TransactionsController do
 
       expect(response.status).to eq(403)
     end
+
+    it "lets two different buyers each buy a unit of a finite listing over HTTP" do
+      listing =
+        build_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 2,
+        )
+
+      sign_in(buyer)
+      post "/marketplace/transactions.json", params: { listing_id: listing.id }
+      expect(response.status).to eq(200)
+      first_transaction_id = json_body["id"]
+
+      sign_in(other_buyer)
+      post "/marketplace/transactions.json", params: { listing_id: listing.id }
+      expect(response.status).to eq(200)
+
+      expect(json_body["id"]).not_to eq(first_transaction_id)
+      expect(listing.reload.stock_reserved).to eq(2)
+    end
+
+    it "returns 409 listing_unavailable once finite stock is exhausted" do
+      listing =
+        build_listing(
+          inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+          stock_quantity: 1,
+        )
+      sign_in(buyer)
+      post "/marketplace/transactions.json", params: { listing_id: listing.id }
+
+      sign_in(other_buyer)
+      post "/marketplace/transactions.json", params: { listing_id: listing.id }
+
+      expect(response.status).to eq(409)
+      expect(response.parsed_body["error_type"]).to eq("listing_unavailable")
+    end
   end
 
   describe "#show" do

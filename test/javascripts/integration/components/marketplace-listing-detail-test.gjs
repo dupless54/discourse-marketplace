@@ -79,6 +79,66 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
       .dom(".marketplace-listing-detail__message-seller")
       .doesNotExist("the seller never sees Message Seller on their own listing");
   });
+
+  test("shows remaining stock and offers Buy for an in-stock finite listing", async function (assert) {
+    this.listing = {
+      id: 20,
+      title: "Limited run poster",
+      status: "active",
+      price_cents: 2000,
+      currency: "USD",
+      cooked: "<p>Limited run.</p>",
+      inventory_mode: "finite",
+      stock_available: 2,
+      purchasable: true,
+      expired: false,
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+    this.transaction = null;
+
+    await render(
+      <template>
+        <MarketplaceListingDetail
+          @listing={{this.listing}}
+          @transaction={{this.transaction}}
+        />
+      </template>
+    );
+
+    assert.dom(".marketplace-listing-detail__availability").hasText("2 left");
+    assert.dom("button.btn-primary").exists("Buy is offered");
+  });
+
+  test("hides Buy and shows out of stock for a sold-out finite listing", async function (assert) {
+    this.listing = {
+      id: 21,
+      title: "Sold out poster",
+      status: "active",
+      price_cents: 2000,
+      currency: "USD",
+      cooked: "<p>Sold out.</p>",
+      inventory_mode: "finite",
+      stock_available: 0,
+      purchasable: false,
+      expired: false,
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+    this.transaction = null;
+
+    await render(
+      <template>
+        <MarketplaceListingDetail
+          @listing={{this.listing}}
+          @transaction={{this.transaction}}
+        />
+      </template>
+    );
+
+    assert
+      .dom(".marketplace-listing-detail__availability")
+      .hasText("Out of stock");
+    assert.dom("button.btn-primary").doesNotExist("Buy is not offered");
+  });
 });
 
 module(

@@ -60,6 +60,144 @@ describe Marketplace::Listing do
     expect(listing).to be_valid
   end
 
+  describe "inventory_mode" do
+    it "defaults to single" do
+      expect(build_listing.inventory_mode).to eq("single")
+    end
+
+    it "requires stock_quantity for finite" do
+      expect(build_listing(inventory_mode: :finite, stock_quantity: nil)).not_to be_valid
+      expect(build_listing(inventory_mode: :finite, stock_quantity: 0)).not_to be_valid
+      expect(build_listing(inventory_mode: :finite, stock_quantity: 1)).to be_valid
+    end
+
+    it "rejects a stock_quantity for single or unlimited" do
+      expect(build_listing(inventory_mode: :single, stock_quantity: 5)).not_to be_valid
+      expect(build_listing(inventory_mode: :unlimited, stock_quantity: 5)).not_to be_valid
+    end
+
+    it "rejects stock_reserved + stock_sold exceeding stock_quantity" do
+      listing =
+        build_listing(inventory_mode: :finite, stock_quantity: 2, stock_reserved: 2, stock_sold: 1)
+      expect(listing).not_to be_valid
+      expect(listing.errors[:stock_quantity]).to be_present
+    end
+
+    it "allows stock_reserved + stock_sold exactly equal to stock_quantity" do
+      listing =
+        build_listing(inventory_mode: :finite, stock_quantity: 2, stock_reserved: 1, stock_sold: 1)
+      expect(listing).to be_valid
+    end
+
+    it "prevents changing inventory_mode once the listing has any transaction history" do
+      listing = build_listing(inventory_mode: :finite, stock_quantity: 3)
+      listing.save!
+      Fabricate(:marketplace_transaction, listing: listing)
+
+      listing.inventory_mode = Marketplace::Listing.inventory_modes[:single]
+      listing.stock_quantity = nil
+
+      expect(listing).not_to be_valid
+      expect(listing.errors[:inventory_mode]).to be_present
+    end
+
+    it "allows changing inventory_mode before any transaction exists" do
+      listing = build_listing(inventory_mode: :single)
+      listing.save!
+
+      listing.inventory_mode = Marketplace::Listing.inventory_modes[:finite]
+      listing.stock_quantity = 3
+
+      expect(listing).to be_valid
+    end
+  end
+
+  describe "#expired?" do
+    it "is false when expires_at is nil" do
+      expect(build_listing(expires_at: nil).expired?).to eq(false)
+    end
+
+    it "is false for a future expires_at" do
+      expect(build_listing(expires_at: 1.hour.from_now).expired?).to eq(false)
+    end
+
+    it "is true for a past expires_at" do
+      expect(build_listing(expires_at: 1.hour.ago).expired?).to eq(true)
+    end
+  end
+
+  describe "#stock_available" do
+    it "is nil for single" do
+      expect(build_listing(inventory_mode: :single).stock_available).to be_nil
+    end
+
+    it "is nil for unlimited" do
+      expect(build_listing(inventory_mode: :unlimited).stock_available).to be_nil
+    end
+
+    it "is the remaining count for finite" do
+      listing = build_listing(inventory_mode: :finite, stock_quantity: 5, stock_reserved: 2, stock_sold: 1)
+      expect(listing.stock_available).to eq(2)
+    end
+
+    it "never goes below zero" do
+      listing = build_listing(inventory_mode: :finite, stock_quantity: 2, stock_reserved: 1, stock_sold: 1)
+      expect(listing.stock_available).to eq(0)
+    end
+  end
+
+  describe "#purchasable?" do
+    it "is false when not active" do
+      listing = build_listing(status: Marketplace::Listing.statuses[:draft])
+      expect(listing.purchasable?).to eq(false)
+    end
+
+    it "is false when expired" do
+      listing =
+        build_listing(status: Marketplace::Listing.statuses[:active], expires_at: 1.hour.ago)
+      expect(listing.purchasable?).to eq(false)
+    end
+
+    it "is true for an active single listing" do
+      listing = build_listing(status: Marketplace::Listing.statuses[:active], inventory_mode: :single)
+      expect(listing.purchasable?).to eq(true)
+    end
+
+    it "is true for an active unlimited listing regardless of stock_sold" do
+      listing =
+        build_listing(
+          status: Marketplace::Listing.statuses[:active],
+          inventory_mode: :unlimited,
+          stock_sold: 500,
+        )
+      expect(listing.purchasable?).to eq(true)
+    end
+
+    it "is true for an active finite listing with remaining stock" do
+      listing =
+        build_listing(
+          status: Marketplace::Listing.statuses[:active],
+          inventory_mode: :finite,
+          stock_quantity: 3,
+          stock_reserved: 1,
+          stock_sold: 1,
+        )
+      expect(listing.purchasable?).to eq(true)
+    end
+
+    it "is false for an active finite listing with no remaining stock" do
+      listing =
+        build_listing(
+          status: Marketplace::Listing.statuses[:active],
+          inventory_mode: :finite,
+          stock_quantity: 2,
+          stock_reserved: 1,
+          stock_sold: 1,
+        )
+      expect(listing.purchasable?).to eq(false)
+    end
+  end
+
   describe "images/attachments" do
     it "associates uploads referenced in raw via UploadReference on create" do
       upload = Fabricate(:upload)

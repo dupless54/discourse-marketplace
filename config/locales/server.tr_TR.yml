@@ -6,3 +6,5 @@ tr_TR:
   marketplace:
     errors:
       category_disabled: "devre dışı bırakılmış ve ilanlar için kullanılamaz"
+      stock_exceeded: "zaten rezerve edilmiş veya satılmış birim sayısından az olamaz"
+      inventory_mode_locked: "ilanın işlem geçmişi olduğu için değiştirilemez"

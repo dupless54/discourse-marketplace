@@ -6,3 +6,5 @@ en:
   marketplace:
     errors:
       category_disabled: "is disabled and cannot be used for listings"
+      stock_exceeded: "must be at least the number of units already reserved or sold"
+      inventory_mode_locked: "cannot be changed after the listing has any transaction history"

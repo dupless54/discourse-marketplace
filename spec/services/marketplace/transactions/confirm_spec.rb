@@ -603,4 +603,129 @@ describe Marketplace::Transactions::Confirm do
       expect(result.transaction.status).to eq("pending")
     end
   end
+
+  describe "finite stock" do
+    def build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0, status: :active, **overrides)
+      Fabricate(
+        :marketplace_listing,
+        seller: seller,
+        category: category,
+        status: Marketplace::Listing.statuses[status],
+        inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+        stock_quantity: stock_quantity,
+        stock_reserved: stock_reserved,
+        stock_sold: stock_sold,
+        **overrides,
+      )
+    end
+
+    it "consumes exactly one unit on final confirmation and stays active/purchasable if stock remains" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0)
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      expect(result.transaction.status).to eq("completed")
+      reloaded = listing.reload
+      expect(reloaded.stock_reserved).to eq(0)
+      expect(reloaded.stock_sold).to eq(1)
+      expect(reloaded.status).to eq("active")
+      expect(reloaded.purchasable?).to eq(true)
+    end
+
+    it "leaves the listing not purchasable once the last unit is consumed, without flipping status" do
+      listing = build_finite_listing(stock_quantity: 1, stock_reserved: 1, stock_sold: 0)
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      reloaded = listing.reload
+      expect(reloaded.stock_reserved).to eq(0)
+      expect(reloaded.stock_sold).to eq(1)
+      expect(reloaded.status).to eq("active")
+      expect(reloaded.purchasable?).to eq(false)
+    end
+
+    it "does not double-consume stock on a completed replay" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0)
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      reloaded = listing.reload
+      expect(reloaded.stock_reserved).to eq(0)
+      expect(reloaded.stock_sold).to eq(1)
+    end
+
+    it "raises TransactionInvariantViolation for a pending transaction whose listing has no reserved stock" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 0, stock_sold: 0)
+      transaction = build_transaction(listing: listing)
+
+      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
+        Marketplace::TransactionInvariantViolation,
+      )
+    end
+
+    it "raises TransactionInvariantViolation and rolls back when the consume CAS affects zero rows" do
+      listing = build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0)
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      allow(Marketplace::Listing).to receive(:where).and_call_original
+      allow(Marketplace::Listing).to receive(:where).with(
+        id: listing.id,
+        inventory_mode: Marketplace::Listing.inventory_modes[:finite],
+      ).and_return(Marketplace::Listing.none)
+
+      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
+        Marketplace::TransactionInvariantViolation,
+      )
+      reloaded = transaction.reload
+      expect(reloaded.status).to eq("pending")
+      expect(listing.reload.stock_reserved).to eq(1)
+    end
+  end
+
+  describe "unlimited stock" do
+    def build_unlimited_listing(status: :active, **overrides)
+      Fabricate(
+        :marketplace_listing,
+        seller: seller,
+        category: category,
+        status: Marketplace::Listing.statuses[status],
+        inventory_mode: Marketplace::Listing.inventory_modes[:unlimited],
+        **overrides,
+      )
+    end
+
+    it "increments stock_sold without any capacity gate and stays active/purchasable" do
+      listing = build_unlimited_listing(stock_sold: 3)
+      transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
+
+      result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(result).to be_success
+      reloaded = listing.reload
+      expect(reloaded.stock_sold).to eq(4)
+      expect(reloaded.status).to eq("active")
+      expect(reloaded.purchasable?).to eq(true)
+    end
+
+    it "allows a second, independent completed transaction on the same listing" do
+      listing = build_unlimited_listing
+      first_transaction =
+        build_transaction(listing: listing, buyer: buyer, seller_confirmed_at: 1.minute.ago)
+      call_service(guardian: buyer.guardian, transaction_id: first_transaction.id)
+
+      second_transaction =
+        build_transaction(listing: listing, buyer: unrelated_user, seller_confirmed_at: 1.minute.ago)
+      result = call_service(guardian: unrelated_user.guardian, transaction_id: second_transaction.id)
+
+      expect(result).to be_success
+      expect(listing.reload.stock_sold).to eq(2)
+    end
+  end
 end

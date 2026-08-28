@@ -13,6 +13,29 @@ import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 
+// Converts an ISO8601 string (as returned by the API) into the value a
+// <input type="datetime-local"> expects (local time, no seconds/zone), and
+// back again on submit. A blank/absent value round-trips to "" both ways,
+// which is exactly "no expiration".
+function isoToDatetimeLocal(iso) {
+  if (!iso) {
+    return "";
+  }
+  const date = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function datetimeLocalToIso(value) {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  return isNaN(date) ? null : date.toISOString();
+}
+
 export default class MarketplaceListingForm extends Component {
   @service router;
   @service siteSettings;
@@ -26,6 +49,9 @@ export default class MarketplaceListingForm extends Component {
   @tracked currency =
     this.args.listing?.currency ??
     this.siteSettings.marketplace_allowed_currencies.split("|")[0];
+  @tracked inventoryMode = this.args.listing?.inventory_mode ?? "single";
+  @tracked stockQuantity = this.args.listing?.stock_quantity ?? "";
+  @tracked expiresAt = isoToDatetimeLocal(this.args.listing?.expires_at);
   @tracked saving = false;
   @tracked errorMessage = null;
 
@@ -41,6 +67,10 @@ export default class MarketplaceListingForm extends Component {
 
   get isEdit() {
     return !!this.args.listing;
+  }
+
+  get isFinite() {
+    return this.inventoryMode === "finite";
   }
 
   get uploading() {
@@ -90,6 +120,21 @@ export default class MarketplaceListingForm extends Component {
   }
 
   @action
+  updateInventoryMode(event) {
+    this.inventoryMode = event.target.value;
+  }
+
+  @action
+  updateStockQuantity(event) {
+    this.stockQuantity = event.target.value;
+  }
+
+  @action
+  updateExpiresAt(event) {
+    this.expiresAt = event.target.value;
+  }
+
+  @action
   async submit(event) {
     event.preventDefault();
     this.saving = true;
@@ -101,6 +146,9 @@ export default class MarketplaceListingForm extends Component {
       category_id: this.categoryId,
       price_cents: Math.round(parseFloat(this.price || "0") * 100),
       currency: this.currency,
+      inventory_mode: this.inventoryMode,
+      stock_quantity: this.isFinite ? this.stockQuantity : null,
+      expires_at: datetimeLocalToIso(this.expiresAt),
     };
 
     try {
@@ -211,6 +259,52 @@ export default class MarketplaceListingForm extends Component {
             {{/each}}
           </select>
         </div>
+      </div>
+
+      <div class="marketplace-listing-form__field">
+        <label>{{i18n "marketplace.form.inventory_mode_label"}}</label>
+        <select
+          class="marketplace-listing-form__inventory-mode"
+          {{on "change" this.updateInventoryMode}}
+        >
+          <option value="single" selected={{eq this.inventoryMode "single"}}>
+            {{i18n "marketplace.form.inventory_mode_single"}}
+          </option>
+          <option value="finite" selected={{eq this.inventoryMode "finite"}}>
+            {{i18n "marketplace.form.inventory_mode_finite"}}
+          </option>
+          <option
+            value="unlimited"
+            selected={{eq this.inventoryMode "unlimited"}}
+          >
+            {{i18n "marketplace.form.inventory_mode_unlimited"}}
+          </option>
+        </select>
+      </div>
+
+      {{#if this.isFinite}}
+        <div class="marketplace-listing-form__field marketplace-listing-form__stock-field">
+          <label>{{i18n "marketplace.form.stock_quantity_label"}}</label>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={{this.stockQuantity}}
+            {{on "input" this.updateStockQuantity}}
+          />
+        </div>
+      {{/if}}
+
+      <div class="marketplace-listing-form__field marketplace-listing-form__expires-field">
+        <label>{{i18n "marketplace.form.expires_at_label"}}</label>
+        <input
+          type="datetime-local"
+          value={{this.expiresAt}}
+          {{on "input" this.updateExpiresAt}}
+        />
+        <span class="marketplace-listing-form__hint">
+          {{i18n "marketplace.form.expires_at_hint"}}
+        </span>
       </div>
 
       <div class="marketplace-listing-form__actions">

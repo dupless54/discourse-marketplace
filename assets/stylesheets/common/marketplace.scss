@@ -148,6 +148,12 @@
   color: var(--primary-medium);
 }
 
+.marketplace-listing-card__availability,
+.marketplace-listing-detail__availability {
+  font-size: $font-down-1;
+  color: var(--primary-medium);
+}
+
 .marketplace-listing-card__actions {
   display: flex;
   gap: 0.5em;
@@ -281,11 +287,17 @@
 
   input[type="text"],
   input[type="number"],
+  input[type="datetime-local"],
   select,
   textarea {
     width: 100%;
     box-sizing: border-box;
   }
+}
+
+.marketplace-listing-form__hint {
+  font-size: $font-down-1;
+  color: var(--primary-medium);
 }
 
 .marketplace-listing-form__description {

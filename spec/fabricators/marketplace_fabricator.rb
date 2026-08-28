@@ -18,6 +18,15 @@ Fabricator(:marketplace_listing, class_name: "Marketplace::Listing") do
   status Marketplace::Listing.statuses[:draft]
 end
 
+Fabricator(:marketplace_finite_listing, from: :marketplace_listing) do
+  inventory_mode Marketplace::Listing.inventory_modes[:finite]
+  stock_quantity 5
+end
+
+Fabricator(:marketplace_unlimited_listing, from: :marketplace_listing) do
+  inventory_mode Marketplace::Listing.inventory_modes[:unlimited]
+end
+
 Fabricator(:marketplace_transaction, class_name: "Marketplace::Transaction") do
   listing do
     Fabricate(

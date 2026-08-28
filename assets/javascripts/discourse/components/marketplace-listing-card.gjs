@@ -32,9 +32,7 @@ export default class MarketplaceListingCard extends Component {
   }
 
   get canBuy() {
-    return (
-      !!this.currentUser && !this.isSeller && this.listing.status === "active"
-    );
+    return !!this.currentUser && !this.isSeller && !!this.listing.purchasable;
   }
 
   get canMessageSeller() {
@@ -47,6 +45,30 @@ export default class MarketplaceListingCard extends Component {
 
   get statusLabel() {
     return i18n(`marketplace.listing.status.${this.listing.status}`);
+  }
+
+  // Only rendered for active listings (status already covers draft/
+  // reserved/sold/archived via the status badge) -- expired and
+  // out-of-stock are states an "active" listing can still be in, so they
+  // need their own indicator alongside the status badge.
+  get availabilityLabel() {
+    if (this.listing.status !== "active") {
+      return null;
+    }
+    if (this.listing.expired) {
+      return i18n("marketplace.listing.expires.expired");
+    }
+    if (this.listing.inventory_mode === "unlimited") {
+      return i18n("marketplace.listing.stock.unlimited");
+    }
+    if (this.listing.inventory_mode === "finite") {
+      return this.listing.stock_available > 0
+        ? i18n("marketplace.listing.stock.remaining", {
+            count: this.listing.stock_available,
+          })
+        : i18n("marketplace.listing.stock.out_of_stock");
+    }
+    return null;
   }
 
   @action
@@ -90,6 +112,11 @@ export default class MarketplaceListingCard extends Component {
         <span class="marketplace-listing-card__body">
           <span class="marketplace-listing-card__price">{{this.formattedPrice}}</span>
           <span class="marketplace-listing-card__title">{{this.listing.title}}</span>
+          {{#if this.availabilityLabel}}
+            <span class="marketplace-listing-card__availability">
+              {{this.availabilityLabel}}
+            </span>
+          {{/if}}
           {{#if this.listing.seller}}
             <span class="marketplace-listing-card__seller">{{i18n
                 "marketplace.listing.seller"

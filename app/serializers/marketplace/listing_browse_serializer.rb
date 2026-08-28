@@ -9,8 +9,23 @@ module Marketplace
                :currency,
                :status,
                :published_at,
-               :thumbnail_url
+               :thumbnail_url,
+               :inventory_mode,
+               :stock_quantity,
+               :stock_available,
+               :stock_sold,
+               :expires_at,
+               :expired,
+               :purchasable
 
     has_one :seller, serializer: BasicUserSerializer, embed: :objects
+
+    def expired
+      object.expired?
+    end
+
+    def purchasable
+      object.purchasable?
+    end
   end
 end

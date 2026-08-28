@@ -102,4 +102,87 @@ describe Marketplace::Listings::Create do
     expect(result).to be_failure
     expect(result).to fail_a_contract
   end
+
+  describe "inventory_mode" do
+    it "defaults to single when omitted" do
+      result = call_service(guardian: guardian, params: params)
+
+      expect(result).to be_success
+      expect(result.listing.inventory_mode).to eq("single")
+      expect(result.listing.stock_quantity).to be_nil
+    end
+
+    it "creates a finite listing with the given stock_quantity" do
+      result =
+        call_service(
+          guardian: guardian,
+          params: params.merge(inventory_mode: "finite", stock_quantity: 5),
+        )
+
+      expect(result).to be_success
+      expect(result.listing.inventory_mode).to eq("finite")
+      expect(result.listing.stock_quantity).to eq(5)
+    end
+
+    it "creates an unlimited listing with no stock_quantity" do
+      result = call_service(guardian: guardian, params: params.merge(inventory_mode: "unlimited"))
+
+      expect(result).to be_success
+      expect(result.listing.inventory_mode).to eq("unlimited")
+      expect(result.listing.stock_quantity).to be_nil
+    end
+
+    it "fails the contract for finite without a stock_quantity" do
+      result = call_service(guardian: guardian, params: params.merge(inventory_mode: "finite"))
+
+      expect(result).to be_failure
+      expect(result).to fail_a_contract
+    end
+
+    it "fails the contract for finite with a zero stock_quantity" do
+      result =
+        call_service(
+          guardian: guardian,
+          params: params.merge(inventory_mode: "finite", stock_quantity: 0),
+        )
+
+      expect(result).to be_failure
+      expect(result).to fail_a_contract
+    end
+
+    it "fails the contract for an unrecognized inventory_mode" do
+      result = call_service(guardian: guardian, params: params.merge(inventory_mode: "bogus"))
+
+      expect(result).to be_failure
+      expect(result).to fail_a_contract
+    end
+
+    it "ignores a stray stock_quantity for a single-mode listing" do
+      result =
+        call_service(
+          guardian: guardian,
+          params: params.merge(inventory_mode: "single", stock_quantity: 5),
+        )
+
+      expect(result).to be_success
+      expect(result.listing.stock_quantity).to be_nil
+    end
+  end
+
+  describe "expires_at" do
+    it "defaults to no expiration" do
+      result = call_service(guardian: guardian, params: params)
+
+      expect(result).to be_success
+      expect(result.listing.expires_at).to be_nil
+    end
+
+    it "accepts an ISO8601 expiration timestamp" do
+      expires_at = 1.week.from_now.change(usec: 0)
+      result = call_service(guardian: guardian, params: params.merge(expires_at: expires_at.iso8601))
+
+      expect(result).to be_success
+      expect(result.listing.expires_at).to eq(expires_at)
+    end
+  end
 end

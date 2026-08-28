@@ -45,7 +45,7 @@ module Marketplace
       return false if !authenticated?
       return false if is_silenced?
       return false if current_user.suspended?
-      return false if !listing.active?
+      return false if !listing.purchasable?
       return false if !listing.category&.enabled?
       return false if current_user.id == listing.seller_id
 

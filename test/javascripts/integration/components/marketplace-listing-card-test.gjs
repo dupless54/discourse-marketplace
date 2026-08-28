@@ -29,6 +29,8 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       price_cents: 15000,
       currency: "USD",
       thumbnail_url: "/uploads/default/original/1X/synth.png",
+      inventory_mode: "single",
+      purchasable: true,
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
@@ -98,6 +100,86 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
     assert.ok(openedWith, "openNewMessage was called");
     assert.strictEqual(openedWith.recipients, "seller_user");
     assert.true(openedWith.title.includes("Vintage Synthesizer"));
+  });
+
+  test("shows remaining stock and offers Buy for an in-stock finite listing", async function (assert) {
+    this.listing = {
+      id: 10,
+      title: "Limited run poster",
+      status: "active",
+      price_cents: 2000,
+      currency: "USD",
+      inventory_mode: "finite",
+      stock_available: 3,
+      purchasable: true,
+      expired: false,
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+
+    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+
+    assert
+      .dom(".marketplace-listing-card__availability")
+      .hasText("3 left");
+    assert.dom(".marketplace-listing-card__buy").exists();
+  });
+
+  test("shows out of stock and hides Buy for a sold-out finite listing", async function (assert) {
+    this.listing = {
+      id: 11,
+      title: "Sold out poster",
+      status: "active",
+      price_cents: 2000,
+      currency: "USD",
+      inventory_mode: "finite",
+      stock_available: 0,
+      purchasable: false,
+      expired: false,
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+
+    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+
+    assert.dom(".marketplace-listing-card__availability").hasText("Out of stock");
+    assert.dom(".marketplace-listing-card__buy").doesNotExist();
+  });
+
+  test("shows an unlimited stock indicator and offers Buy", async function (assert) {
+    this.listing = {
+      id: 12,
+      title: "Digital download",
+      status: "active",
+      price_cents: 500,
+      currency: "USD",
+      inventory_mode: "unlimited",
+      purchasable: true,
+      expired: false,
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+
+    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+
+    assert.dom(".marketplace-listing-card__availability").hasText("Unlimited stock");
+    assert.dom(".marketplace-listing-card__buy").exists();
+  });
+
+  test("shows expired and hides Buy for an expired active listing", async function (assert) {
+    this.listing = {
+      id: 13,
+      title: "Expired listing",
+      status: "active",
+      price_cents: 500,
+      currency: "USD",
+      inventory_mode: "single",
+      purchasable: false,
+      expired: true,
+      seller: { id: this.currentUser.id + 1, username: "seller_user" },
+    };
+
+    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+
+    assert.dom(".marketplace-listing-card__availability").hasText("Expired");
+    assert.dom(".marketplace-listing-card__buy").doesNotExist();
   });
 });
 
