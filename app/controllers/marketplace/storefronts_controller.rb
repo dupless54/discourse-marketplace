@@ -10,7 +10,7 @@ module Marketplace
         format.json do
           guardian.ensure_public_can_see_profiles!
 
-          seller = User.find_by(username_lower: params[:username].to_s.downcase)
+          seller = User.find_by_username(params[:username])
           raise Discourse::NotFound if seller.blank?
           if !seller.active? && !(current_user&.staff? || SiteSetting.show_inactive_accounts)
             raise Discourse::NotFound
