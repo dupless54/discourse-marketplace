@@ -25,6 +25,13 @@ function marketplaceSections() {
 module("Unit | Initializer | marketplace-sidebar", function (hooks) {
   setupTest(hooks);
 
+  hooks.beforeEach(function () {
+    // The application boot can run plugin initializers before this unit test.
+    // Start from a clean registry so the explicit initialize call below tests
+    // one production registration rather than depending on QUnit test order.
+    resetSidebarPanels();
+  });
+
   hooks.afterEach(function () {
     // addSidebarSection pushes into a module-level registry that otherwise
     // outlives this test file for the rest of the QUnit run.
