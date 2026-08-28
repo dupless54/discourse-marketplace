@@ -46,6 +46,9 @@ export default class MarketplaceListingRoute extends Route {
       listing: listingResult.listing,
       transactions,
       transactionsPagination,
+      hasPendingTransaction: transactions.some(
+        (transaction) => transaction.status === "pending"
+      ),
       selectedTransactionId: params.transaction_id
         ? Number(params.transaction_id)
         : null,
