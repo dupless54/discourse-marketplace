@@ -6,7 +6,7 @@ module Marketplace
       requires_plugin Marketplace::PLUGIN_NAME
 
       def index
-        categories = Marketplace::Category.order(:position, :id)
+        categories = Marketplace::Category.includes(:field_definitions).order(:position, :id)
 
         render_json_dump(
           categories: serialize_data(categories, Marketplace::AdminCategorySerializer),
@@ -16,6 +16,7 @@ module Marketplace
       def create
         Marketplace::Categories::Create.call(service_params) do
           on_success do |category:|
+            category.field_definitions.load
             render_serialized(
               category,
               Marketplace::AdminCategorySerializer,
@@ -45,6 +46,7 @@ module Marketplace
           service_params.deep_merge(params: { category_id: params[:id] }),
         ) do
           on_success do |category:|
+            category.field_definitions.load
             render_serialized(
               category,
               Marketplace::AdminCategorySerializer,

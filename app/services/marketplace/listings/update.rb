@@ -14,6 +14,7 @@ module Marketplace
       attribute :inventory_mode, :string, default: "single"
       attribute :stock_quantity, :integer
       attribute :expires_at, :datetime
+      attribute :custom_fields, default: {}
 
       validates :listing_id, presence: true
       validates :title, presence: true
@@ -41,6 +42,7 @@ module Marketplace
     transaction do
       model :listing, :assign_listing
       model :listing, :save_listing
+      step :save_field_values
     end
 
     private
@@ -67,6 +69,7 @@ module Marketplace
     # stock_quantity below already-committed stock is likewise caught by
     # the model's stock_reserved_and_sold_within_quantity validation.
     def assign_listing(listing:, params:, category:)
+      category_changed = listing.category_id != category.id
       listing.assign_attributes(
         title: params.title,
         raw: params.raw,
@@ -78,12 +81,31 @@ module Marketplace
         stock_quantity: params.inventory_mode == "finite" ? params.stock_quantity : nil,
         expires_at: params.expires_at,
       )
+
+      definitions = category.field_definitions.enabled.ordered.to_a
+      normalized_values = listing.validate_structured_field_values(params.custom_fields, definitions: definitions)
+      context[:category_changed] = category_changed
+      context[:field_definitions] = definitions
+      context[:normalized_field_values] = normalized_values || {}
       listing
     end
 
     def save_listing(listing:)
       listing.save
       listing
+    end
+
+    def save_field_values(
+      listing:,
+      field_definitions:,
+      normalized_field_values:,
+      category_changed:
+    )
+      listing.replace_enabled_field_values!(
+        normalized_field_values,
+        definitions: field_definitions,
+        category_changed: category_changed,
+      )
     end
   end
 end

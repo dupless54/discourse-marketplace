@@ -270,6 +270,50 @@
   font-size: $font-up-1;
 }
 
+.marketplace-listing-detail__specifications {
+  padding: 1.25em;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius, 8px);
+  background: var(--secondary);
+}
+
+.marketplace-listing-detail__specifications-heading {
+  margin: 0 0 0.85em;
+  font-size: $font-up-1;
+}
+
+.marketplace-listing-detail__specification-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+}
+
+.marketplace-listing-detail__specification {
+  display: grid;
+  grid-template-columns: minmax(7em, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.75em;
+  padding: 0.7em 0;
+  border-bottom: 1px solid var(--primary-low);
+
+  &:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  dt {
+    color: var(--primary-medium);
+    font-weight: 500;
+  }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+    color: var(--primary-high);
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+}
+
 // Cooked listing content can contain user-uploaded images. Without this,
 // an oversized upload renders at its native pixel dimensions and blows out
 // the layout -- this is the actual production bug being fixed here.
@@ -384,6 +428,18 @@
 
   .marketplace-listing-detail__panel {
     position: static;
+  }
+
+  .marketplace-listing-detail__specification-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace-listing-detail__specification:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--primary-low);
+  }
+
+  .marketplace-listing-detail__specification:last-child {
+    border-bottom: 0;
   }
 
   .marketplace-browse__filters,
@@ -590,6 +646,38 @@
   resize: vertical;
 }
 
+.marketplace-listing-form__structured-fields {
+  padding: 1em;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius, 8px);
+  background: var(--primary-very-low);
+
+  h2 {
+    margin: 0 0 0.8em;
+    font-size: $font-up-1;
+  }
+}
+
+.marketplace-listing-form__structured-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1em;
+}
+
+.marketplace-listing-form__boolean-label {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+
+  input {
+    margin: 0;
+  }
+}
+
+.marketplace-listing-form__required {
+  color: var(--danger);
+}
+
 .marketplace-listing-form__row {
   display: flex;
   gap: 1em;
@@ -619,7 +707,71 @@
 }
 
 @media (max-width: 500px) {
-  .marketplace-listing-form__row {
+  .marketplace-listing-form__row,
+  .marketplace-listing-form__structured-grid {
     flex-direction: column;
+    grid-template-columns: 1fr;
   }
+}
+
+// --- Category field administration -------------------------------------
+
+.marketplace-category-admin__new,
+.marketplace-category-admin__category {
+  margin-bottom: 1.5em;
+  padding: 1em;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius, 8px);
+  background: var(--secondary);
+}
+
+.marketplace-category-admin__new .control-group,
+.marketplace-category-admin__category-row,
+.marketplace-category-admin__field {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75em;
+  align-items: end;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+    font-weight: 600;
+  }
+
+  input:not([type="checkbox"]),
+  select,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.marketplace-category-admin__enabled,
+.marketplace-category-admin__check {
+  flex-direction: row !important;
+  align-items: center;
+  min-height: 2.3em;
+}
+
+.marketplace-category-admin__fields {
+  margin-top: 1em;
+  padding-top: 1em;
+  border-top: 1px solid var(--primary-low);
+}
+
+.marketplace-category-admin__field {
+  margin-top: 0.75em;
+  padding: 0.85em;
+  border-radius: var(--d-border-radius, 8px);
+  background: var(--primary-very-low);
+}
+
+.marketplace-category-admin__field--new {
+  border: 1px dashed var(--primary-low-mid);
+}
+
+.marketplace-category-admin__choices {
+  grid-column: 1 / -1;
 }

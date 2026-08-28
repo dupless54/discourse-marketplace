@@ -98,6 +98,20 @@ export default class MarketplaceListingDetail extends Component {
     return null;
   }
 
+  get customFields() {
+    return (this.listing.custom_fields ?? []).map((field) => ({
+      ...field,
+      renderedValue:
+        field.type === "boolean"
+          ? i18n(
+              field.value === "true"
+                ? "marketplace.listing.boolean_yes"
+                : "marketplace.listing.boolean_no"
+            )
+          : field.display_value,
+    }));
+  }
+
   get isParticipant() {
     return (
       this.transaction &&
@@ -291,6 +305,25 @@ export default class MarketplaceListingDetail extends Component {
                 class="marketplace-listing-detail__hero-image"
               />
             </a>
+          {{/if}}
+
+          {{#if this.customFields.length}}
+            <section class="marketplace-listing-detail__specifications">
+              <h2 class="marketplace-listing-detail__specifications-heading">
+                {{i18n "marketplace.listing.details_heading"}}
+              </h2>
+              <dl class="marketplace-listing-detail__specification-grid">
+                {{#each this.customFields as |field|}}
+                  <div
+                    class="marketplace-listing-detail__specification"
+                    data-field-key={{field.key}}
+                  >
+                    <dt>{{field.label}}</dt>
+                    <dd>{{field.renderedValue}}</dd>
+                  </div>
+                {{/each}}
+              </dl>
+            </section>
           {{/if}}
 
           {{#if this.listing.cooked}}

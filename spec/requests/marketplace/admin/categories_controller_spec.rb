@@ -24,6 +24,7 @@ describe Marketplace::Admin::CategoriesController do
             "slug" => first_category.slug,
             "position" => first_category.position,
             "enabled" => false,
+            "field_definitions" => [],
           },
           {
             "id" => second_category.id,
@@ -31,6 +32,7 @@ describe Marketplace::Admin::CategoriesController do
             "slug" => second_category.slug,
             "position" => second_category.position,
             "enabled" => true,
+            "field_definitions" => [],
           },
         ],
       )

@@ -6,6 +6,14 @@ module Marketplace
 
     belongs_to :seller, class_name: "::User"
     belongs_to :category, class_name: "Marketplace::Category"
+    has_many :field_values,
+             class_name: "Marketplace::ListingFieldValue",
+             inverse_of: :listing,
+             dependent: :destroy
+
+    MAX_TEXT_LENGTH = 255
+    MAX_TEXTAREA_LENGTH = 5000
+    INTEGER_RANGE = (-(2**63))..((2**63) - 1)
 
     enum :status, { draft: 0, active: 10, reserved: 20, sold: 30, archived: 40 }, scopes: false
     enum :inventory_mode, { single: 0, finite: 10, unlimited: 20 }, scopes: false
@@ -47,6 +55,7 @@ module Marketplace
     validate :stock_reserved_and_sold_within_quantity, if: -> { finite? }
     validate :inventory_mode_immutable_after_transactions,
              if: -> { persisted? && will_save_change_to_inventory_mode? }
+    validate :structured_field_values_are_valid
 
     # Purely time-derived -- an expired listing is never destroyed or
     # status-transitioned automatically, so this stays a live computation
@@ -154,7 +163,143 @@ module Marketplace
       end
     end
 
+    def validate_structured_field_values(payload, definitions:)
+      @structured_field_errors = []
+      normalized_payload = normalize_structured_payload(payload)
+      return nil if normalized_payload.nil?
+
+      definitions_by_key = definitions.index_by(&:key)
+      unknown_keys = normalized_payload.keys - definitions_by_key.keys
+      if unknown_keys.present?
+        add_structured_field_error(I18n.t("marketplace.errors.unknown_fields"))
+        return nil
+      end
+
+      normalized = {}
+      definitions.each do |definition|
+        raw_value = normalized_payload[definition.key]
+        value = normalize_structured_value(definition, raw_value)
+
+        if value.nil?
+          if definition.required?
+            add_structured_field_error(
+              I18n.t("marketplace.errors.required_field", label: definition.label),
+            )
+          end
+          next
+        end
+
+        normalized[definition.id] = value
+      end
+
+      @structured_field_errors.empty? ? normalized : nil
+    end
+
+    def replace_enabled_field_values!(normalized_values, definitions:, category_changed:)
+      transaction do
+        if category_changed
+          field_values.delete_all
+        else
+          field_values.where(field_definition_id: definitions.map(&:id)).delete_all
+        end
+
+        normalized_values.each do |definition_id, value|
+          field_values.create!(field_definition_id: definition_id, value: value)
+        end
+      end
+    end
+
     private
+
+    def normalize_structured_payload(payload)
+      payload = payload.to_unsafe_h if payload.respond_to?(:to_unsafe_h)
+      if !payload.is_a?(Hash)
+        add_structured_field_error(I18n.t("marketplace.errors.malformed_fields"))
+        return nil
+      end
+
+      payload.each_with_object({}) do |(key, value), normalized|
+        if !key.is_a?(String) && !key.is_a?(Symbol)
+          add_structured_field_error(I18n.t("marketplace.errors.malformed_fields"))
+          next
+        end
+        if value.is_a?(Hash) || value.is_a?(Array) || value.respond_to?(:to_unsafe_h)
+          add_structured_field_error(I18n.t("marketplace.errors.malformed_fields"))
+          next
+        end
+
+        normalized[key.to_s] = value
+      end
+    end
+
+    def normalize_structured_value(definition, raw_value)
+      return nil if raw_value.nil?
+
+      case definition.field_type
+      when "boolean"
+        return "true" if raw_value == true || raw_value == "true"
+        return "false" if raw_value == false || raw_value == "false"
+
+        add_structured_field_error(
+          I18n.t("marketplace.errors.invalid_boolean", label: definition.label),
+        )
+        nil
+      when "integer"
+        string = raw_value.to_s.strip
+        return nil if string.blank?
+        if !string.match?(/\A-?\d+\z/)
+          add_structured_field_error(
+            I18n.t("marketplace.errors.invalid_integer", label: definition.label),
+          )
+          return nil
+        end
+
+        integer = Integer(string, 10)
+        if !INTEGER_RANGE.cover?(integer)
+          add_structured_field_error(
+            I18n.t("marketplace.errors.invalid_integer", label: definition.label),
+          )
+          return nil
+        end
+        integer.to_s
+      when "select"
+        string = raw_value.to_s
+        return nil if string.blank?
+        if !definition.choices.any? { |choice| (choice["value"] || choice[:value]) == string }
+          add_structured_field_error(
+            I18n.t("marketplace.errors.invalid_select", label: definition.label),
+          )
+          return nil
+        end
+        string
+      when "text", "textarea"
+        string = raw_value.to_s.strip
+        return nil if string.blank?
+        if Nokogiri::HTML5.fragment(string).at_css("*").present?
+          add_structured_field_error(
+            I18n.t("marketplace.errors.field_html_not_allowed", label: definition.label),
+          )
+          return nil
+        end
+        maximum = definition.field_type == "textarea" ? MAX_TEXTAREA_LENGTH : MAX_TEXT_LENGTH
+        if string.length > maximum
+          add_structured_field_error(
+            I18n.t("marketplace.errors.field_too_long", label: definition.label, count: maximum),
+          )
+          return nil
+        end
+        string
+      end
+    end
+
+    def add_structured_field_error(message)
+      @structured_field_errors ||= []
+      @structured_field_errors << message
+    end
+
+    def structured_field_values_are_valid
+      Array(@structured_field_errors).each { |message| errors.add(:custom_fields, message) }
+    end
 
     def category_must_be_enabled
       return if category.nil?

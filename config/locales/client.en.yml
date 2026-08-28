@@ -37,6 +37,24 @@ en:
           save: "Save"
           empty: "No marketplace categories have been created yet."
           error: "The category could not be saved. Check the values and try again."
+          fields:
+            title: "Listing fields"
+            add: "Add field"
+            save: "Save field"
+            empty: "This category has no listing fields yet."
+            key: "Field key"
+            label: "Field name"
+            type: "Field type"
+            required: "Required"
+            placeholder: "Placeholder"
+            help_text: "Help text"
+            choices: "Choices (one value | Label per line)"
+            types:
+              text: "Text"
+              textarea: "Long text"
+              integer: "Number"
+              boolean: "Yes/No"
+              select: "Select"
 
       notifications:
         transaction_started: "%{username} wants to buy %{listing_title}"
@@ -70,6 +88,8 @@ en:
         description_label: "Description"
         category_label: "Category"
         category_placeholder: "Select a category"
+        structured_fields_heading: "Listing Details"
+        select_placeholder: "Select an option"
         upload_button: "Add image or file"
         upload_uploading: "Uploading…"
         price_label: "Price"
@@ -95,6 +115,9 @@ en:
         message_seller_subject: "About your listing: %{listing_title}"
         back_to_marketplace: "Back to Marketplace"
         description_heading: "Listing Description"
+        details_heading: "Listing Details"
+        boolean_yes: "Yes"
+        boolean_no: "No"
         status:
           draft: "Draft"
           active: "Active"

@@ -6,6 +6,11 @@ module Marketplace
 
     SLUG_FORMAT = /\A[a-z0-9]+(-[a-z0-9]+)*\z/
 
+    has_many :field_definitions,
+             -> { order(:position, :id) },
+             class_name: "Marketplace::CategoryFieldDefinition",
+             inverse_of: :category
+
     validates :name, presence: true, length: { maximum: 100 }
     validates :slug,
               presence: true,

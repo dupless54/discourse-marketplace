@@ -53,6 +53,14 @@ export default class MarketplaceListingForm extends Component {
   @tracked inventoryMode = this.args.listing?.inventory_mode ?? "single";
   @tracked stockQuantity = this.args.listing?.stock_quantity ?? "";
   @tracked expiresAt = isoToDatetimeLocal(this.args.listing?.expires_at);
+  initialCategoryId = this.args.listing?.category_id ?? "";
+  initialCustomFields = Object.fromEntries(
+    (this.args.listing?.custom_fields ?? []).map((field) => [
+      field.key,
+      field.type === "boolean" ? field.value === "true" : field.value,
+    ])
+  );
+  @tracked customFields = { ...this.initialCustomFields };
   @tracked saving = false;
   @tracked errorMessage = null;
 
@@ -76,6 +84,26 @@ export default class MarketplaceListingForm extends Component {
 
   get uploading() {
     return this.uppyUpload.uploading || this.uppyUpload.processing;
+  }
+
+  get selectedCategory() {
+    return this.args.categories.find(
+      (category) => category.id === Number(this.categoryId)
+    );
+  }
+
+  get customFieldsForForm() {
+    return (this.selectedCategory?.field_definitions ?? []).map((field) => ({
+      ...field,
+      value:
+        this.customFields[field.key] ?? (field.type === "boolean" ? false : ""),
+    }));
+  }
+
+  get customFieldPayload() {
+    return Object.fromEntries(
+      this.customFieldsForForm.map((field) => [field.key, field.value])
+    );
   }
 
   get uploadButtonLabel() {
@@ -108,6 +136,17 @@ export default class MarketplaceListingForm extends Component {
   @action
   updateCategoryId(event) {
     this.categoryId = event.target.value ? Number(event.target.value) : "";
+    this.customFields =
+      this.categoryId === this.initialCategoryId
+        ? { ...this.initialCustomFields }
+        : {};
+  }
+
+  @action
+  updateCustomField(field, event) {
+    const value =
+      field.type === "boolean" ? event.target.checked : event.target.value;
+    this.customFields = { ...this.customFields, [field.key]: value };
   }
 
   @action
@@ -150,6 +189,7 @@ export default class MarketplaceListingForm extends Component {
       inventory_mode: this.inventoryMode,
       stock_quantity: this.isFinite ? this.stockQuantity : null,
       expires_at: datetimeLocalToIso(this.expiresAt),
+      custom_fields: this.customFieldPayload,
     };
 
     try {
@@ -228,7 +268,10 @@ export default class MarketplaceListingForm extends Component {
 
       <div class="marketplace-listing-form__field">
         <label>{{i18n "marketplace.form.category_label"}}</label>
-        <select {{on "change" this.updateCategoryId}}>
+        <select
+          class="marketplace-listing-form__category"
+          {{on "change" this.updateCategoryId}}
+        >
           <option value="">{{i18n "marketplace.form.category_placeholder"}}</option>
           {{#each @categories as |category|}}
             <option
@@ -238,6 +281,85 @@ export default class MarketplaceListingForm extends Component {
           {{/each}}
         </select>
       </div>
+
+      {{#if this.customFieldsForForm.length}}
+        <section class="marketplace-listing-form__structured-fields">
+          <h2>{{i18n "marketplace.form.structured_fields_heading"}}</h2>
+          <div class="marketplace-listing-form__structured-grid">
+            {{#each this.customFieldsForForm as |field|}}
+              <div
+                class="marketplace-listing-form__field marketplace-listing-form__custom-field"
+                data-field-key={{field.key}}
+              >
+                {{#if (eq field.type "boolean")}}
+                  <label class="marketplace-listing-form__boolean-label">
+                    <input
+                      type="checkbox"
+                      checked={{field.value}}
+                      {{on "change" (fn this.updateCustomField field)}}
+                    />
+                    <span>
+                      {{field.label}}
+                      {{#if field.required}}<span
+                          class="marketplace-listing-form__required"
+                          aria-hidden="true"
+                        >*</span>{{/if}}
+                    </span>
+                  </label>
+                {{else}}
+                  <label>
+                    {{field.label}}
+                    {{#if field.required}}<span
+                        class="marketplace-listing-form__required"
+                        aria-hidden="true"
+                      >*</span>{{/if}}
+                  </label>
+
+                  {{#if (eq field.type "textarea")}}
+                    <Textarea
+                      @value={{field.value}}
+                      rows="4"
+                      maxlength="5000"
+                      placeholder={{field.placeholder}}
+                      required={{field.required}}
+                      {{on "input" (fn this.updateCustomField field)}}
+                    />
+                  {{else if (eq field.type "select")}}
+                    <select
+                      required={{field.required}}
+                      {{on "change" (fn this.updateCustomField field)}}
+                    >
+                      <option value="">{{i18n
+                          "marketplace.form.select_placeholder"
+                        }}</option>
+                      {{#each field.choices as |choice|}}
+                        <option
+                          value={{choice.value}}
+                          selected={{eq choice.value field.value}}
+                        >{{choice.label}}</option>
+                      {{/each}}
+                    </select>
+                  {{else}}
+                    <input
+                      type={{if (eq field.type "integer") "number" "text"}}
+                      step={{if (eq field.type "integer") "1"}}
+                      maxlength={{if (eq field.type "text") "255"}}
+                      value={{field.value}}
+                      placeholder={{field.placeholder}}
+                      required={{field.required}}
+                      {{on "input" (fn this.updateCustomField field)}}
+                    />
+                  {{/if}}
+                {{/if}}
+
+                {{#if field.help_text}}
+                  <span class="marketplace-listing-form__hint">{{field.help_text}}</span>
+                {{/if}}
+              </div>
+            {{/each}}
+          </div>
+        </section>
+      {{/if}}
 
       <div class="marketplace-listing-form__row">
         <div class="marketplace-listing-form__field marketplace-listing-form__price-field">

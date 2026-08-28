@@ -13,6 +13,7 @@ module Marketplace
       attribute :inventory_mode, :string, default: "single"
       attribute :stock_quantity, :integer
       attribute :expires_at, :datetime
+      attribute :custom_fields, default: {}
 
       validates :title, presence: true
       validates :raw, presence: true
@@ -39,6 +40,7 @@ module Marketplace
     transaction do
       model :listing, :build_listing
       model :listing, :save_listing
+      step :save_field_values
     end
 
     private
@@ -52,7 +54,7 @@ module Marketplace
     end
 
     def build_listing(guardian:, params:, category:)
-      Marketplace::Listing.new(
+      listing = Marketplace::Listing.new(
         seller_id: guardian.user.id,
         title: params.title,
         raw: params.raw,
@@ -65,11 +67,25 @@ module Marketplace
         stock_quantity: params.inventory_mode == "finite" ? params.stock_quantity : nil,
         expires_at: params.expires_at,
       )
+
+      definitions = category.field_definitions.enabled.ordered.to_a
+      normalized_values = listing.validate_structured_field_values(params.custom_fields, definitions: definitions)
+      context[:field_definitions] = definitions
+      context[:normalized_field_values] = normalized_values || {}
+      listing
     end
 
     def save_listing(listing:)
       listing.save
       listing
+    end
+
+    def save_field_values(listing:, field_definitions:, normalized_field_values:)
+      listing.replace_enabled_field_values!(
+        normalized_field_values,
+        definitions: field_definitions,
+        category_changed: true,
+      )
     end
   end
 end

@@ -10,6 +10,66 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
 
   const categories = [{ id: 1, name: "Electronics" }];
 
+  const structuredCategories = [
+    {
+      id: 1,
+      name: "Cars",
+      field_definitions: [
+        {
+          key: "model",
+          label: "Model",
+          type: "text",
+          required: true,
+          choices: [],
+        },
+        {
+          key: "notes",
+          label: "Notes",
+          type: "textarea",
+          required: false,
+          choices: [],
+        },
+        {
+          key: "mileage",
+          label: "Mileage",
+          type: "integer",
+          required: true,
+          choices: [],
+        },
+        {
+          key: "trade_available",
+          label: "Trade available",
+          type: "boolean",
+          required: false,
+          choices: [],
+        },
+        {
+          key: "fuel",
+          label: "Fuel",
+          type: "select",
+          required: true,
+          choices: [
+            { value: "diesel", label: "Diesel" },
+            { value: "electric", label: "Electric" },
+          ],
+        },
+      ],
+    },
+    {
+      id: 2,
+      name: "Digital",
+      field_definitions: [
+        {
+          key: "platform",
+          label: "Platform",
+          type: "select",
+          required: true,
+          choices: [{ value: "steam", label: "Steam" }],
+        },
+      ],
+    },
+  ];
+
   test("shows an upload control when creating a listing", async function (assert) {
     await render(
       <template>
@@ -166,5 +226,71 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
     assert
       .dom(".marketplace-listing-form__expires-field input")
       .hasValue(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+  });
+
+  test("renders every supported field type when a category is selected", async function (assert) {
+    await render(
+      <template>
+        <MarketplaceListingForm @categories={{structuredCategories}} />
+      </template>
+    );
+
+    assert.dom(".marketplace-listing-form__structured-fields").doesNotExist();
+    await fillIn(".marketplace-listing-form__category", "1");
+
+    assert.dom('[data-field-key="model"] input[type="text"]').exists();
+    assert.dom('[data-field-key="notes"] textarea').exists();
+    assert.dom('[data-field-key="mileage"] input[type="number"]').exists();
+    assert.dom('[data-field-key="trade_available"] input[type="checkbox"]').exists();
+    assert.dom('[data-field-key="fuel"] select').exists();
+    assert.dom(".marketplace-listing-form__required").exists({ count: 3 });
+  });
+
+  test("switching category replaces fields without leaking same-category state", async function (assert) {
+    await render(
+      <template>
+        <MarketplaceListingForm @categories={{structuredCategories}} />
+      </template>
+    );
+
+    await fillIn(".marketplace-listing-form__category", "1");
+    await fillIn('[data-field-key="model"] input', "BMW 320d");
+    await fillIn(".marketplace-listing-form__category", "2");
+
+    assert.dom('[data-field-key="model"]').doesNotExist();
+    assert.dom('[data-field-key="mileage"]').doesNotExist();
+    assert.dom('[data-field-key="platform"] select').exists();
+    assert.dom('[data-field-key="platform"] select').hasValue("");
+  });
+
+  test("preloads existing structured values on edit", async function (assert) {
+    const listing = {
+      id: 8,
+      title: "BMW 320d",
+      raw: "Car description",
+      category_id: 1,
+      price_cents: 500,
+      currency: "USD",
+      custom_fields: [
+        { key: "model", type: "text", value: "BMW 320d" },
+        { key: "mileage", type: "integer", value: "125000" },
+        { key: "trade_available", type: "boolean", value: "true" },
+        { key: "fuel", type: "select", value: "diesel" },
+      ],
+    };
+
+    await render(
+      <template>
+        <MarketplaceListingForm
+          @categories={{structuredCategories}}
+          @listing={{listing}}
+        />
+      </template>
+    );
+
+    assert.dom('[data-field-key="model"] input').hasValue("BMW 320d");
+    assert.dom('[data-field-key="mileage"] input').hasValue("125000");
+    assert.dom('[data-field-key="trade_available"] input').isChecked();
+    assert.dom('[data-field-key="fuel"] select').hasValue("diesel");
   });
 });
