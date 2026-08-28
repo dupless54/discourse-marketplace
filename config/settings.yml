@@ -12,3 +12,7 @@ marketplace:
     default: "TRY|EUR|USD|GBP"
     type: list
     list_type: compact
+  marketplace_offer_expiry_hours:
+    default: 48
+    min: 1
+    max: 168
