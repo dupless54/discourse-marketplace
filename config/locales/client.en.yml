@@ -151,6 +151,12 @@ en:
         search_button: "Search"
         load_more: "Load more"
         empty: "No listings found."
+        dynamic_filters: "Listing details"
+        clear_filters: "Clear filters"
+        filter_any: "Any"
+        integer_min: "Min"
+        integer_max: "Max"
+        text_filter_placeholder: "Contains…"
 
       form:
         new_title: "New Listing"
