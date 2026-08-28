@@ -59,6 +59,9 @@ const EMPTY_LISTINGS = {
   pagination: { page: 1, per_page: 20, has_more: false },
 };
 
+const scoreMin = '[data-filter-key="score"] .marketplace-browse__integer-range label:first-child input';
+const scoreMax = '[data-filter-key="score"] .marketplace-browse__integer-range label:last-child input';
+
 acceptance("Marketplace | dynamic filters", function (needs) {
   let listingRequests;
 
@@ -89,8 +92,8 @@ acceptance("Marketplace | dynamic filters", function (needs) {
     assert.dom('[data-filter-key="edition"] input').exists();
 
     await select('[data-filter-key="platform"] select', "steam");
-    await fillIn('[data-filter-key="score"] input:first-of-type', "5");
-    await fillIn('[data-filter-key="score"] input:last-of-type', "20");
+    await fillIn(scoreMin, "5");
+    await fillIn(scoreMax, "20");
     await select('[data-filter-key="warranty"] select', "true");
     await fillIn('[data-filter-key="edition"] input', "collector");
     await click(".marketplace-browse__primary-filters .btn-primary");
@@ -108,12 +111,12 @@ acceptance("Marketplace | dynamic filters", function (needs) {
     await visit("/marketplace");
     await select(".marketplace-browse__category", "3");
     await select('[data-filter-key="platform"] select', "steam");
-    await fillIn('[data-filter-key="score"] input:first-of-type', "5");
+    await fillIn(scoreMin, "5");
 
     await click(".marketplace-browse__clear-filters");
 
     assert.dom('[data-filter-key="platform"] select').hasValue("");
-    assert.dom('[data-filter-key="score"] input:first-of-type').hasValue("");
+    assert.dom(scoreMin).hasValue("");
 
     const request = listingRequests.at(-1);
     assert.strictEqual(request.category_id, "3");
