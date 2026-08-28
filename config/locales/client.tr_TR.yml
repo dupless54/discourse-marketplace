@@ -153,7 +153,7 @@ tr_TR:
         empty: "İlan bulunamadı."
         dynamic_filters: "İlan özellikleri"
         clear_filters: "Filtreleri temizle"
-        filter_any: "Farketmez"
+        filter_any: "Fark etmez"
         integer_min: "En az"
         integer_max: "En fazla"
         text_filter_placeholder: "İçeren…"
