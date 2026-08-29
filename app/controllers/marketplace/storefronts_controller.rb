@@ -8,21 +8,37 @@ module Marketplace
       respond_to do |format|
         format.html { render "default/empty" }
         format.json do
+          storefront_debug!("start:#{params[:username]}")
           guardian.ensure_public_can_see_profiles!
+          storefront_debug!("public-profile-ok:#{params[:username]}")
 
           seller = find_seller
+          storefront_debug!(seller.present? ? "seller-found" : "seller-missing")
           raise Discourse::NotFound if seller.blank?
           if !seller.active? && !(current_user&.staff? || SiteSetting.show_inactive_accounts)
+            storefront_debug!("seller-inactive")
             raise Discourse::NotFound
           end
-          raise Discourse::NotFound if !guardian.can_see_profile?(seller)
+          storefront_debug!("seller-active")
+          if !guardian.can_see_profile?(seller)
+            storefront_debug!("profile-hidden")
+            raise Discourse::NotFound
+          end
+          storefront_debug!("profile-visible")
 
           result = Marketplace::ListingQuery.new(params: params, seller_id: seller.id).results
+          storefront_debug!("query-ok:#{result[:records].size}")
           mark_favorites!(result[:records])
+          storefront_debug!("favorites-ok")
+
+          seller_json = serialize_data(seller, BasicUserSerializer)
+          storefront_debug!("seller-serialized")
+          listings_json = serialize_data(result[:records], Marketplace::ListingBrowseSerializer)
+          storefront_debug!("listings-serialized")
 
           render_json_dump(
-            seller: serialize_data(seller, BasicUserSerializer),
-            listings: serialize_data(result[:records], Marketplace::ListingBrowseSerializer),
+            seller: seller_json,
+            listings: listings_json,
             pagination: {
               page: result[:page],
               per_page: result[:per_page],
@@ -34,6 +50,10 @@ module Marketplace
     end
 
     private
+
+    def storefront_debug!(stage)
+      response.headers["X-Marketplace-Storefront-Debug"] = stage if Rails.env.test?
+    end
 
     def find_seller
       username = params[:username].to_s
