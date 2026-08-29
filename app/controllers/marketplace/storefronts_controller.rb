@@ -4,41 +4,28 @@ module Marketplace
   class StorefrontsController < ::ApplicationController
     requires_plugin Marketplace::PLUGIN_NAME
 
+    prepend_around_action :debug_storefront_request,
+                          if: -> { Rails.env.test? && params[:storefront_debug] == "1" }
+
     def show
       respond_to do |format|
         format.html { render "default/empty" }
         format.json do
-          storefront_debug!("start:#{params[:username]}")
           guardian.ensure_public_can_see_profiles!
-          storefront_debug!("public-profile-ok:#{params[:username]}")
 
           seller = find_seller
-          storefront_debug!(seller.present? ? "seller-found" : "seller-missing")
           raise Discourse::NotFound if seller.blank?
           if !seller.active? && !(current_user&.staff? || SiteSetting.show_inactive_accounts)
-            storefront_debug!("seller-inactive")
             raise Discourse::NotFound
           end
-          storefront_debug!("seller-active")
-          if !guardian.can_see_profile?(seller)
-            storefront_debug!("profile-hidden")
-            raise Discourse::NotFound
-          end
-          storefront_debug!("profile-visible")
+          raise Discourse::NotFound if !guardian.can_see_profile?(seller)
 
           result = Marketplace::ListingQuery.new(params: params, seller_id: seller.id).results
-          storefront_debug!("query-ok:#{result[:records].size}")
           mark_favorites!(result[:records])
-          storefront_debug!("favorites-ok")
-
-          seller_json = serialize_data(seller, BasicUserSerializer)
-          storefront_debug!("seller-serialized")
-          listings_json = serialize_data(result[:records], Marketplace::ListingBrowseSerializer)
-          storefront_debug!("listings-serialized")
 
           render_json_dump(
-            seller: seller_json,
-            listings: listings_json,
+            seller: serialize_data(seller, BasicUserSerializer),
+            listings: serialize_data(result[:records], Marketplace::ListingBrowseSerializer),
             pagination: {
               page: result[:page],
               per_page: result[:per_page],
@@ -51,8 +38,19 @@ module Marketplace
 
     private
 
-    def storefront_debug!(stage)
-      response.headers["X-Marketplace-Storefront-Debug"] = stage if Rails.env.test?
+    def debug_storefront_request
+      yield
+    rescue StandardError => error
+      render(
+        json: {
+          debug_error: error.class.name,
+          debug_message: error.message,
+          debug_username: params[:username],
+          debug_format: params[:format],
+          debug_backtrace: error.backtrace&.grep(/marketplace|application_controller/)&.first(16),
+        },
+        status: 599,
+      )
     end
 
     def find_seller
