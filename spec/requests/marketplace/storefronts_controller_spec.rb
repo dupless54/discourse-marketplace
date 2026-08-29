@@ -10,18 +10,6 @@ RSpec.describe Marketplace::StorefrontsController do
     SiteSetting.hide_new_user_profiles = false
   end
 
-  around do |example|
-    if example.metadata[:storefront_raise]
-      previous = Rails.application.env_config["action_dispatch.show_exceptions"]
-      Rails.application.env_config["action_dispatch.show_exceptions"] = :none
-      example.run
-    else
-      example.run
-    end
-  ensure
-    Rails.application.env_config["action_dispatch.show_exceptions"] = previous if example.metadata[:storefront_raise]
-  end
-
   def active_listing(user:, title:, category: self.category, published_at: Time.current)
     Fabricate(
       :marketplace_listing,
@@ -38,7 +26,7 @@ RSpec.describe Marketplace::StorefrontsController do
   end
 
   describe "GET /marketplace/sellers/:username" do
-    it "returns only the seller's publicly browseable listings and BasicUser fields", :storefront_raise do
+    it "returns only the seller's publicly browseable listings and BasicUser fields" do
       visible = active_listing(user: seller, title: "Visible", published_at: 2.hours.ago)
       active_listing(user: other_seller, title: "Other seller")
       Fabricate(:marketplace_listing, seller: seller, category: category, title: "Draft")
@@ -55,7 +43,7 @@ RSpec.describe Marketplace::StorefrontsController do
       active_listing(user: seller, title: "Disabled category", category: disabled_category)
       disabled_category.update!(enabled: false)
 
-      get_storefront(seller.username)
+      get_storefront(seller.username, params: { storefront_debug: "1" })
 
       expect(response.status).to eq(200), "#{response.body}\n#{response.headers.to_h.inspect}"
       expect(response.parsed_body.dig("seller", "id")).to eq(seller.id)
@@ -64,11 +52,11 @@ RSpec.describe Marketplace::StorefrontsController do
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([visible.id])
     end
 
-    it "paginates the seller's visible listings deterministically", :storefront_raise do
+    it "paginates the seller's visible listings deterministically" do
       older = active_listing(user: seller, title: "Older", published_at: 2.hours.ago)
       newer = active_listing(user: seller, title: "Newer", published_at: 1.hour.ago)
 
-      get_storefront(seller.username, params: { page: 1, per_page: 1 })
+      get_storefront(seller.username, params: { page: 1, per_page: 1, storefront_debug: "1" })
 
       expect(response.status).to eq(200), response.body
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([newer.id])
@@ -78,7 +66,7 @@ RSpec.describe Marketplace::StorefrontsController do
         "has_more" => true,
       )
 
-      get_storefront(seller.username, params: { page: 2, per_page: 1 })
+      get_storefront(seller.username, params: { page: 2, per_page: 1, storefront_debug: "1" })
 
       expect(response.status).to eq(200), response.body
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([older.id])
