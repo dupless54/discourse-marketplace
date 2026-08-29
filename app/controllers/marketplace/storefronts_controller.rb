@@ -21,7 +21,7 @@ module Marketplace
           mark_favorites!(result[:records])
 
           render_json_dump(
-            seller: serialize_data(seller, BasicUserSerializer),
+            seller: serialize_data(seller, BasicUserSerializer, root: false),
             listings: serialize_data(result[:records], Marketplace::ListingBrowseSerializer),
             pagination: {
               page: result[:page],
