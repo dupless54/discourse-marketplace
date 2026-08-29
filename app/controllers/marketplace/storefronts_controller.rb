@@ -10,7 +10,7 @@ module Marketplace
         format.json do
           guardian.ensure_public_can_see_profiles!
 
-          seller = User.find_by_username(params[:username])
+          seller = find_seller
           raise Discourse::NotFound if seller.blank?
           if !seller.active? && !(current_user&.staff? || SiteSetting.show_inactive_accounts)
             raise Discourse::NotFound
@@ -34,6 +34,14 @@ module Marketplace
     end
 
     private
+
+    def find_seller
+      username = params[:username].to_s
+      seller = User.find_by_username(username)
+      return seller if seller.present? || !username.end_with?(".json")
+
+      User.find_by_username(username.delete_suffix(".json"))
+    end
 
     def mark_favorites!(listings)
       return if listings.blank?
