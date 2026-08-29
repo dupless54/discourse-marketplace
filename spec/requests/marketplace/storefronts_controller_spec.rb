@@ -6,6 +6,7 @@ RSpec.describe Marketplace::StorefrontsController do
   fab!(:category) { Fabricate(:marketplace_category) }
 
   before do
+    SiteSetting.marketplace_enabled = true
     SiteSetting.hide_user_profiles_from_public = false
     SiteSetting.hide_new_user_profiles = false
   end
@@ -43,7 +44,7 @@ RSpec.describe Marketplace::StorefrontsController do
       active_listing(user: seller, title: "Disabled category", category: disabled_category)
       disabled_category.update!(enabled: false)
 
-      get_storefront(seller.username, params: { storefront_debug: "1" })
+      get_storefront(seller.username)
 
       expect(response.status).to eq(200), "#{response.body}\n#{response.headers.to_h.inspect}"
       expect(response.parsed_body.dig("seller", "id")).to eq(seller.id)
@@ -56,7 +57,7 @@ RSpec.describe Marketplace::StorefrontsController do
       older = active_listing(user: seller, title: "Older", published_at: 2.hours.ago)
       newer = active_listing(user: seller, title: "Newer", published_at: 1.hour.ago)
 
-      get_storefront(seller.username, params: { page: 1, per_page: 1, storefront_debug: "1" })
+      get_storefront(seller.username, params: { page: 1, per_page: 1 })
 
       expect(response.status).to eq(200), response.body
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([newer.id])
@@ -66,7 +67,7 @@ RSpec.describe Marketplace::StorefrontsController do
         "has_more" => true,
       )
 
-      get_storefront(seller.username, params: { page: 2, per_page: 1, storefront_debug: "1" })
+      get_storefront(seller.username, params: { page: 2, per_page: 1 })
 
       expect(response.status).to eq(200), response.body
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([older.id])
