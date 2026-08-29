@@ -44,16 +44,18 @@ RSpec.describe Marketplace::StorefrontsController do
       disabled_category.update!(enabled: false)
 
       allow_any_instance_of(Marketplace::StorefrontsController)
-        .to receive(:ensure_dont_cache_page)
-        .and_wrap_original do |method, *args, &block|
-          method.call(*args, &block)
-        rescue Discourse::NotFound => e
-          raise "storefront NotFound escaped callbacks:\n#{e.full_message(highlight: false)}"
+        .to receive(:rescue_discourse_actions)
+        .and_wrap_original do |method, *args|
+          if args.first == :not_found
+            raise "storefront controller converted a NotFound:\n#{caller.join("\n")}"
+          end
+
+          method.call(*args)
         end
 
       get_storefront(seller.username)
 
-      expect(response.status).to eq(200), response.body
+      expect(response.status).to eq(200), "#{response.body}\n#{response.headers.to_h.inspect}"
       expect(response.parsed_body.dig("seller", "id")).to eq(seller.id)
       expect(response.parsed_body.dig("seller", "username")).to eq(seller.username)
       expect(response.parsed_body.fetch("seller")).not_to include("email", "trust_level", "admin", "moderator")
