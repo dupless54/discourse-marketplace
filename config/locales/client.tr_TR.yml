@@ -96,6 +96,15 @@ tr_TR:
         load_more: "Daha fazla yükle"
         error: "Favori durumu güncellenemedi. Lütfen tekrar deneyin."
 
+      storefront:
+        back: "Pazar Yerine Dön"
+        eyebrow: "Pazar Yeri Satıcısı"
+        view_profile: "Forum Profilini Gör"
+        view_storefront: "Satıcı Mağazası"
+        listings_title: "Aktif İlanlar"
+        empty: "Bu satıcının şu anda aktif ilanı yok."
+        load_more: "Daha fazla yükle"
+
       offers:
         title: "Tekliflerim"
         tabs:

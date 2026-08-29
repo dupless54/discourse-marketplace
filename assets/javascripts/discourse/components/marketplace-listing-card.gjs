@@ -174,6 +174,16 @@ export default class MarketplaceListingCard extends Component {
           </button>
         {{/if}}
 
+        {{#if this.listing.seller}}
+          <LinkTo
+            @route="marketplace.seller"
+            @model={{this.listing.seller.username}}
+            class="btn btn-default btn-small marketplace-listing-card__storefront"
+          >
+            {{i18n "marketplace.storefront.view_storefront"}}
+          </LinkTo>
+        {{/if}}
+
         {{#if this.isSeller}}
           <LinkTo
             @route="marketplace.listing.edit"

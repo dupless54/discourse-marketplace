@@ -12,6 +12,7 @@ register_asset "stylesheets/common/marketplace.scss"
 register_asset "stylesheets/common/marketplace-favorites.scss"
 register_asset "stylesheets/common/marketplace-offers.scss"
 register_asset "stylesheets/common/marketplace-dynamic-filters.scss"
+register_asset "stylesheets/common/marketplace-storefront.scss"
 
 module ::Marketplace
   PLUGIN_NAME = "discourse-marketplace"

@@ -16,6 +16,7 @@ Marketplace::Engine.routes.draw do
 
   get "categories" => "categories#index"
   get "favorites" => "favorites#index"
+  get "sellers/:username" => "storefronts#show"
 
   namespace :admin do
     resources :categories, only: %i[index create update destroy] do

@@ -96,6 +96,15 @@ en:
         load_more: "Load more"
         error: "The favorite could not be updated. Please try again."
 
+      storefront:
+        back: "Back to Marketplace"
+        eyebrow: "Marketplace Seller"
+        view_profile: "View Forum Profile"
+        view_storefront: "Seller Store"
+        listings_title: "Active Listings"
+        empty: "This seller has no active listings right now."
+        load_more: "Load more"
+
       offers:
         title: "My Offers"
         tabs:
