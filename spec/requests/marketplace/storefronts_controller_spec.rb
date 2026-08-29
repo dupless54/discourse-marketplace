@@ -10,6 +10,18 @@ RSpec.describe Marketplace::StorefrontsController do
     SiteSetting.hide_new_user_profiles = false
   end
 
+  around do |example|
+    if example.metadata[:storefront_raise]
+      previous = Rails.application.env_config["action_dispatch.show_exceptions"]
+      Rails.application.env_config["action_dispatch.show_exceptions"] = :none
+      example.run
+    else
+      example.run
+    end
+  ensure
+    Rails.application.env_config["action_dispatch.show_exceptions"] = previous if example.metadata[:storefront_raise]
+  end
+
   def active_listing(user:, title:, category: self.category, published_at: Time.current)
     Fabricate(
       :marketplace_listing,
@@ -26,7 +38,7 @@ RSpec.describe Marketplace::StorefrontsController do
   end
 
   describe "GET /marketplace/sellers/:username" do
-    it "returns only the seller's publicly browseable listings and BasicUser fields" do
+    it "returns only the seller's publicly browseable listings and BasicUser fields", :storefront_raise do
       visible = active_listing(user: seller, title: "Visible", published_at: 2.hours.ago)
       active_listing(user: other_seller, title: "Other seller")
       Fabricate(:marketplace_listing, seller: seller, category: category, title: "Draft")
@@ -52,7 +64,7 @@ RSpec.describe Marketplace::StorefrontsController do
       expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([visible.id])
     end
 
-    it "paginates the seller's visible listings deterministically" do
+    it "paginates the seller's visible listings deterministically", :storefront_raise do
       older = active_listing(user: seller, title: "Older", published_at: 2.hours.ago)
       newer = active_listing(user: seller, title: "Newer", published_at: 1.hour.ago)
 
