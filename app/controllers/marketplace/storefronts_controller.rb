@@ -4,16 +4,13 @@ module Marketplace
   class StorefrontsController < ::ApplicationController
     requires_plugin Marketplace::PLUGIN_NAME
 
-    prepend_around_action :debug_storefront_request,
-                          if: -> { Rails.env.test? && params[:storefront_debug] == "1" }
-
     def show
       respond_to do |format|
         format.html { render "default/empty" }
         format.json do
           guardian.ensure_public_can_see_profiles!
 
-          seller = find_seller
+          seller = User.find_by_username(params[:username])
           raise Discourse::NotFound if seller.blank?
           if !seller.active? && !(current_user&.staff? || SiteSetting.show_inactive_accounts)
             raise Discourse::NotFound
@@ -37,29 +34,6 @@ module Marketplace
     end
 
     private
-
-    def debug_storefront_request
-      yield
-    rescue StandardError => error
-      render(
-        json: {
-          debug_error: error.class.name,
-          debug_message: error.message,
-          debug_username: params[:username],
-          debug_format: params[:format],
-          debug_backtrace: error.backtrace&.grep(/marketplace|application_controller/)&.first(16),
-        },
-        status: 599,
-      )
-    end
-
-    def find_seller
-      username = params[:username].to_s
-      seller = User.find_by_username(username)
-      return seller if seller.present? || !username.end_with?(".json")
-
-      User.find_by_username(username.delete_suffix(".json"))
-    end
 
     def mark_favorites!(listings)
       return if listings.blank?
