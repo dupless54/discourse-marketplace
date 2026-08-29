@@ -43,6 +43,14 @@ RSpec.describe Marketplace::StorefrontsController do
       active_listing(user: seller, title: "Disabled category", category: disabled_category)
       disabled_category.update!(enabled: false)
 
+      allow_any_instance_of(Marketplace::StorefrontsController)
+        .to receive(:ensure_dont_cache_page)
+        .and_wrap_original do |method, *args, &block|
+          method.call(*args, &block)
+        rescue Discourse::NotFound => e
+          raise "storefront NotFound escaped callbacks:\n#{e.full_message(highlight: false)}"
+        end
+
       get_storefront(seller.username)
 
       expect(response.status).to eq(200), response.body
