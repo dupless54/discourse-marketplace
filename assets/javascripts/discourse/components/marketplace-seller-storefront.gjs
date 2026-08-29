@@ -38,7 +38,7 @@ export default class MarketplaceSellerStorefront extends Component {
     this.loading = true;
     try {
       const result = await ajax(
-        `/marketplace/sellers/${encodeURIComponent(this.seller.username)}`,
+        `/marketplace/sellers/${encodeURIComponent(this.seller.username)}.json`,
         { data: { page: this.pagination.page + 1, per_page: this.pagination.per_page } }
       );
       const ids = new Set(this.listings.map((listing) => listing.id));
