@@ -44,13 +44,13 @@ RSpec.describe Marketplace::StorefrontsController do
       disabled_category.update!(enabled: false)
 
       allow_any_instance_of(Marketplace::StorefrontsController)
-        .to receive(:rescue_discourse_actions)
-        .and_wrap_original do |method, *args|
-          if args.first == :not_found
-            raise "storefront controller converted a NotFound:\n#{caller.join("\n")}"
+        .to receive(:rescue_with_handler)
+        .and_wrap_original do |method, exception, *args, **kwargs|
+          if exception.is_a?(Discourse::NotFound)
+            raise "storefront original NotFound:\n#{exception.full_message(highlight: false)}"
           end
 
-          method.call(*args)
+          method.call(exception, *args, **kwargs)
         end
 
       get_storefront(seller.username)
