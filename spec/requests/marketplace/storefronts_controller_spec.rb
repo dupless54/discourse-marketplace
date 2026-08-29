@@ -80,7 +80,7 @@ RSpec.describe Marketplace::StorefrontsController do
 
       get_storefront(seller.username)
 
-      expect(response.status).to eq(404)
+      expect(response.status).to eq(403)
       expect(response.body).not_to include(seller.username)
     end
 
