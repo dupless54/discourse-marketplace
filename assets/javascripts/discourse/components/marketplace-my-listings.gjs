@@ -1,8 +1,9 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
-import { on } from "@ember/modifier";
 import { ajax } from "discourse/lib/ajax";
+import { popupAjaxError } from "discourse/lib/ajax-error";
+import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import MarketplaceListingCard from "./marketplace-listing-card";
 import MarketplaceNav from "./marketplace-nav";
@@ -14,6 +15,10 @@ export default class MarketplaceMyListings extends Component {
   @tracked loading = false;
 
   async fetchListings(page) {
+    if (this.loading) {
+      return;
+    }
+
     this.loading = true;
     try {
       const result = await ajax("/marketplace/listings/mine", {
@@ -24,6 +29,8 @@ export default class MarketplaceMyListings extends Component {
         page === 1 ? result.listings : [...this.listings, ...result.listings];
       this.hasMore = result.pagination.has_more;
       this.page = result.pagination.page;
+    } catch (error) {
+      popupAjaxError(error);
     } finally {
       this.loading = false;
     }
@@ -35,10 +42,12 @@ export default class MarketplaceMyListings extends Component {
   }
 
   <template>
-    <div class="marketplace-my-listings">
+    <main class="marketplace-my-listings marketplace-page">
       <MarketplaceNav />
 
-      <h1>{{i18n "marketplace.mine.title"}}</h1>
+      <header class="marketplace-page__header">
+        <h1>{{i18n "marketplace.mine.title"}}</h1>
+      </header>
 
       {{#if this.listings.length}}
         <div class="marketplace-listings-grid">
@@ -48,18 +57,21 @@ export default class MarketplaceMyListings extends Component {
         </div>
 
         {{#if this.hasMore}}
-          <button
-            type="button"
-            class="btn marketplace-my-listings__load-more"
-            disabled={{this.loading}}
-            {{on "click" this.loadMore}}
-          >
-            {{i18n "marketplace.mine.load_more"}}
-          </button>
+          <div class="marketplace-page__load-more">
+            <DButton
+              class="marketplace-my-listings__load-more"
+              @label="marketplace.mine.load_more"
+              @action={{this.loadMore}}
+              @disabled={{this.loading}}
+              @isLoading={{this.loading}}
+            />
+          </div>
         {{/if}}
       {{else}}
-        <p class="marketplace-my-listings__empty">{{i18n "marketplace.mine.empty"}}</p>
+        <div class="marketplace-page__empty" role="status">
+          <p class="marketplace-my-listings__empty">{{i18n "marketplace.mine.empty"}}</p>
+        </div>
       {{/if}}
-    </div>
+    </main>
   </template>
 }

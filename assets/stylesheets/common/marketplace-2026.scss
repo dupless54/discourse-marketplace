@@ -1,0 +1,242 @@
+// 2026 Discourse-aligned Marketplace UI safety layer.
+// Loaded after the feature-specific stylesheets so it can normalize the
+// complete Marketplace surface without duplicating each component's design.
+
+.marketplace-page,
+.marketplace-browse,
+.marketplace-listing-detail,
+.marketplace-listing-form,
+.marketplace-offer-center,
+.marketplace-transaction-center,
+.marketplace-category-admin {
+  min-inline-size: 0;
+}
+
+.marketplace-page__header,
+.marketplace-browse__header,
+.marketplace-listing-form__header,
+.marketplace-offer-center > h1,
+.marketplace-transaction-center > h1 {
+  margin-block: 0 1.5rem;
+}
+
+.marketplace-page__header h1,
+.marketplace-browse__header h1,
+.marketplace-listing-detail__title,
+.marketplace-listing-form h1,
+.marketplace-offer-center > h1,
+.marketplace-transaction-center > h1 {
+  margin-block-start: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.marketplace-page__empty,
+.marketplace-browse__empty,
+.marketplace-offer-center__empty,
+.marketplace-transaction-center__empty,
+.marketplace-storefront__empty {
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: 2rem;
+  border: 1px dashed var(--primary-low);
+  border-radius: var(--d-border-radius-large, 8px);
+  background: var(--primary-very-low);
+  text-align: center;
+}
+
+.marketplace-page__empty > :last-child,
+.marketplace-browse__empty,
+.marketplace-offer-center__empty,
+.marketplace-transaction-center__empty,
+.marketplace-storefront__empty {
+  margin-block-end: 0;
+}
+
+.marketplace-page__load-more {
+  display: flex;
+  justify-content: center;
+  margin-block-start: 1.5rem;
+}
+
+.marketplace-browse,
+.marketplace-listing-detail,
+.marketplace-listing-form,
+.marketplace-favorites,
+.marketplace-my-listings,
+.marketplace-offer-center,
+.marketplace-transaction-center,
+.marketplace-storefront,
+.marketplace-category-admin {
+  :is(input, select, textarea, button, .btn, a) {
+    max-inline-size: 100%;
+  }
+
+  :is(input, select, textarea):focus-visible,
+  :is(button, .btn, a):focus-visible {
+    outline: 2px solid var(--tertiary);
+    outline-offset: 2px;
+  }
+}
+
+.marketplace-browse__filters,
+.marketplace-listing-form,
+.marketplace-offer-card__counter-form,
+.marketplace-category-admin {
+  :is(input, select, textarea) {
+    box-sizing: border-box;
+    font: inherit;
+  }
+}
+
+.marketplace-browse__primary-filters,
+.marketplace-browse__dynamic-filter-grid,
+.marketplace-listing-form__grid,
+.marketplace-category-admin__category-row,
+.marketplace-category-admin__field {
+  > * {
+    min-inline-size: 0;
+  }
+}
+
+.marketplace-listing-card,
+.marketplace-offer-card,
+.marketplace-transaction-center__card,
+.marketplace-storefront__hero,
+.marketplace-listing-detail__panel,
+.marketplace-listing-detail__content,
+.marketplace-listing-form__panel,
+.marketplace-category-admin__category {
+  box-sizing: border-box;
+  min-inline-size: 0;
+}
+
+.marketplace-listing-card__title,
+.marketplace-offer-card h2,
+.marketplace-transaction-center__title,
+.marketplace-storefront__name {
+  overflow-wrap: anywhere;
+}
+
+.marketplace-listing-card__actions,
+.marketplace-listing-detail__cta,
+.marketplace-listing-detail__seller-actions,
+.marketplace-offer-card__actions,
+.marketplace-transaction-center__actions {
+  min-inline-size: 0;
+
+  .btn {
+    min-block-size: 2.25rem;
+  }
+}
+
+.marketplace-listing-card__favorite-error,
+.marketplace-listing-detail__error,
+.marketplace-offer-center__error,
+.marketplace-transaction-center__error {
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--danger-low-mid);
+  border-radius: var(--d-border-radius, 4px);
+  background: var(--danger-low);
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+
+.marketplace-listing-detail__hero-link,
+.marketplace-listing-detail__hero-image,
+.marketplace-listing-card__media,
+.marketplace-listing-card__image,
+.marketplace-transaction-center__media,
+.marketplace-transaction-center__image {
+  max-inline-size: 100%;
+}
+
+.marketplace-listing-detail__body,
+.marketplace-listing-detail__specification,
+.marketplace-offer-card__main,
+.marketplace-transaction-center__body {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.marketplace-nav {
+  margin-block-end: 1.5rem;
+
+  .horizontal-overflow-nav__container {
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 700px) {
+  .marketplace-page__header,
+  .marketplace-browse__header,
+  .marketplace-listing-form__header {
+    margin-block-end: 1rem;
+  }
+
+  .marketplace-page__empty,
+  .marketplace-browse__empty,
+  .marketplace-offer-center__empty,
+  .marketplace-transaction-center__empty,
+  .marketplace-storefront__empty {
+    padding: 1.25rem;
+  }
+
+  .marketplace-browse__primary-filters,
+  .marketplace-browse__dynamic-filter-grid,
+  .marketplace-category-admin__category-row,
+  .marketplace-category-admin__field,
+  .marketplace-offer-card__counter-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .marketplace-browse__primary-filters > *,
+  .marketplace-browse__primary-filters :is(input, select, .btn),
+  .marketplace-listing-form :is(input, select, textarea),
+  .marketplace-offer-card__counter-form :is(input, .btn),
+  .marketplace-category-admin :is(input, select, textarea) {
+    inline-size: 100%;
+  }
+
+  .marketplace-listing-card__actions,
+  .marketplace-listing-detail__seller-actions,
+  .marketplace-offer-card__actions,
+  .marketplace-transaction-center__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+
+    > .btn,
+    > a.btn {
+      inline-size: 100%;
+      justify-content: center;
+    }
+  }
+
+  .marketplace-storefront__hero {
+    align-items: flex-start;
+  }
+
+  .marketplace-storefront__profile-link {
+    inline-size: 100%;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketplace-browse *,
+  .marketplace-listing-card *,
+  .marketplace-listing-detail *,
+  .marketplace-listing-form *,
+  .marketplace-offer-center *,
+  .marketplace-transaction-center *,
+  .marketplace-storefront *,
+  .marketplace-category-admin * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

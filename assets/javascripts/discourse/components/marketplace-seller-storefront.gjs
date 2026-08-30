@@ -2,8 +2,9 @@ import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
 import { LinkTo } from "@ember/routing";
-import { on } from "@ember/modifier";
 import { ajax } from "discourse/lib/ajax";
+import { popupAjaxError } from "discourse/lib/ajax-error";
+import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import MarketplaceListingCard from "./marketplace-listing-card";
 import MarketplaceNav from "./marketplace-nav";
@@ -39,7 +40,12 @@ export default class MarketplaceSellerStorefront extends Component {
     try {
       const result = await ajax(
         `/marketplace/sellers/${encodeURIComponent(this.seller.username)}.json`,
-        { data: { page: this.pagination.page + 1, per_page: this.pagination.per_page } }
+        {
+          data: {
+            page: this.pagination.page + 1,
+            per_page: this.pagination.per_page,
+          },
+        }
       );
       const ids = new Set(this.listings.map((listing) => listing.id));
       this.listings = [
@@ -47,13 +53,18 @@ export default class MarketplaceSellerStorefront extends Component {
         ...result.listings.filter((listing) => !ids.has(listing.id)),
       ];
       this.pagination = result.pagination;
+    } catch (error) {
+      popupAjaxError(error);
     } finally {
       this.loading = false;
     }
   }
 
   <template>
-    <div class="marketplace-storefront" data-seller-username={{this.seller.username}}>
+    <main
+      class="marketplace-storefront marketplace-page"
+      data-seller-username={{this.seller.username}}
+    >
       <MarketplaceNav />
 
       <LinkTo @route="marketplace.index" class="marketplace-storefront__back">
@@ -79,7 +90,10 @@ export default class MarketplaceSellerStorefront extends Component {
           <span class="marketplace-storefront__username">@{{this.seller.username}}</span>
         </div>
 
-        <a class="btn btn-default marketplace-storefront__profile-link" href={{this.profileUrl}}>
+        <a
+          class="btn btn-default marketplace-storefront__profile-link"
+          href={{this.profileUrl}}
+        >
           {{i18n "marketplace.storefront.view_profile"}}
         </a>
       </section>
@@ -97,21 +111,24 @@ export default class MarketplaceSellerStorefront extends Component {
           </div>
 
           {{#if this.pagination.has_more}}
-            <button
-              type="button"
-              class="btn marketplace-storefront__load-more"
-              disabled={{this.loading}}
-              {{on "click" this.loadMore}}
-            >
-              {{i18n "marketplace.storefront.load_more"}}
-            </button>
+            <div class="marketplace-page__load-more">
+              <DButton
+                class="marketplace-storefront__load-more"
+                @label="marketplace.storefront.load_more"
+                @action={{this.loadMore}}
+                @disabled={{this.loading}}
+                @isLoading={{this.loading}}
+              />
+            </div>
           {{/if}}
         {{else}}
-          <p class="marketplace-storefront__empty">
-            {{i18n "marketplace.storefront.empty"}}
-          </p>
+          <div class="marketplace-page__empty" role="status">
+            <p class="marketplace-storefront__empty">
+              {{i18n "marketplace.storefront.empty"}}
+            </p>
+          </div>
         {{/if}}
       </section>
-    </div>
+    </main>
   </template>
 }
