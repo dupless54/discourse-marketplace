@@ -1,17 +1,17 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { action } from "@ember/object";
 import { concat, fn } from "@ember/helper";
-import { on } from "@ember/modifier";
+import { action } from "@ember/object";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
 import { htmlSafe } from "@ember/template";
 import PluginOutlet from "discourse/components/plugin-outlet";
 import lazyHash from "discourse/helpers/lazy-hash";
-import { and, eq, not } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import lightbox from "discourse/lib/lightbox";
+import { and, eq, not } from "discourse/truth-helpers";
+import DButton from "discourse/ui-kit/d-button";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 
@@ -76,8 +76,6 @@ export default class MarketplaceListingDetail extends Component {
     return !!this.transactionsPagination?.has_more;
   }
 
-  // Only rendered while the listing is still active -- draft/reserved/sold/
-  // archived already have their own dedicated status line above.
   get availabilityLabel() {
     if (this.listing.status !== "active") {
       return null;
@@ -138,6 +136,10 @@ export default class MarketplaceListingDetail extends Component {
   }
 
   async runAction(fn) {
+    if (this.busy) {
+      return;
+    }
+
     this.busy = true;
     this.errorMessage = null;
     try {
@@ -151,17 +153,6 @@ export default class MarketplaceListingDetail extends Component {
     }
   }
 
-  // The hero image and the cooked description body are siblings inside
-  // one container (see the template), so a single lightbox() call covers
-  // both as one PhotoSwipe gallery. Listing#cook (server-side) already
-  // wraps every embedded image in the same div.lightbox-wrapper > a.lightbox
-  // markup core's own CookedPostProcessor#add_lightbox! produces, so this
-  // is the same client-side activation core itself uses for post content
-  // (see instance-initializers/post-decorations.js) -- just triggered from
-  // this component's own render instead of the post-decoration pipeline,
-  // since a listing isn't a Post. Fires once per component lifetime: the
-  // element isn't re-created by the availability refreshes below (those
-  // never change `cooked`), so nothing here has to re-run.
   @action
   setupLightbox(element) {
     lightbox(element);
@@ -177,10 +168,6 @@ export default class MarketplaceListingDetail extends Component {
     });
   }
 
-  // Re-fetches the listing rather than hand-patching status locally: a
-  // finite/unlimited listing's availability (stock_available, purchasable)
-  // can change without its status changing at all, so only the server's
-  // view is trustworthy here.
   async refreshListing() {
     const result = await ajax(`/marketplace/listings/${this.listing.id}`);
     this.listing = result.listing;
@@ -243,6 +230,10 @@ export default class MarketplaceListingDetail extends Component {
 
   @action
   loadMoreTransactions() {
+    if (!this.hasMoreTransactions) {
+      return;
+    }
+
     this.runAction(async () => {
       const nextPage = this.transactionsPagination.page + 1;
       const result = await ajax(
@@ -280,7 +271,7 @@ export default class MarketplaceListingDetail extends Component {
   }
 
   <template>
-    <div class="marketplace-listing-detail">
+    <main class="marketplace-listing-detail marketplace-page">
       <LinkTo
         @route="marketplace.index"
         class="marketplace-listing-detail__back"
@@ -362,7 +353,9 @@ export default class MarketplaceListingDetail extends Component {
             {{this.listing.seller.username}}</span>
 
           {{#if this.errorMessage}}
-            <div class="marketplace-listing-detail__error">{{this.errorMessage}}</div>
+            <div class="marketplace-listing-detail__error" role="alert">
+              {{this.errorMessage}}
+            </div>
           {{/if}}
 
           <div class="marketplace-listing-detail__cta">
@@ -376,38 +369,41 @@ export default class MarketplaceListingDetail extends Component {
                   {{i18n "marketplace.listing.edit_button"}}
                 </LinkTo>
                 {{#if (eq this.listing.status "draft")}}
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    disabled={{this.busy}}
-                    {{on "click" this.publish}}
-                  >{{i18n "marketplace.listing.publish_button"}}</button>
+                  <DButton
+                    class="btn-primary"
+                    @label="marketplace.listing.publish_button"
+                    @action={{this.publish}}
+                    @disabled={{this.busy}}
+                    @isLoading={{this.busy}}
+                  />
                 {{/if}}
                 {{#if (eq this.listing.status "active")}}
-                  <button
-                    type="button"
-                    class="btn"
-                    disabled={{this.busy}}
-                    {{on "click" this.archive}}
-                  >{{i18n "marketplace.listing.archive_button"}}</button>
+                  <DButton
+                    @label="marketplace.listing.archive_button"
+                    @action={{this.archive}}
+                    @disabled={{this.busy}}
+                    @isLoading={{this.busy}}
+                  />
                 {{/if}}
               </div>
             {{else}}
               {{#if this.canMessageSeller}}
-                <button
-                  type="button"
-                  class="btn marketplace-listing-detail__message-seller"
-                  {{on "click" this.messageSeller}}
-                >{{i18n "marketplace.listing.message_seller_button"}}</button>
+                <DButton
+                  class="marketplace-listing-detail__message-seller"
+                  @label="marketplace.listing.message_seller_button"
+                  @action={{this.messageSeller}}
+                  @disabled={{this.busy}}
+                />
               {{/if}}
 
               {{#if this.canBuy}}
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  disabled={{this.busy}}
-                  {{on "click" this.buy}}
-                >{{i18n "marketplace.listing.buy_button"}}</button>
+                <DButton
+                  class="btn-primary"
+                  @label="marketplace.listing.buy_button"
+                  @action={{this.buy}}
+                  @disabled={{this.busy}}
+                  @isLoading={{this.busy}}
+                />
               {{/if}}
             {{/if}}
           </div>
@@ -437,21 +433,22 @@ export default class MarketplaceListingDetail extends Component {
                         (not transaction.seller_confirmed_at)
                       )
                     }}
-                      <button
-                        type="button"
-                        class="btn btn-primary marketplace-transaction__confirm"
-                        disabled={{this.busy}}
-                        {{on "click" (fn this.confirm transaction)}}
-                      >{{i18n "marketplace.transaction.confirm_button"}}</button>
+                      <DButton
+                        class="btn-primary marketplace-transaction__confirm"
+                        @label="marketplace.transaction.confirm_button"
+                        @action={{fn this.confirm transaction}}
+                        @disabled={{this.busy}}
+                        @isLoading={{this.busy}}
+                      />
                     {{/if}}
 
                     {{#if (eq transaction.status "pending")}}
-                      <button
-                        type="button"
-                        class="btn marketplace-transaction__cancel"
-                        disabled={{this.busy}}
-                        {{on "click" (fn this.cancelTransaction transaction)}}
-                      >{{i18n "marketplace.transaction.cancel_button"}}</button>
+                      <DButton
+                        class="marketplace-transaction__cancel"
+                        @label="marketplace.transaction.cancel_button"
+                        @action={{fn this.cancelTransaction transaction}}
+                        @disabled={{this.busy}}
+                      />
                     {{/if}}
 
                     <PluginOutlet
@@ -496,12 +493,13 @@ export default class MarketplaceListingDetail extends Component {
               {{/if}}
 
               {{#if this.hasMoreTransactions}}
-                <button
-                  type="button"
-                  class="btn marketplace-transactions__load-more"
-                  disabled={{this.busy}}
-                  {{on "click" this.loadMoreTransactions}}
-                >{{i18n "marketplace.transaction.load_more"}}</button>
+                <DButton
+                  class="marketplace-transactions__load-more"
+                  @label="marketplace.transaction.load_more"
+                  @action={{this.loadMoreTransactions}}
+                  @disabled={{this.busy}}
+                  @isLoading={{this.busy}}
+                />
               {{/if}}
             </section>
           {{else if this.transaction}}
@@ -514,21 +512,21 @@ export default class MarketplaceListingDetail extends Component {
                 }}</p>
 
               {{#if this.canConfirm}}
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  disabled={{this.busy}}
-                  {{on "click" (fn this.confirm this.transaction)}}
-                >{{i18n "marketplace.transaction.confirm_button"}}</button>
+                <DButton
+                  class="btn-primary"
+                  @label="marketplace.transaction.confirm_button"
+                  @action={{fn this.confirm this.transaction}}
+                  @disabled={{this.busy}}
+                  @isLoading={{this.busy}}
+                />
               {{/if}}
 
               {{#if this.canCancel}}
-                <button
-                  type="button"
-                  class="btn"
-                  disabled={{this.busy}}
-                  {{on "click" (fn this.cancelTransaction this.transaction)}}
-                >{{i18n "marketplace.transaction.cancel_button"}}</button>
+                <DButton
+                  @label="marketplace.transaction.cancel_button"
+                  @action={{fn this.cancelTransaction this.transaction}}
+                  @disabled={{this.busy}}
+                />
               {{/if}}
 
               <PluginOutlet
@@ -543,6 +541,6 @@ export default class MarketplaceListingDetail extends Component {
           {{/if}}
         </div>
       </div>
-    </div>
+    </main>
   </template>
 }

@@ -1,12 +1,13 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { action } from "@ember/object";
 import { concat, fn } from "@ember/helper";
+import { action } from "@ember/object";
 import { on } from "@ember/modifier";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { eq } from "discourse/truth-helpers";
+import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 
 function formatPrice(cents, currency) {
@@ -72,11 +73,12 @@ export default class MarketplaceOfferPanel extends Component {
 
   @action
   async loadOffers() {
-    if (!this.currentUser) {
+    if (!this.currentUser || this.loading) {
       return;
     }
 
     this.loading = true;
+    this.errorMessage = null;
     try {
       const result = await ajax(
         `/marketplace/listings/${this.args.listing.id}/offers`,
@@ -107,6 +109,10 @@ export default class MarketplaceOfferPanel extends Component {
   }
 
   async runOfferAction(offerId, fn) {
+    if (this.busyOfferId) {
+      return;
+    }
+
     this.busyOfferId = offerId;
     this.errorMessage = null;
     try {
@@ -125,6 +131,10 @@ export default class MarketplaceOfferPanel extends Component {
 
   @action
   createOffer() {
+    if (this.creating) {
+      return;
+    }
+
     const amountCents = amountToCents(this.offerAmount);
     if (!amountCents) {
       this.errorMessage = i18n("marketplace.offer.invalid_amount");
@@ -219,7 +229,9 @@ export default class MarketplaceOfferPanel extends Component {
         <h2>{{i18n "marketplace.offer.panel_title"}}</h2>
 
         {{#if this.errorMessage}}
-          <div class="marketplace-offer-panel__error">{{this.errorMessage}}</div>
+          <div class="marketplace-offer-panel__error" role="alert">
+            {{this.errorMessage}}
+          </div>
         {{/if}}
 
         {{#if this.canCreateOffer}}
@@ -237,12 +249,13 @@ export default class MarketplaceOfferPanel extends Component {
                 <span>{{@listing.currency}}</span>
               </div>
             </label>
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={{this.creating}}
-              {{on "click" this.createOffer}}
-            >{{i18n "marketplace.offer.submit"}}</button>
+            <DButton
+              class="btn-primary"
+              @label="marketplace.offer.submit"
+              @action={{this.createOffer}}
+              @disabled={{this.creating}}
+              @isLoading={{this.creating}}
+            />
           </div>
         {{/if}}
 
@@ -251,7 +264,10 @@ export default class MarketplaceOfferPanel extends Component {
             {{#each this.offerItems as |item|}}
               <article class="marketplace-offer-panel__item" data-offer-id={{item.id}}>
                 {{#if this.isSeller}}
-                  <strong>{{i18n "marketplace.offer.from_buyer" username=item.buyerUsername}}</strong>
+                  <strong>{{i18n
+                      "marketplace.offer.from_buyer"
+                      username=item.buyerUsername
+                    }}</strong>
                 {{/if}}
                 <span class="marketplace-offer-panel__price">{{item.amount}}</span>
                 <span class="marketplace-offer-panel__status">{{i18n
@@ -260,32 +276,31 @@ export default class MarketplaceOfferPanel extends Component {
 
                 {{#if item.canRespond}}
                   <div class="marketplace-offer-panel__actions">
-                    <button
-                      type="button"
-                      class="btn btn-primary"
-                      disabled={{eq this.busyOfferId item.id}}
-                      {{on "click" (fn this.accept item)}}
-                    >{{i18n "marketplace.offer.accept"}}</button>
-                    <button
-                      type="button"
-                      class="btn"
-                      disabled={{eq this.busyOfferId item.id}}
-                      {{on "click" (fn this.reject item)}}
-                    >{{i18n "marketplace.offer.reject"}}</button>
-                    <button
-                      type="button"
-                      class="btn"
-                      disabled={{eq this.busyOfferId item.id}}
-                      {{on "click" (fn this.beginCounter item)}}
-                    >{{i18n "marketplace.offer.counter"}}</button>
+                    <DButton
+                      class="btn-primary"
+                      @label="marketplace.offer.accept"
+                      @action={{fn this.accept item}}
+                      @disabled={{eq this.busyOfferId item.id}}
+                      @isLoading={{eq this.busyOfferId item.id}}
+                    />
+                    <DButton
+                      @label="marketplace.offer.reject"
+                      @action={{fn this.reject item}}
+                      @disabled={{eq this.busyOfferId item.id}}
+                    />
+                    <DButton
+                      @label="marketplace.offer.counter"
+                      @action={{fn this.beginCounter item}}
+                      @disabled={{eq this.busyOfferId item.id}}
+                    />
                   </div>
                 {{else if item.canWithdraw}}
-                  <button
-                    type="button"
-                    class="btn"
-                    disabled={{eq this.busyOfferId item.id}}
-                    {{on "click" (fn this.withdraw item)}}
-                  >{{i18n "marketplace.offer.withdraw"}}</button>
+                  <DButton
+                    @label="marketplace.offer.withdraw"
+                    @action={{fn this.withdraw item}}
+                    @disabled={{eq this.busyOfferId item.id}}
+                    @isLoading={{eq this.busyOfferId item.id}}
+                  />
                 {{/if}}
 
                 {{#if (eq this.counterOfferId item.id)}}
@@ -294,25 +309,29 @@ export default class MarketplaceOfferPanel extends Component {
                       type="text"
                       inputmode="decimal"
                       value={{this.counterAmount}}
+                      aria-label={{i18n "marketplace.offer.amount_label"}}
                       {{on "input" this.setCounterAmount}}
                     />
                     <span>{{item.offer.currency}}</span>
-                    <button
-                      type="button"
-                      class="btn btn-primary"
-                      disabled={{eq this.busyOfferId item.id}}
-                      {{on "click" (fn this.counter item)}}
-                    >{{i18n "marketplace.offer.send_counter"}}</button>
-                    <button type="button" class="btn" {{on "click" this.cancelCounter}}>
-                      {{i18n "marketplace.offer.cancel"}}
-                    </button>
+                    <DButton
+                      class="btn-primary"
+                      @label="marketplace.offer.send_counter"
+                      @action={{fn this.counter item}}
+                      @disabled={{eq this.busyOfferId item.id}}
+                      @isLoading={{eq this.busyOfferId item.id}}
+                    />
+                    <DButton
+                      @label="marketplace.offer.cancel"
+                      @action={{this.cancelCounter}}
+                      @disabled={{eq this.busyOfferId item.id}}
+                    />
                   </div>
                 {{/if}}
               </article>
             {{/each}}
           </div>
         {{else if this.loading}}
-          <p>{{i18n "marketplace.offer.loading"}}</p>
+          <p role="status">{{i18n "marketplace.offer.loading"}}</p>
         {{/if}}
       </section>
     {{/if}}
