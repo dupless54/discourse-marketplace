@@ -155,6 +155,7 @@ tr_TR:
         sort_newest: "En yeni"
         sort_price_asc: "Fiyat: Düşükten yükseğe"
         sort_price_desc: "Fiyat: Yüksekten düşüğe"
+        sort_label: "İlanları sırala"
         search_placeholder: "İlanlarda ara"
         category_all: "Tüm kategoriler"
         search_button: "Ara"
@@ -166,6 +167,13 @@ tr_TR:
         integer_min: "En az"
         integer_max: "En fazla"
         text_filter_placeholder: "İçeren…"
+        all_filter: "Tümü"
+        popular_categories: "Popüler Kategoriler"
+        view_all_categories: "Tüm Kategoriler"
+        category_browse_hint: "İlanları görüntüle"
+        featured_listings: "Öne Çıkan İlanlar"
+        view_all_listings: "Tümünü Gör"
+        latest_listings: "Yeni İlanlar"
 
       form:
         new_title: "Yeni İlan"
