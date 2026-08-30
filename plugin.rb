@@ -16,6 +16,7 @@ register_asset "stylesheets/common/marketplace-storefront.scss"
 register_asset "stylesheets/common/marketplace-showcase.scss"
 register_asset "stylesheets/common/marketplace-card-identity.scss"
 register_asset "stylesheets/common/marketplace-polish-v2.scss"
+register_asset "stylesheets/common/marketplace-secondary-pages-v2.scss"
 
 module ::Marketplace
   PLUGIN_NAME = "discourse-marketplace"
