@@ -1,14 +1,15 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { action } from "@ember/object";
 import { concat, fn, hash } from "@ember/helper";
+import { action } from "@ember/object";
 import { on } from "@ember/modifier";
 import { LinkTo } from "@ember/routing";
 import PluginOutlet from "discourse/components/plugin-outlet";
 import lazyHash from "discourse/helpers/lazy-hash";
-import dIcon from "discourse/ui-kit/helpers/d-icon";
-import { eq } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
+import { eq } from "discourse/truth-helpers";
+import DButton from "discourse/ui-kit/d-button";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 import MarketplaceNav from "./marketplace-nav";
 
@@ -32,12 +33,6 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
-// Builds the per-card view model once per response rather than computing
-// derived fields (canConfirm/canCancel/formatted price/dates) inline from
-// the template -- Glimmer templates in this codebase only invoke plain
-// helpers/getters, never a bound method with the loop item as an argument
-// (see marketplace-listing-detail.gjs / marketplace-listing-card.gjs), so
-// anything item-specific is precomputed here instead.
 function toViewModel(transaction) {
   const isBuyer = transaction.role === "buyer";
   const counterparty = isBuyer ? transaction.seller : transaction.buyer;
@@ -97,6 +92,10 @@ export default class MarketplaceTransactionCenter extends Component {
   }
 
   async fetchTransactions(page) {
+    if (this.loading) {
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = null;
     try {
@@ -124,7 +123,7 @@ export default class MarketplaceTransactionCenter extends Component {
 
   @action
   selectTab(role) {
-    if (this.role === role) {
+    if (this.role === role || this.loading) {
       return;
     }
     this.role = role;
@@ -133,20 +132,20 @@ export default class MarketplaceTransactionCenter extends Component {
 
   @action
   selectStatus(event) {
+    if (this.loading) {
+      return;
+    }
     this.status = event.target.value;
     this.fetchTransactions(1);
   }
 
   @action
   loadMore() {
-    this.fetchTransactions(this.page + 1);
+    if (this.hasMore) {
+      this.fetchTransactions(this.page + 1);
+    }
   }
 
-  // #confirm/#cancel respond with the plain TransactionSerializer shape
-  // (no `role`/`listing_thumbnail_url` -- those are Transaction Center-only
-  // additions on TransactionSummarySerializer), so the old view's fields
-  // are spread first and only overwritten by whatever the response
-  // actually included.
   replaceTransaction(updated) {
     this.transactions = this.transactions.map((transaction) =>
       transaction.id === updated.id
@@ -156,6 +155,10 @@ export default class MarketplaceTransactionCenter extends Component {
   }
 
   async runAction(transactionId, fn) {
+    if (this.busyTransactionId) {
+      return;
+    }
+
     this.busyTransactionId = transactionId;
     this.errorMessage = null;
     try {
@@ -192,29 +195,34 @@ export default class MarketplaceTransactionCenter extends Component {
   }
 
   <template>
-    <div class="marketplace-transaction-center">
+    <main class="marketplace-transaction-center marketplace-page">
       <MarketplaceNav />
 
-      <h1>{{i18n "marketplace.transactions.title"}}</h1>
+      <header class="marketplace-page__header">
+        <h1>{{i18n "marketplace.transactions.title"}}</h1>
+      </header>
 
       <div class="marketplace-transaction-center__tabs">
         {{#each this.roleTabs as |tab|}}
-          <button
-            type="button"
+          <DButton
             class={{concat
-              "btn marketplace-transaction-center__tab"
+              "marketplace-transaction-center__tab"
               (if tab.active " marketplace-transaction-center__tab--active" "")
             }}
-            disabled={{this.loading}}
-            {{on "click" (fn this.selectTab tab.value)}}
-          >
-            {{tab.label}}
-          </button>
+            @translatedLabel={{tab.label}}
+            @action={{fn this.selectTab tab.value}}
+            @disabled={{this.loading}}
+            @ariaPressed={{tab.active}}
+          />
         {{/each}}
       </div>
 
       <div class="marketplace-transaction-center__filters">
-        <select {{on "change" this.selectStatus}}>
+        <select
+          aria-label={{i18n "marketplace.transactions.title"}}
+          disabled={{this.loading}}
+          {{on "change" this.selectStatus}}
+        >
           {{#each this.statusFilters as |filter|}}
             <option value={{filter.value}}>{{filter.label}}</option>
           {{/each}}
@@ -222,7 +230,7 @@ export default class MarketplaceTransactionCenter extends Component {
       </div>
 
       {{#if this.errorMessage}}
-        <div class="marketplace-transaction-center__error">
+        <div class="marketplace-transaction-center__error" role="alert">
           {{this.errorMessage}}
         </div>
       {{/if}}
@@ -275,7 +283,10 @@ export default class MarketplaceTransactionCenter extends Component {
                       {{i18n "marketplace.listing.seller"}}
                       {{item.counterpartyUsername}}
                     {{else}}
-                      {{i18n "marketplace.transaction.buyer" username=item.counterpartyUsername}}
+                      {{i18n
+                        "marketplace.transaction.buyer"
+                        username=item.counterpartyUsername
+                      }}
                     {{/if}}
                   </span>
                   <span class="marketplace-transaction-center__date">
@@ -287,24 +298,21 @@ export default class MarketplaceTransactionCenter extends Component {
               {{#if (eq item.status "pending")}}
                 <div class="marketplace-transaction-center__actions">
                   {{#if item.canConfirm}}
-                    <button
-                      type="button"
-                      class="btn btn-primary btn-small"
-                      disabled={{eq this.busyTransactionId item.id}}
-                      {{on "click" (fn this.confirm item)}}
-                    >
-                      {{i18n "marketplace.transaction.confirm_button"}}
-                    </button>
+                    <DButton
+                      class="btn-primary btn-small"
+                      @label="marketplace.transaction.confirm_button"
+                      @action={{fn this.confirm item}}
+                      @disabled={{eq this.busyTransactionId item.id}}
+                      @isLoading={{eq this.busyTransactionId item.id}}
+                    />
                   {{/if}}
                   {{#if item.canCancel}}
-                    <button
-                      type="button"
-                      class="btn btn-small"
-                      disabled={{eq this.busyTransactionId item.id}}
-                      {{on "click" (fn this.cancelTransaction item)}}
-                    >
-                      {{i18n "marketplace.transaction.cancel_button"}}
-                    </button>
+                    <DButton
+                      class="btn-small"
+                      @label="marketplace.transaction.cancel_button"
+                      @action={{fn this.cancelTransaction item}}
+                      @disabled={{eq this.busyTransactionId item.id}}
+                    />
                   {{/if}}
                 </div>
               {{/if}}
@@ -322,20 +330,23 @@ export default class MarketplaceTransactionCenter extends Component {
         </div>
 
         {{#if this.hasMore}}
-          <button
-            type="button"
-            class="btn marketplace-transaction-center__load-more"
-            disabled={{this.loading}}
-            {{on "click" this.loadMore}}
-          >
-            {{i18n "marketplace.transaction.load_more"}}
-          </button>
+          <div class="marketplace-page__load-more">
+            <DButton
+              class="marketplace-transaction-center__load-more"
+              @label="marketplace.transaction.load_more"
+              @action={{this.loadMore}}
+              @disabled={{this.loading}}
+              @isLoading={{this.loading}}
+            />
+          </div>
         {{/if}}
       {{else}}
-        <p class="marketplace-transaction-center__empty">
-          {{i18n "marketplace.transactions.empty"}}
-        </p>
+        <div class="marketplace-page__empty" role="status">
+          <p class="marketplace-transaction-center__empty">
+            {{i18n "marketplace.transactions.empty"}}
+          </p>
+        </div>
       {{/if}}
-    </div>
+    </main>
   </template>
 }

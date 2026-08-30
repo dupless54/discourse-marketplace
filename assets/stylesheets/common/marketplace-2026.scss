@@ -6,6 +6,7 @@
 .marketplace-browse,
 .marketplace-listing-detail,
 .marketplace-listing-form,
+.marketplace-offer-panel,
 .marketplace-offer-center,
 .marketplace-transaction-center,
 .marketplace-category-admin {
@@ -63,7 +64,9 @@
 .marketplace-listing-detail,
 .marketplace-listing-form,
 .marketplace-favorites,
+.marketplace-favorite-control,
 .marketplace-my-listings,
+.marketplace-offer-panel,
 .marketplace-offer-center,
 .marketplace-transaction-center,
 .marketplace-storefront,
@@ -81,6 +84,7 @@
 
 .marketplace-browse__filters,
 .marketplace-listing-form,
+.marketplace-offer-panel,
 .marketplace-offer-card__counter-form,
 .marketplace-category-admin {
   :is(input, select, textarea) {
@@ -101,6 +105,7 @@
 
 .marketplace-listing-card,
 .marketplace-offer-card,
+.marketplace-offer-panel__item,
 .marketplace-transaction-center__card,
 .marketplace-storefront__hero,
 .marketplace-listing-detail__panel,
@@ -113,6 +118,7 @@
 
 .marketplace-listing-card__title,
 .marketplace-offer-card h2,
+.marketplace-offer-panel__item,
 .marketplace-transaction-center__title,
 .marketplace-storefront__name {
   overflow-wrap: anywhere;
@@ -121,6 +127,8 @@
 .marketplace-listing-card__actions,
 .marketplace-listing-detail__cta,
 .marketplace-listing-detail__seller-actions,
+.marketplace-offer-panel__actions,
+.marketplace-offer-panel__counter,
 .marketplace-offer-card__actions,
 .marketplace-transaction-center__actions {
   min-inline-size: 0;
@@ -131,7 +139,10 @@
 }
 
 .marketplace-listing-card__favorite-error,
+.marketplace-favorite-control__error,
 .marketplace-listing-detail__error,
+.marketplace-listing-form__error,
+.marketplace-offer-panel__error,
 .marketplace-offer-center__error,
 .marketplace-transaction-center__error {
   box-sizing: border-box;
@@ -188,6 +199,7 @@
   .marketplace-browse__dynamic-filter-grid,
   .marketplace-category-admin__category-row,
   .marketplace-category-admin__field,
+  .marketplace-offer-panel__counter,
   .marketplace-offer-card__counter-form {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -195,6 +207,7 @@
   .marketplace-browse__primary-filters > *,
   .marketplace-browse__primary-filters :is(input, select, .btn),
   .marketplace-listing-form :is(input, select, textarea),
+  .marketplace-offer-panel :is(input, select, .btn),
   .marketplace-offer-card__counter-form :is(input, .btn),
   .marketplace-category-admin :is(input, select, textarea) {
     inline-size: 100%;
@@ -202,6 +215,7 @@
 
   .marketplace-listing-card__actions,
   .marketplace-listing-detail__seller-actions,
+  .marketplace-offer-panel__actions,
   .marketplace-offer-card__actions,
   .marketplace-transaction-center__actions {
     display: grid;
@@ -230,6 +244,7 @@
   .marketplace-listing-card *,
   .marketplace-listing-detail *,
   .marketplace-listing-form *,
+  .marketplace-offer-panel *,
   .marketplace-offer-center *,
   .marketplace-transaction-center *,
   .marketplace-storefront *,

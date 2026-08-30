@@ -12,7 +12,7 @@ Marketplace V1 and the post-V1 marketplace extensions are implemented on `main`:
 - listing image/attachment upload and cooked/lightbox rendering;
 - `Marketplace::TradeContract` as the stable reputation integration seam plus the existing `marketplace-transaction-after-actions` outlet.
 
-The 2026 Discourse-alignment refresh keeps those product/state-machine contracts unchanged while aligning client integrations with current Discourse guidance: Marketplace plugin API integrations use `apiInitializer`, repeated listing surfaces use core `DButton` loading/error behavior where applicable, and a final shared responsive/accessibility stylesheet normalizes all Marketplace surfaces without replacing their feature-specific BEM blocks.
+The 2026 Discourse-alignment refresh keeps those product/state-machine contracts unchanged while aligning the complete client surface with current Discourse guidance: plugin API integrations use `apiInitializer`; primary Marketplace actions use core `DButton` loading/disabled semantics; browse, listing forms, listing detail, favorites, storefront, offer flows and transaction flows expose consistent request/error states and stronger form/control accessibility; and a final shared responsive/accessibility stylesheet normalizes Marketplace surfaces without replacing their feature-specific BEM blocks. The existing route map and category administration remain intentionally intact where they already match current Discourse patterns.
 
 Known intentional product boundaries remain: Marketplace does not process payments or provide escrow, shipping, auctions, paid boosts, or complex dispute arbitration unless explicitly added in a future scoped change.
 

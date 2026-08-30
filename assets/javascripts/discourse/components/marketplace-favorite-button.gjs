@@ -1,10 +1,9 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
-import { on } from "@ember/modifier";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
-import dIcon from "discourse/ui-kit/helpers/d-icon";
+import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 
 export default class MarketplaceFavoriteButton extends Component {
@@ -48,18 +47,19 @@ export default class MarketplaceFavoriteButton extends Component {
   <template>
     {{#if this.currentUser}}
       <div class="marketplace-favorite-control">
-        <button
-          type="button"
-          class="btn btn-default marketplace-favorite-control__button"
-          aria-pressed={{this.favorited}}
-          disabled={{this.busy}}
-          {{on "click" this.toggle}}
-        >
-          {{dIcon "heart"}}
-          {{this.label}}
-        </button>
+        <DButton
+          class="btn-default marketplace-favorite-control__button"
+          @translatedLabel={{this.label}}
+          @icon="heart"
+          @action={{this.toggle}}
+          @disabled={{this.busy}}
+          @isLoading={{this.busy}}
+          @ariaPressed={{this.favorited}}
+        />
         {{#if this.errorMessage}}
-          <span class="marketplace-favorite-control__error">{{this.errorMessage}}</span>
+          <div class="marketplace-favorite-control__error" role="alert">
+            {{this.errorMessage}}
+          </div>
         {{/if}}
       </div>
     {{/if}}

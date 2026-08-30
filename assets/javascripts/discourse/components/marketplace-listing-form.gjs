@@ -1,7 +1,7 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { Textarea } from "@ember/component";
-import { fn } from "@ember/helper";
+import { concat, fn } from "@ember/helper";
 import { action } from "@ember/object";
 import { getOwner } from "@ember/owner";
 import { on } from "@ember/modifier";
@@ -15,10 +15,6 @@ import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import MarketplaceNav from "./marketplace-nav";
 
-// Converts an ISO8601 string (as returned by the API) into the value a
-// <input type="datetime-local"> expects (local time, no seconds/zone), and
-// back again on submit. A blank/absent value round-trips to "" both ways,
-// which is exactly "no expiration".
 function isoToDatetimeLocal(iso) {
   if (!iso) {
     return "";
@@ -113,6 +109,12 @@ export default class MarketplaceListingForm extends Component {
       : "marketplace.form.upload_button";
   }
 
+  get submitButtonLabel() {
+    return this.isEdit
+      ? "marketplace.form.submit_save"
+      : "marketplace.form.submit_create";
+  }
+
   @action
   updateTitle(event) {
     this.title = event.target.value;
@@ -178,6 +180,10 @@ export default class MarketplaceListingForm extends Component {
   @action
   async submit(event) {
     event.preventDefault();
+    if (this.saving) {
+      return;
+    }
+
     this.saving = true;
     this.errorMessage = null;
 
@@ -224,12 +230,15 @@ export default class MarketplaceListingForm extends Component {
       </h1>
 
       {{#if this.errorMessage}}
-        <div class="marketplace-listing-form__error">{{this.errorMessage}}</div>
+        <div class="marketplace-listing-form__error" role="alert">
+          {{this.errorMessage}}
+        </div>
       {{/if}}
 
       <div class="marketplace-listing-form__field">
-        <label>{{i18n "marketplace.form.title_label"}}</label>
+        <label for="marketplace-listing-title">{{i18n "marketplace.form.title_label"}}</label>
         <input
+          id="marketplace-listing-title"
           type="text"
           value={{this.title}}
           {{on "input" this.updateTitle}}
@@ -237,8 +246,11 @@ export default class MarketplaceListingForm extends Component {
       </div>
 
       <div class="marketplace-listing-form__field">
-        <label>{{i18n "marketplace.form.description_label"}}</label>
+        <label for="marketplace-listing-description">{{i18n
+            "marketplace.form.description_label"
+          }}</label>
         <Textarea
+          id="marketplace-listing-description"
           @value={{this.raw}}
           rows="8"
           class="marketplace-listing-form__description"
@@ -259,17 +271,21 @@ export default class MarketplaceListingForm extends Component {
           @icon="upload"
           @action={{this.pickUpload}}
           @disabled={{this.uploading}}
+          @isLoading={{this.uploading}}
         />
         {{#if this.uploading}}
-          <span class="marketplace-listing-form__upload-progress">
+          <span class="marketplace-listing-form__upload-progress" role="status">
             {{this.uppyUpload.uploadProgress}}%
           </span>
         {{/if}}
       </div>
 
       <div class="marketplace-listing-form__field">
-        <label>{{i18n "marketplace.form.category_label"}}</label>
+        <label for="marketplace-listing-category">{{i18n
+            "marketplace.form.category_label"
+          }}</label>
         <select
+          id="marketplace-listing-category"
           class="marketplace-listing-form__category"
           {{on "change" this.updateCategoryId}}
         >
@@ -308,7 +324,7 @@ export default class MarketplaceListingForm extends Component {
                     </span>
                   </label>
                 {{else}}
-                  <label>
+                  <label for={{concat "marketplace-field-" field.key}}>
                     {{field.label}}
                     {{#if field.required}}<span
                         class="marketplace-listing-form__required"
@@ -318,6 +334,7 @@ export default class MarketplaceListingForm extends Component {
 
                   {{#if (eq field.type "textarea")}}
                     <Textarea
+                      id={{concat "marketplace-field-" field.key}}
                       @value={{field.value}}
                       rows="4"
                       maxlength="5000"
@@ -327,6 +344,7 @@ export default class MarketplaceListingForm extends Component {
                     />
                   {{else if (eq field.type "select")}}
                     <select
+                      id={{concat "marketplace-field-" field.key}}
                       required={{field.required}}
                       {{on "change" (fn this.updateCustomField field)}}
                     >
@@ -342,6 +360,7 @@ export default class MarketplaceListingForm extends Component {
                     </select>
                   {{else}}
                     <input
+                      id={{concat "marketplace-field-" field.key}}
                       type={{if (eq field.type "integer") "number" "text"}}
                       step={{if (eq field.type "integer") "1"}}
                       maxlength={{if (eq field.type "text") "255"}}
@@ -364,8 +383,9 @@ export default class MarketplaceListingForm extends Component {
 
       <div class="marketplace-listing-form__row">
         <div class="marketplace-listing-form__field marketplace-listing-form__price-field">
-          <label>{{i18n "marketplace.form.price_label"}}</label>
+          <label for="marketplace-listing-price">{{i18n "marketplace.form.price_label"}}</label>
           <input
+            id="marketplace-listing-price"
             type="number"
             min="0"
             step="0.01"
@@ -375,8 +395,10 @@ export default class MarketplaceListingForm extends Component {
         </div>
 
         <div class="marketplace-listing-form__field marketplace-listing-form__currency-field">
-          <label>{{i18n "marketplace.form.currency_label"}}</label>
-          <select {{on "change" this.updateCurrency}}>
+          <label for="marketplace-listing-currency">{{i18n
+              "marketplace.form.currency_label"
+            }}</label>
+          <select id="marketplace-listing-currency" {{on "change" this.updateCurrency}}>
             {{#each this.currencies as |currencyCode|}}
               <option
                 value={{currencyCode}}
@@ -388,8 +410,11 @@ export default class MarketplaceListingForm extends Component {
       </div>
 
       <div class="marketplace-listing-form__field">
-        <label>{{i18n "marketplace.form.inventory_mode_label"}}</label>
+        <label for="marketplace-listing-inventory-mode">{{i18n
+            "marketplace.form.inventory_mode_label"
+          }}</label>
         <select
+          id="marketplace-listing-inventory-mode"
           class="marketplace-listing-form__inventory-mode"
           {{on "change" this.updateInventoryMode}}
         >
@@ -410,8 +435,11 @@ export default class MarketplaceListingForm extends Component {
 
       {{#if this.isFinite}}
         <div class="marketplace-listing-form__field marketplace-listing-form__stock-field">
-          <label>{{i18n "marketplace.form.stock_quantity_label"}}</label>
+          <label for="marketplace-listing-stock">{{i18n
+              "marketplace.form.stock_quantity_label"
+            }}</label>
           <input
+            id="marketplace-listing-stock"
             type="number"
             min="1"
             step="1"
@@ -422,8 +450,11 @@ export default class MarketplaceListingForm extends Component {
       {{/if}}
 
       <div class="marketplace-listing-form__field marketplace-listing-form__expires-field">
-        <label>{{i18n "marketplace.form.expires_at_label"}}</label>
+        <label for="marketplace-listing-expires-at">{{i18n
+            "marketplace.form.expires_at_label"
+          }}</label>
         <input
+          id="marketplace-listing-expires-at"
           type="datetime-local"
           value={{this.expiresAt}}
           {{on "input" this.updateExpiresAt}}
@@ -434,13 +465,13 @@ export default class MarketplaceListingForm extends Component {
       </div>
 
       <div class="marketplace-listing-form__actions">
-        <button type="submit" class="btn btn-primary" disabled={{this.saving}}>
-          {{#if this.isEdit}}
-            {{i18n "marketplace.form.submit_save"}}
-          {{else}}
-            {{i18n "marketplace.form.submit_create"}}
-          {{/if}}
-        </button>
+        <DButton
+          class="btn-primary"
+          @type="submit"
+          @label={{this.submitButtonLabel}}
+          @disabled={{this.saving}}
+          @isLoading={{this.saving}}
+        />
       </div>
     </form>
   </template>
