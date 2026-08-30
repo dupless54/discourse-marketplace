@@ -1,0 +1,38 @@
+.marketplace-listing-card__seller {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.marketplace-listing-card__seller-avatar {
+  flex: 0 0 1.5em;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.marketplace-listing-card__seller-username {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketplace-browse--showcase {
+  .marketplace-browse__featured-grid,
+  .marketplace-browse__latest-list {
+    .marketplace-listing-card__seller-label {
+      display: none;
+    }
+  }
+
+  // DNavItem can mark either the link or its list item as active depending on
+  // the core nav render path. Cover both without replacing the core nav.
+  .marketplace-nav .nav-pills > li.active > a {
+    background: var(--tertiary-low, var(--primary-low));
+    color: var(--tertiary);
+    font-weight: 650;
+  }
+}

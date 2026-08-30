@@ -57,6 +57,10 @@ export default class MarketplaceListingCard extends Component {
     );
   }
 
+  get sellerAvatarUrl() {
+    return this.listing.seller?.avatar_template?.replace("{size}", "32");
+  }
+
   get availabilityLabel() {
     if (this.listing.status !== "active") {
       return null;
@@ -152,10 +156,24 @@ export default class MarketplaceListingCard extends Component {
             </span>
           {{/if}}
           {{#if this.listing.seller}}
-            <span class="marketplace-listing-card__seller">{{i18n
-                "marketplace.listing.seller"
-              }}
-              {{this.listing.seller.username}}</span>
+            <span class="marketplace-listing-card__seller">
+              {{#if this.sellerAvatarUrl}}
+                <img
+                  class="marketplace-listing-card__seller-avatar"
+                  src={{this.sellerAvatarUrl}}
+                  alt=""
+                  width="24"
+                  height="24"
+                  loading="lazy"
+                />
+              {{/if}}
+              <span class="marketplace-listing-card__seller-label">{{i18n
+                  "marketplace.listing.seller"
+                }}</span>
+              <span class="marketplace-listing-card__seller-username">
+                {{this.listing.seller.username}}
+              </span>
+            </span>
           {{/if}}
         </span>
       </LinkTo>

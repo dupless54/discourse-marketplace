@@ -155,6 +155,7 @@ en:
         sort_newest: "Newest"
         sort_price_asc: "Price: Low to High"
         sort_price_desc: "Price: High to Low"
+        sort_label: "Sort listings"
         search_placeholder: "Search listings"
         category_all: "All categories"
         search_button: "Search"
@@ -166,6 +167,13 @@ en:
         integer_min: "Min"
         integer_max: "Max"
         text_filter_placeholder: "Contains…"
+        all_filter: "All"
+        popular_categories: "Popular Categories"
+        view_all_categories: "All Categories"
+        category_browse_hint: "Browse listings"
+        featured_listings: "Featured Listings"
+        view_all_listings: "View All"
+        latest_listings: "Latest Listings"
 
       form:
         new_title: "New Listing"

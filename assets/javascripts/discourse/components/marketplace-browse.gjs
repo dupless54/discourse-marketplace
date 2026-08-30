@@ -5,6 +5,7 @@ import { action } from "@ember/object";
 import { on } from "@ember/modifier";
 import { ajax } from "discourse/lib/ajax";
 import { eq } from "discourse/truth-helpers";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 import MarketplaceListingCard from "./marketplace-listing-card";
 import MarketplaceNav from "./marketplace-nav";
@@ -31,9 +32,21 @@ export default class MarketplaceBrowse extends Component {
   }
 
   get selectedCategory() {
-    return this.args.categories.find(
+    return (this.args.categories ?? []).find(
       (category) => category.id === Number(this.categoryId)
     );
+  }
+
+  get featuredCategories() {
+    return (this.args.categories ?? []).slice(0, 5);
+  }
+
+  get featuredListings() {
+    return this.listings.slice(0, 4);
+  }
+
+  get latestListings() {
+    return this.listings.slice(4);
   }
 
   get structuredFiltersForForm() {
@@ -50,6 +63,80 @@ export default class MarketplaceBrowse extends Component {
 
       return { ...field, value: current ?? "" };
     });
+  }
+
+  get activeFilterChips() {
+    const chips = [];
+    const trimmedQuery = this.query.trim();
+
+    if (trimmedQuery) {
+      chips.push({
+        type: "query",
+        key: "query",
+        label: trimmedQuery,
+      });
+    }
+
+    if (this.selectedCategory) {
+      chips.push({
+        type: "category",
+        key: "category",
+        label: this.selectedCategory.name,
+      });
+    }
+
+    for (const field of this.structuredFiltersForForm) {
+      if (field.type === "integer") {
+        const parts = [];
+        if (field.minValue !== "") {
+          parts.push(
+            `${i18n("marketplace.browse.integer_min")} ${field.minValue}`
+          );
+        }
+        if (field.maxValue !== "") {
+          parts.push(
+            `${i18n("marketplace.browse.integer_max")} ${field.maxValue}`
+          );
+        }
+        if (parts.length) {
+          chips.push({
+            type: "field",
+            key: field.key,
+            label: `${field.label}: ${parts.join(" · ")}`,
+          });
+        }
+        continue;
+      }
+
+      if (field.value === "") {
+        continue;
+      }
+
+      let displayValue = field.value;
+      if (field.type === "select") {
+        displayValue =
+          field.choices.find((choice) => choice.value === field.value)?.label ??
+          field.value;
+      } else if (field.type === "boolean") {
+        displayValue = i18n(
+          field.value === "true"
+            ? "marketplace.listing.boolean_yes"
+            : "marketplace.listing.boolean_no"
+        );
+      }
+
+      chips.push({
+        type: "field",
+        key: field.key,
+        label: `${field.label}: ${displayValue}`,
+      });
+    }
+
+    return chips;
+  }
+
+  get hasActiveFilters() {
+    return this.activeFilterChips.length > 0 || this.sort !== "newest";
   }
 
   addStructuredFilters(params) {
@@ -103,6 +190,21 @@ export default class MarketplaceBrowse extends Component {
   }
 
   @action
+  selectCategory(category) {
+    this.categoryId =
+      Number(this.categoryId) === category.id ? "" : category.id;
+    this.fieldFilters = {};
+    this.fetchListings(1);
+  }
+
+  @action
+  showAllCategories() {
+    this.categoryId = "";
+    this.fieldFilters = {};
+    this.fetchListings(1);
+  }
+
+  @action
   updateSort(event) {
     this.sort = event.target.value;
     this.fetchListings(1);
@@ -132,6 +234,31 @@ export default class MarketplaceBrowse extends Component {
   }
 
   @action
+  clearFilterChip(chip) {
+    if (chip.type === "query") {
+      this.query = "";
+    } else if (chip.type === "category") {
+      this.categoryId = "";
+      this.fieldFilters = {};
+    } else if (chip.type === "field") {
+      const nextFilters = { ...this.fieldFilters };
+      delete nextFilters[chip.key];
+      this.fieldFilters = nextFilters;
+    }
+
+    this.fetchListings(1);
+  }
+
+  @action
+  clearAllFilters() {
+    this.query = "";
+    this.categoryId = "";
+    this.sort = "newest";
+    this.fieldFilters = {};
+    this.fetchListings(1);
+  }
+
+  @action
   search(event) {
     event.preventDefault();
     this.fetchListings(1);
@@ -143,25 +270,35 @@ export default class MarketplaceBrowse extends Component {
   }
 
   <template>
-    <div class="marketplace-browse">
-      <MarketplaceNav />
-
+    <div class="marketplace-browse marketplace-browse--showcase">
       <div class="marketplace-browse__header">
-        <h1>{{i18n "marketplace.title"}}</h1>
+        <div class="marketplace-browse__title-wrap">
+          <span class="marketplace-browse__title-icon">{{dIcon "tag"}}</span>
+          <h1>{{i18n "marketplace.title"}}</h1>
+        </div>
       </div>
+
+      <MarketplaceNav />
 
       <form class="marketplace-browse__filters" {{on "submit" this.search}}>
         <div class="marketplace-browse__primary-filters">
-          <input
-            type="text"
-            class="marketplace-browse__search"
-            placeholder={{i18n "marketplace.browse.search_placeholder"}}
-            value={{this.query}}
-            {{on "input" this.updateQuery}}
-          />
+          <label class="marketplace-browse__search-shell">
+            <span class="marketplace-browse__search-icon">{{dIcon
+                "magnifying-glass"
+              }}</span>
+            <input
+              type="text"
+              class="marketplace-browse__search"
+              aria-label={{i18n "marketplace.browse.search_placeholder"}}
+              placeholder={{i18n "marketplace.browse.search_placeholder"}}
+              value={{this.query}}
+              {{on "input" this.updateQuery}}
+            />
+          </label>
 
           <select
             class="marketplace-browse__category"
+            aria-label={{i18n "marketplace.browse.category_all"}}
             {{on "change" this.updateCategory}}
           >
             <option value="">{{i18n "marketplace.browse.category_all"}}</option>
@@ -175,6 +312,7 @@ export default class MarketplaceBrowse extends Component {
 
           <select
             class="marketplace-browse__sort"
+            aria-label={{i18n "marketplace.browse.sort_label"}}
             {{on "change" this.updateSort}}
           >
             {{#each this.sorts as |sortOption|}}
@@ -185,9 +323,52 @@ export default class MarketplaceBrowse extends Component {
             {{/each}}
           </select>
 
-          <button type="submit" class="btn btn-primary" disabled={{this.loading}}>
-            {{i18n "marketplace.browse.search_button"}}
+          <button
+            type="submit"
+            class="btn btn-primary marketplace-browse__search-button"
+            disabled={{this.loading}}
+          >
+            {{dIcon "magnifying-glass"}}
+            <span>{{i18n "marketplace.browse.search_button"}}</span>
           </button>
+        </div>
+
+        <div class="marketplace-browse__filter-chips">
+          <button
+            type="button"
+            class={{if
+              this.hasActiveFilters
+              "marketplace-browse__filter-chip"
+              "marketplace-browse__filter-chip marketplace-browse__filter-chip--active"
+            }}
+            disabled={{this.loading}}
+            {{on "click" this.clearAllFilters}}
+          >
+            {{i18n "marketplace.browse.all_filter"}}
+          </button>
+
+          {{#each this.activeFilterChips as |chip|}}
+            <button
+              type="button"
+              class="marketplace-browse__filter-chip marketplace-browse__filter-chip--selected"
+              disabled={{this.loading}}
+              {{on "click" (fn this.clearFilterChip chip)}}
+            >
+              <span>{{chip.label}}</span>
+              <span aria-hidden="true">×</span>
+            </button>
+          {{/each}}
+
+          {{#if this.hasActiveFilters}}
+            <button
+              type="button"
+              class="btn btn-flat marketplace-browse__clear-all-filters"
+              disabled={{this.loading}}
+              {{on "click" this.clearAllFilters}}
+            >
+              {{i18n "marketplace.browse.clear_filters"}}
+            </button>
+          {{/if}}
         </div>
 
         {{#if this.structuredFiltersForForm.length}}
@@ -286,12 +467,83 @@ export default class MarketplaceBrowse extends Component {
         {{/if}}
       </form>
 
+      {{#if this.featuredCategories.length}}
+        <section class="marketplace-browse__category-showcase">
+          <div class="marketplace-browse__section-heading">
+            <h2>{{i18n "marketplace.browse.popular_categories"}}</h2>
+            <button
+              type="button"
+              class="btn btn-flat marketplace-browse__section-link"
+              disabled={{this.loading}}
+              {{on "click" this.showAllCategories}}
+            >
+              {{i18n "marketplace.browse.view_all_categories"}}
+            </button>
+          </div>
+
+          <div class="marketplace-browse__category-strip">
+            {{#each this.featuredCategories as |category|}}
+              <button
+                type="button"
+                class={{if
+                  (eq category.id this.categoryId)
+                  "marketplace-browse__category-card marketplace-browse__category-card--active"
+                  "marketplace-browse__category-card"
+                }}
+                data-category-id={{category.id}}
+                disabled={{this.loading}}
+                {{on "click" (fn this.selectCategory category)}}
+              >
+                <span class="marketplace-browse__category-card-icon">
+                  {{dIcon "tag"}}
+                </span>
+                <span class="marketplace-browse__category-card-copy">
+                  <strong>{{category.name}}</strong>
+                  <small>{{i18n "marketplace.browse.category_browse_hint"}}</small>
+                </span>
+              </button>
+            {{/each}}
+          </div>
+        </section>
+      {{/if}}
+
       {{#if this.listings.length}}
-        <div class="marketplace-listings-grid">
-          {{#each this.listings as |listing|}}
-            <MarketplaceListingCard @listing={{listing}} />
-          {{/each}}
-        </div>
+        <section class="marketplace-browse__featured">
+          <div class="marketplace-browse__section-heading">
+            <h2>{{i18n "marketplace.browse.featured_listings"}}</h2>
+            {{#if this.latestListings.length}}
+              <a
+                href="#marketplace-latest-listings"
+                class="btn btn-flat marketplace-browse__section-link"
+              >
+                {{i18n "marketplace.browse.view_all_listings"}}
+              </a>
+            {{/if}}
+          </div>
+
+          <div class="marketplace-listings-grid marketplace-browse__featured-grid">
+            {{#each this.featuredListings as |listing|}}
+              <MarketplaceListingCard @listing={{listing}} />
+            {{/each}}
+          </div>
+        </section>
+
+        {{#if this.latestListings.length}}
+          <section
+            id="marketplace-latest-listings"
+            class="marketplace-browse__latest"
+          >
+            <div class="marketplace-browse__section-heading">
+              <h2>{{i18n "marketplace.browse.latest_listings"}}</h2>
+            </div>
+
+            <div class="marketplace-browse__latest-list">
+              {{#each this.latestListings as |listing|}}
+                <MarketplaceListingCard @listing={{listing}} />
+              {{/each}}
+            </div>
+          </section>
+        {{/if}}
 
         {{#if this.hasMore}}
           <button
