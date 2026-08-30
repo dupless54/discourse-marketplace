@@ -1,0 +1,283 @@
+// Marketplace listing create/edit presentation.
+// Keep the existing form contract and submission behavior intact; this file is
+// only responsible for layout, hierarchy, and responsive overflow safety.
+
+.marketplace-new,
+.marketplace-listing-edit {
+  width: 100%;
+  max-width: 1080px;
+  min-width: 0;
+  margin-inline: auto;
+  padding: 0.9em 1em 2.5em;
+  box-sizing: border-box;
+
+  .marketplace-nav {
+    margin-bottom: 1.15em;
+  }
+}
+
+.marketplace-listing-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.95em 1em;
+  min-width: 0;
+  margin: 0;
+  padding: clamp(1em, 2.4vw, 1.5em);
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius-large, 12px);
+  background: var(--secondary);
+  box-shadow: var(--shadow-card);
+
+  .marketplace-listing-form__heading {
+    grid-column: 1 / -1;
+    margin: 0 0 0.15em;
+    color: var(--primary);
+    font-size: clamp(1.55rem, 2.2vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .marketplace-listing-form__error {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.8em 1em;
+    border: 1px solid var(--danger-low-mid, var(--primary-low));
+    border-radius: var(--d-border-radius, 9px);
+    background: var(--danger-low, var(--primary-very-low));
+    color: var(--danger, var(--primary));
+  }
+
+  .marketplace-listing-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .marketplace-listing-form__field > label,
+  .marketplace-listing-form__field > .marketplace-listing-form__boolean-label {
+    color: var(--primary-high);
+    font-weight: 650;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: var(--d-border-radius, 9px);
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .marketplace-listing-form__description {
+    min-height: 12em;
+    line-height: 1.55;
+  }
+
+  // The primary identity/content fields need the full content width.
+  .marketplace-listing-form__field:nth-of-type(1),
+  .marketplace-listing-form__field:nth-of-type(2),
+  .marketplace-listing-form__upload,
+  .marketplace-listing-form__structured-fields,
+  .marketplace-listing-form__row,
+  .marketplace-listing-form__actions {
+    grid-column: 1 / -1;
+  }
+
+  .marketplace-listing-form__upload {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65em;
+    padding: 0.85em;
+    border: 1px dashed var(--primary-low-mid);
+    border-radius: var(--d-border-radius, 9px);
+    background: var(--primary-very-low);
+  }
+
+  .marketplace-listing-form__upload-button {
+    min-width: 0;
+  }
+
+  .marketplace-listing-form__upload-progress {
+    color: var(--primary-medium);
+    font-size: $font-down-1;
+    font-weight: 650;
+  }
+
+  .marketplace-listing-form__structured-fields {
+    min-width: 0;
+    margin: 0.15em 0;
+    padding: 1em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius-large, 12px);
+    background: var(--primary-very-low);
+  }
+
+  .marketplace-listing-form__structured-fields > h2 {
+    margin: 0 0 0.85em;
+    color: var(--primary);
+    font-size: $font-up-1;
+  }
+
+  .marketplace-listing-form__structured-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85em 1em;
+    min-width: 0;
+  }
+
+  .marketplace-listing-form__custom-field {
+    min-width: 0;
+  }
+
+  .marketplace-listing-form__boolean-label {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.55em;
+    min-height: 2.4em;
+    padding: 0.55em 0.7em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius, 9px);
+    background: var(--secondary);
+  }
+
+  .marketplace-listing-form__boolean-label input {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+  }
+
+  .marketplace-listing-form__required {
+    color: var(--danger);
+  }
+
+  .marketplace-listing-form__hint {
+    color: var(--primary-medium);
+    font-size: $font-down-1;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .marketplace-listing-form__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(130px, 0.32fr);
+    gap: 0.85em 1em;
+    min-width: 0;
+    padding: 1em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius, 9px);
+    background: var(--primary-very-low);
+  }
+
+  .marketplace-listing-form__price-field,
+  .marketplace-listing-form__currency-field {
+    min-width: 0;
+  }
+
+  .marketplace-listing-form__stock-field,
+  .marketplace-listing-form__expires-field {
+    min-width: 0;
+  }
+
+  .marketplace-listing-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5em;
+    min-width: 0;
+    padding-top: 0.3em;
+  }
+
+  .marketplace-listing-form__actions .btn-primary {
+    min-width: min(100%, 12em);
+    justify-content: center;
+  }
+}
+
+// The same native horizontal nav remains authoritative, but its surrounding
+// spacing and tap targets are normalized across Marketplace pages.
+.marketplace-nav {
+  min-width: 0;
+  max-width: 100%;
+
+  .nav-pills,
+  .horizontal-overflow-nav__scroll-container {
+    min-width: 0;
+  }
+
+  .nav-pills > li > a,
+  .d-nav-item {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .marketplace-new,
+  .marketplace-listing-edit {
+    padding-inline: 0.7em;
+  }
+
+  .marketplace-listing-form {
+    grid-template-columns: 1fr;
+    padding: 0.9em;
+
+    .marketplace-listing-form__field,
+    .marketplace-listing-form__field:nth-of-type(1),
+    .marketplace-listing-form__field:nth-of-type(2),
+    .marketplace-listing-form__upload,
+    .marketplace-listing-form__structured-fields,
+    .marketplace-listing-form__row,
+    .marketplace-listing-form__actions {
+      grid-column: 1;
+    }
+
+    .marketplace-listing-form__structured-grid,
+    .marketplace-listing-form__row {
+      grid-template-columns: 1fr;
+    }
+
+    .marketplace-listing-form__description {
+      min-height: 10em;
+    }
+
+    .marketplace-listing-form__actions {
+      justify-content: stretch;
+    }
+
+    .marketplace-listing-form__actions .btn-primary {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .marketplace-listing-form {
+    border-radius: var(--d-border-radius, 9px);
+
+    .marketplace-listing-form__structured-fields,
+    .marketplace-listing-form__row {
+      padding: 0.8em;
+    }
+
+    .marketplace-listing-form__upload {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .marketplace-listing-form__upload-button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
