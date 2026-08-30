@@ -26,7 +26,7 @@ function listing(id, category = CATEGORIES[0]) {
     status: "active",
     price_cents: id * 1000,
     currency: "USD",
-    thumbnail_url: null,
+    thumbnail_url: "/uploads/default/original/1X/listing.png",
     inventory_mode: "single",
     purchasable: true,
     expired: false,
@@ -39,7 +39,7 @@ function listing(id, category = CATEGORIES[0]) {
 
 const LISTINGS = Array.from({ length: 6 }, (_, index) => listing(index + 1));
 
-acceptance("Marketplace | showcase browse", function (needs) {
+acceptance("Marketplace | compact browse", function (needs) {
   let listingRequests;
 
   needs.settings({ marketplace_enabled: true });
@@ -58,17 +58,31 @@ acceptance("Marketplace | showcase browse", function (needs) {
     });
   });
 
-  test("renders featured cards and a compact latest-listing section", async function (assert) {
+  test("renders one compact feed instead of automatically featured cards", async function (assert) {
     await visit("/marketplace");
 
-    assert.dom(".marketplace-browse--showcase").exists();
+    assert.dom(".marketplace-browse--compact-feed").exists();
     assert.dom(".marketplace-browse__category-card").exists({ count: 2 });
     assert
-      .dom(".marketplace-browse__featured-grid .marketplace-listing-card")
-      .exists({ count: 4 });
+      .dom(".marketplace-browse__listing-list .marketplace-listing-card")
+      .exists({ count: 6 });
+    assert.dom(".marketplace-browse__featured-grid").doesNotExist();
+    assert.dom(".marketplace-browse__latest-list").doesNotExist();
+  });
+
+  test("keeps category metadata outside the listing image", async function (assert) {
+    await visit("/marketplace");
+
     assert
-      .dom(".marketplace-browse__latest-list .marketplace-listing-card")
-      .exists({ count: 2 });
+      .dom(
+        ".marketplace-browse__listing-list .marketplace-listing-card__media .marketplace-listing-card__category-badge"
+      )
+      .doesNotExist();
+    assert
+      .dom(
+        ".marketplace-browse__listing-list .marketplace-listing-card__body .marketplace-listing-card__category-badge"
+      )
+      .exists({ count: 6 });
   });
 
   test("filters from a category showcase card using the existing listing endpoint", async function (assert) {

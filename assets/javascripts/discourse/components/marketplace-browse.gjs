@@ -41,14 +41,6 @@ export default class MarketplaceBrowse extends Component {
     return (this.args.categories ?? []).slice(0, 5);
   }
 
-  get featuredListings() {
-    return this.listings.slice(0, 4);
-  }
-
-  get latestListings() {
-    return this.listings.slice(4);
-  }
-
   get structuredFiltersForForm() {
     return (this.selectedCategory?.field_definitions ?? []).map((field) => {
       const current = this.fieldFilters[field.key];
@@ -270,7 +262,7 @@ export default class MarketplaceBrowse extends Component {
   }
 
   <template>
-    <div class="marketplace-browse marketplace-browse--showcase">
+    <div class="marketplace-browse marketplace-browse--showcase marketplace-browse--compact-feed">
       <div class="marketplace-browse__header">
         <div class="marketplace-browse__title-wrap">
           <span class="marketplace-browse__title-icon">{{dIcon "tag"}}</span>
@@ -508,42 +500,17 @@ export default class MarketplaceBrowse extends Component {
       {{/if}}
 
       {{#if this.listings.length}}
-        <section class="marketplace-browse__featured">
+        <section class="marketplace-browse__latest marketplace-browse__results">
           <div class="marketplace-browse__section-heading">
-            <h2>{{i18n "marketplace.browse.featured_listings"}}</h2>
-            {{#if this.latestListings.length}}
-              <a
-                href="#marketplace-latest-listings"
-                class="btn btn-flat marketplace-browse__section-link"
-              >
-                {{i18n "marketplace.browse.view_all_listings"}}
-              </a>
-            {{/if}}
+            <h2>{{i18n "marketplace.browse.latest_listings"}}</h2>
           </div>
 
-          <div class="marketplace-listings-grid marketplace-browse__featured-grid">
-            {{#each this.featuredListings as |listing|}}
+          <div class="marketplace-browse__listing-list">
+            {{#each this.listings as |listing|}}
               <MarketplaceListingCard @listing={{listing}} />
             {{/each}}
           </div>
         </section>
-
-        {{#if this.latestListings.length}}
-          <section
-            id="marketplace-latest-listings"
-            class="marketplace-browse__latest"
-          >
-            <div class="marketplace-browse__section-heading">
-              <h2>{{i18n "marketplace.browse.latest_listings"}}</h2>
-            </div>
-
-            <div class="marketplace-browse__latest-list">
-              {{#each this.latestListings as |listing|}}
-                <MarketplaceListingCard @listing={{listing}} />
-              {{/each}}
-            </div>
-          </section>
-        {{/if}}
 
         {{#if this.hasMore}}
           <button

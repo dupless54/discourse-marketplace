@@ -134,22 +134,25 @@ export default class MarketplaceListingCard extends Component {
               {{dIcon "image"}}
             </span>
           {{/if}}
-          {{#if this.listing.category}}
-            <span class="marketplace-listing-card__category-badge">
-              {{this.listing.category.name}}
-            </span>
-          {{/if}}
-          <span
-            class={{concat
-              "marketplace-listing-card__status-badge marketplace-listing-card__status-badge--"
-              this.listing.status
-            }}
-          >{{this.statusLabel}}</span>
         </span>
 
         <span class="marketplace-listing-card__body">
-          <span class="marketplace-listing-card__price">{{this.formattedPrice}}</span>
+          <span class="marketplace-listing-card__meta">
+            {{#if this.listing.category}}
+              <span class="marketplace-listing-card__category-badge">
+                {{this.listing.category.name}}
+              </span>
+            {{/if}}
+            <span
+              class={{concat
+                "marketplace-listing-card__status-badge marketplace-listing-card__status-badge--"
+                this.listing.status
+              }}
+            >{{this.statusLabel}}</span>
+          </span>
+
           <span class="marketplace-listing-card__title">{{this.listing.title}}</span>
+          <span class="marketplace-listing-card__price">{{this.formattedPrice}}</span>
           {{#if this.availabilityLabel}}
             <span class="marketplace-listing-card__availability">
               {{this.availabilityLabel}}
