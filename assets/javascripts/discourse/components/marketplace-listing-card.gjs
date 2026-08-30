@@ -1,11 +1,11 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { concat } from "@ember/helper";
-import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
+import DButton from "discourse/ui-kit/d-button";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 
@@ -115,7 +115,7 @@ export default class MarketplaceListingCard extends Component {
   }
 
   <template>
-    <div class="marketplace-listing-card">
+    <article class="marketplace-listing-card">
       <LinkTo
         @route="marketplace.listing"
         @model={{this.listing.id}}
@@ -181,18 +181,17 @@ export default class MarketplaceListingCard extends Component {
         </span>
       </LinkTo>
 
-      <span class="marketplace-listing-card__actions">
+      <div class="marketplace-listing-card__actions">
         {{#if this.currentUser}}
-          <button
-            type="button"
-            class="btn btn-default btn-small marketplace-listing-card__favorite"
-            aria-pressed={{this.favorited}}
-            disabled={{this.favoriteBusy}}
-            {{on "click" this.toggleFavorite}}
-          >
-            {{dIcon "heart"}}
-            {{this.favoriteLabel}}
-          </button>
+          <DButton
+            class="btn-default btn-small marketplace-listing-card__favorite"
+            @translatedLabel={{this.favoriteLabel}}
+            @icon="heart"
+            @action={{this.toggleFavorite}}
+            @disabled={{this.favoriteBusy}}
+            @isLoading={{this.favoriteBusy}}
+            @ariaPressed={{this.favorited}}
+          />
         {{/if}}
 
         {{#if this.listing.seller}}
@@ -215,13 +214,11 @@ export default class MarketplaceListingCard extends Component {
           </LinkTo>
         {{else}}
           {{#if this.canMessageSeller}}
-            <button
-              type="button"
-              class="btn btn-default btn-small marketplace-listing-card__message"
-              {{on "click" this.messageSeller}}
-            >
-              {{i18n "marketplace.listing.message_seller_button"}}
-            </button>
+            <DButton
+              class="btn-default btn-small marketplace-listing-card__message"
+              @label="marketplace.listing.message_seller_button"
+              @action={{this.messageSeller}}
+            />
           {{/if}}
           {{#if this.canBuy}}
             <LinkTo
@@ -233,10 +230,12 @@ export default class MarketplaceListingCard extends Component {
             </LinkTo>
           {{/if}}
         {{/if}}
-      </span>
+      </div>
       {{#if this.favoriteError}}
-        <span class="marketplace-listing-card__favorite-error">{{this.favoriteError}}</span>
+        <div class="marketplace-listing-card__favorite-error" role="alert">
+          {{this.favoriteError}}
+        </div>
       {{/if}}
-    </div>
+    </article>
   </template>
 }
