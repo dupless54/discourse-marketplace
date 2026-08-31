@@ -5,49 +5,50 @@ import DNavItem from "discourse/ui-kit/d-nav-item";
 import { i18n } from "discourse-i18n";
 
 // One compact nav, reused at the top of every top-level Marketplace page.
-// DHorizontalOverflowNav is core's mobile-safe scrollable nav shell, so the
-// V2 Favorites and Offers destinations stay usable on narrow viewports
-// without a separate custom navigation system.
+// The outer shell prevents the scrollable core nav from contributing its
+// intrinsic item width to the document on narrow viewports.
 export default class MarketplaceNav extends Component {
   @service currentUser;
 
   <template>
-    <DHorizontalOverflowNav
-      @ariaLabel={{i18n "marketplace.nav.aria_label"}}
-      class="marketplace-nav"
-    >
-      <DNavItem
-        @route="marketplace.index"
-        @label="marketplace.title"
-        @icon="tag"
-      />
-      {{#if this.currentUser}}
+    <div class="marketplace-nav-shell">
+      <DHorizontalOverflowNav
+        @ariaLabel={{i18n "marketplace.nav.aria_label"}}
+        class="marketplace-nav"
+      >
         <DNavItem
-          @route="marketplace.new"
-          @label="marketplace.new_listing"
-          @icon="plus"
+          @route="marketplace.index"
+          @label="marketplace.title"
+          @icon="tag"
         />
-        <DNavItem
-          @route="marketplace.mine"
-          @label="marketplace.my_listings"
-          @icon="list"
-        />
-        <DNavItem
-          @route="marketplace.favorites"
-          @label="marketplace.favorites.title"
-          @icon="heart"
-        />
-        <DNavItem
-          @route="marketplace.offers"
-          @label="marketplace.offers.title"
-          @icon="handshake"
-        />
-        <DNavItem
-          @route="marketplace.transactions"
-          @label="marketplace.my_transactions"
-          @icon="right-left"
-        />
-      {{/if}}
-    </DHorizontalOverflowNav>
+        {{#if this.currentUser}}
+          <DNavItem
+            @route="marketplace.new"
+            @label="marketplace.new_listing"
+            @icon="plus"
+          />
+          <DNavItem
+            @route="marketplace.mine"
+            @label="marketplace.my_listings"
+            @icon="list"
+          />
+          <DNavItem
+            @route="marketplace.favorites"
+            @label="marketplace.favorites.title"
+            @icon="heart"
+          />
+          <DNavItem
+            @route="marketplace.offers"
+            @label="marketplace.offers.title"
+            @icon="handshake"
+          />
+          <DNavItem
+            @route="marketplace.transactions"
+            @label="marketplace.my_transactions"
+            @icon="right-left"
+          />
+        {{/if}}
+      </DHorizontalOverflowNav>
+    </div>
   </template>
 }
