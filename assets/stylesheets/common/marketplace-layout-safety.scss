@@ -40,6 +40,31 @@
     overflow-x: clip;
   }
 
+  // Listing create/edit contains a programmatically-triggered native file
+  // input. Give that hidden control a deterministic origin/size and make the
+  // page wrapper a real overflow container so native intrinsic widths cannot
+  // increase the document scroll width on narrow screens.
+  .marketplace-new,
+  .marketplace-listing-edit {
+    overflow-x: hidden;
+  }
+
+  .marketplace-listing-form__upload {
+    position: relative;
+  }
+
+  .marketplace-listing-form__upload-input.hidden-upload-field {
+    inset: 0 auto auto 0;
+    width: 1px;
+    inline-size: 1px;
+    height: 1px;
+    block-size: 1px;
+    max-width: 1px;
+    max-inline-size: 1px;
+    margin: 0;
+    padding: 0;
+  }
+
   // DHorizontalOverflowNav applies this class directly to its nav-pills <ul>.
   // Let core own the horizontal scrolling instead of widening the page.
   .marketplace-nav {
