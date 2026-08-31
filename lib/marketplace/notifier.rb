@@ -162,14 +162,7 @@ module Marketplace
     end
     private_class_method :notify_offer_responder_counterpart
 
-    def self.notify(
-      recipient_id:,
-      actor:,
-      listing:,
-      message:,
-      transaction_id: nil,
-      offer_id: nil
-    )
+    def self.notify(recipient_id:, actor:, listing:, message:, transaction_id: nil, offer_id: nil)
       Notification.create!(
         notification_type: Notification.types[:custom],
         user_id: recipient_id,

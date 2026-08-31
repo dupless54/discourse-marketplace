@@ -17,9 +17,9 @@ class CreateMarketplaceTransactions < ActiveRecord::Migration[8.0]
     end
 
     add_foreign_key :marketplace_transactions,
-                     :marketplace_listings,
-                     column: :listing_id,
-                     on_delete: :restrict
+                    :marketplace_listings,
+                    column: :listing_id,
+                    on_delete: :restrict
 
     add_index :marketplace_transactions,
               :listing_id,
@@ -28,15 +28,15 @@ class CreateMarketplaceTransactions < ActiveRecord::Migration[8.0]
               name: "idx_marketplace_transactions_listing_open"
 
     add_check_constraint :marketplace_transactions,
-                          "status IN (0, 10, 20)",
-                          name: "marketplace_transactions_status_check"
+                         "status IN (0, 10, 20)",
+                         name: "marketplace_transactions_status_check"
 
     add_check_constraint :marketplace_transactions,
-                          "buyer_id <> seller_id",
-                          name: "marketplace_transactions_buyer_seller_check"
+                         "buyer_id <> seller_id",
+                         name: "marketplace_transactions_buyer_seller_check"
 
     add_check_constraint :marketplace_transactions,
-                          <<~SQL.squish,
+                         <<~SQL.squish,
                             (
                               (
                                 status = 0
@@ -70,6 +70,6 @@ class CreateMarketplaceTransactions < ActiveRecord::Migration[8.0]
                               )
                             )
                           SQL
-                          name: "marketplace_transactions_status_shape_check"
+                         name: "marketplace_transactions_status_shape_check"
   end
 end

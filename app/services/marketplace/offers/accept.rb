@@ -55,8 +55,7 @@ module Marketplace
     end
 
     def prepare_accept(offer:, guardian:)
-      if offer.accepted? &&
-           offer.responded_by_id == guardian.user.id &&
+      if offer.accepted? && offer.responded_by_id == guardian.user.id &&
            offer.accepted_transaction.present?
         context[:transaction] = offer.accepted_transaction
         context[:replay] = true
@@ -78,7 +77,9 @@ module Marketplace
 
     def validate_buyer_and_listing(offer:, listing:)
       buyer_guardian = Guardian.new(offer.buyer)
-      context.fail!(listing_unavailable: true) if !buyer_guardian.can_create_marketplace_transaction?(listing)
+      if !buyer_guardian.can_create_marketplace_transaction?(listing)
+        context.fail!(listing_unavailable: true)
+      end
     end
 
     def validate_current_terms(offer:, listing:)

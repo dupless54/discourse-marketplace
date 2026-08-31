@@ -4,7 +4,7 @@ describe Marketplace::Transactions::Create do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:other_buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   def build_listing(status: :active, **overrides)
     Fabricate(
@@ -189,7 +189,9 @@ describe Marketplace::Transactions::Create do
 
       expect(result).to be_failure
       expect(result).to fail_a_policy(:can_create_marketplace_transaction)
-      expect(Marketplace::Transaction.where(listing_id: listing.id).pluck(:id)).to eq([completed.id])
+      expect(Marketplace::Transaction.where(listing_id: listing.id).pluck(:id)).to eq(
+        [completed.id],
+      )
       expect(listing.reload.status).to eq("sold")
     end
 
@@ -276,7 +278,9 @@ describe Marketplace::Transactions::Create do
       call_service(guardian: buyer.guardian, listing_id: listing.id)
 
       result = nil
-      expect { result = call_service(guardian: Guardian.new, listing_id: listing.id) }.not_to raise_error
+      expect {
+        result = call_service(guardian: Guardian.new, listing_id: listing.id)
+      }.not_to raise_error
 
       expect(result.failure?).to eq(true)
       expect(result.listing_unavailable).to eq(true)
@@ -572,9 +576,9 @@ describe Marketplace::Transactions::Create do
       expect(result).to be_success
       expect(result.transaction.id).not_to eq(completed.id)
       expect(completed.reload.status).to eq("completed")
-      expect(Marketplace::Transaction.where(listing_id: listing.id, buyer_id: buyer.id).count).to eq(
-        2,
-      )
+      expect(
+        Marketplace::Transaction.where(listing_id: listing.id, buyer_id: buyer.id).count,
+      ).to eq(2)
     end
 
     it "rejects an expired unlimited listing with a plain policy failure" do

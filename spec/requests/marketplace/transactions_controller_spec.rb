@@ -5,8 +5,8 @@ describe Marketplace::TransactionsController do
   fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:other_buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:unrelated_user) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:staff) { Fabricate(:admin) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:staff, :admin)
+  fab!(:category, :marketplace_category)
 
   before do
     SiteSetting.marketplace_enabled = true
@@ -328,7 +328,11 @@ describe Marketplace::TransactionsController do
 
     it "returns 422 transaction_not_confirmable for a cancelled transaction" do
       transaction =
-        build_transaction(status: :cancelled, cancelled_at: Time.current, cancelled_by_id: seller.id)
+        build_transaction(
+          status: :cancelled,
+          cancelled_at: Time.current,
+          cancelled_by_id: seller.id,
+        )
 
       sign_in(buyer)
       post "/marketplace/transactions/#{transaction.id}/confirm.json"

@@ -2,7 +2,7 @@
 
 describe Marketplace::Listings::TransitionStatus do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   let(:guardian) { seller.guardian }
 

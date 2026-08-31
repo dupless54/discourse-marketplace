@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe Marketplace::ListingFieldValue do
-  fab!(:listing) { Fabricate(:marketplace_listing) }
+  fab!(:listing, :marketplace_listing)
 
   it "rejects a definition from another category" do
     other_definition = Fabricate(:marketplace_category_field_definition)
@@ -17,13 +17,8 @@ describe Marketplace::ListingFieldValue do
   end
 
   it "allows only one value per definition and listing" do
-    definition =
-      Fabricate(:marketplace_category_field_definition, category: listing.category)
-    Fabricate(
-      :marketplace_listing_field_value,
-      listing: listing,
-      field_definition: definition,
-    )
+    definition = Fabricate(:marketplace_category_field_definition, category: listing.category)
+    Fabricate(:marketplace_listing_field_value, listing: listing, field_definition: definition)
 
     duplicate =
       Fabricate.build(

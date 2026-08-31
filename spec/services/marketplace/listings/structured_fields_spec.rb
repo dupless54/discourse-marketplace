@@ -2,13 +2,12 @@
 
 describe "Marketplace listing structured fields" do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   before { SiteSetting.marketplace_allowed_currencies = "USD|EUR" }
 
   def definition(key, type, **attributes)
-    choices =
-      type == "select" ? [{ "value" => "diesel", "label" => "Diesel" }] : []
+    choices = type == "select" ? [{ "value" => "diesel", "label" => "Diesel" }] : []
     Fabricate(
       :marketplace_category_field_definition,
       category: category,
@@ -27,15 +26,13 @@ describe "Marketplace listing structured fields" do
       category_id: category.id,
       price_cents: 500,
       currency: "USD",
-      custom_fields: {},
+      custom_fields: {
+      },
     }.merge(overrides)
   end
 
   def create_listing(overrides = {})
-    Marketplace::Listings::Create.call(
-      guardian: seller.guardian,
-      params: base_params(overrides),
-    )
+    Marketplace::Listings::Create.call(guardian: seller.guardian, params: base_params(overrides))
   end
 
   def update_listing(listing, overrides = {})
@@ -64,9 +61,7 @@ describe "Marketplace listing structured fields" do
       )
 
     expect(result).to be_success
-    expect(
-      result.listing.field_values.joins(:field_definition).pluck(:key, :value).to_h,
-    ).to eq(
+    expect(result.listing.field_values.joins(:field_definition).pluck(:key, :value).to_h).to eq(
       "name" => "BMW 320d",
       "notes" => "Clean car",
       "mileage" => "125000",
@@ -105,11 +100,7 @@ describe "Marketplace listing structured fields" do
     definition("instant", "boolean")
     definition("fuel", "select")
 
-    [
-      { mileage: "12.5" },
-      { instant: "yes" },
-      { fuel: "electric" },
-    ].each do |custom_fields|
+    [{ mileage: "12.5" }, { instant: "yes" }, { fuel: "electric" }].each do |custom_fields|
       result = create_listing(custom_fields: custom_fields)
       expect(result).to be_failure
       expect(result.listing.errors[:custom_fields]).to be_present
@@ -119,7 +110,7 @@ describe "Marketplace listing structured fields" do
   it "rejects nested or non-object custom field payloads" do
     definition("name", "text")
 
-    [{ name: { html: "<script>alert(1)</script>" } }, ["name", "value"]].each do |payload|
+    [{ name: { html: "<script>alert(1)</script>" } }, %w[name value]].each do |payload|
       result = create_listing(custom_fields: payload)
       expect(result).to be_failure
       expect(result.listing.errors[:custom_fields]).to be_present
@@ -171,7 +162,9 @@ describe "Marketplace listing structured fields" do
       update_listing(
         listing,
         category_id: new_category.id,
-        custom_fields: { platform: "New platform value" },
+        custom_fields: {
+          platform: "New platform value",
+        },
       )
 
     expect(result).to be_success

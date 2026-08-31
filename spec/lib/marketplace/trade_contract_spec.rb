@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 describe Marketplace::TradeContract do
-  fab!(:seller) { Fabricate(:user) }
-  fab!(:buyer) { Fabricate(:user) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:seller, :user)
+  fab!(:buyer, :user)
+  fab!(:category, :marketplace_category)
   fab!(:listing) do
     Fabricate(
       :marketplace_listing,
@@ -199,7 +199,9 @@ describe Marketplace::TradeContract do
 
   describe "public surface" do
     it "exposes exactly one public lookup method" do
-      expect(described_class.singleton_methods(false)).to contain_exactly(:completed_transaction_info)
+      expect(described_class.singleton_methods(false)).to contain_exactly(
+        :completed_transaction_info,
+      )
     end
 
     it "does not expose a generic find/transaction_info API" do

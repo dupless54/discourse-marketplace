@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe Marketplace::ListingQuery do
-  fab!(:seller) { Fabricate(:user) }
-  fab!(:other_seller) { Fabricate(:user) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:seller, :user)
+  fab!(:other_seller, :user)
+  fab!(:category, :marketplace_category)
 
   def active_listing(user:, title:)
     Fabricate(

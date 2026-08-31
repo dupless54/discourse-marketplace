@@ -134,9 +134,10 @@ module Marketplace
     def release_listing_capacity(listing, now)
       if listing.single?
         affected_rows =
-          Marketplace::Listing
-            .where(id: listing.id, status: Marketplace::Listing.statuses[:reserved])
-            .update_all(status: Marketplace::Listing.statuses[:active], updated_at: now)
+          Marketplace::Listing.where(
+            id: listing.id,
+            status: Marketplace::Listing.statuses[:reserved],
+          ).update_all(status: Marketplace::Listing.statuses[:active], updated_at: now)
 
         raise Marketplace::TransactionInvariantViolation if affected_rows != 1
       elsif listing.finite?

@@ -106,9 +106,21 @@ module Marketplace
       context[:actor_is_buyer] = actor_is_buyer
 
       actor_confirmed_at =
-        actor_is_buyer ? transaction_record.buyer_confirmed_at : transaction_record.seller_confirmed_at
+        (
+          if actor_is_buyer
+            transaction_record.buyer_confirmed_at
+          else
+            transaction_record.seller_confirmed_at
+          end
+        )
       other_confirmed_at =
-        actor_is_buyer ? transaction_record.seller_confirmed_at : transaction_record.buyer_confirmed_at
+        (
+          if actor_is_buyer
+            transaction_record.seller_confirmed_at
+          else
+            transaction_record.buyer_confirmed_at
+          end
+        )
 
       context[:actor_already_confirmed_at_start] = actor_confirmed_at.present?
       context[:other_already_confirmed] = other_confirmed_at.present?
@@ -118,11 +130,17 @@ module Marketplace
       actor_already_confirmed_at_start
     end
 
-    def actor_confirming_first_time_alone(actor_already_confirmed_at_start:, other_already_confirmed:)
+    def actor_confirming_first_time_alone(
+      actor_already_confirmed_at_start:,
+      other_already_confirmed:
+    )
       !actor_already_confirmed_at_start && !other_already_confirmed
     end
 
-    def actor_confirming_second_and_final(actor_already_confirmed_at_start:, other_already_confirmed:)
+    def actor_confirming_second_and_final(
+      actor_already_confirmed_at_start:,
+      other_already_confirmed:
+    )
       !actor_already_confirmed_at_start && other_already_confirmed
     end
 
@@ -202,22 +220,30 @@ module Marketplace
     def consume_listing_capacity(listing, now)
       if listing.single?
         affected_rows =
-          Marketplace::Listing
-            .where(id: listing.id, status: Marketplace::Listing.statuses[:reserved])
-            .update_all(status: Marketplace::Listing.statuses[:sold], closed_at: now, updated_at: now)
+          Marketplace::Listing.where(
+            id: listing.id,
+            status: Marketplace::Listing.statuses[:reserved],
+          ).update_all(
+            status: Marketplace::Listing.statuses[:sold],
+            closed_at: now,
+            updated_at: now,
+          )
       elsif listing.finite?
         affected_rows =
           Marketplace::Listing
             .where(id: listing.id, inventory_mode: Marketplace::Listing.inventory_modes[:finite])
             .where("stock_reserved > 0")
             .update_all(
-              ["stock_reserved = stock_reserved - 1, stock_sold = stock_sold + 1, updated_at = ?", now],
+              [
+                "stock_reserved = stock_reserved - 1, stock_sold = stock_sold + 1, updated_at = ?",
+                now,
+              ],
             )
       else
         affected_rows =
-          Marketplace::Listing
-            .where(id: listing.id)
-            .update_all(["stock_sold = stock_sold + 1, updated_at = ?", now])
+          Marketplace::Listing.where(id: listing.id).update_all(
+            ["stock_sold = stock_sold + 1, updated_at = ?", now],
+          )
       end
 
       raise Marketplace::TransactionInvariantViolation if affected_rows != 1

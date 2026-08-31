@@ -2,7 +2,7 @@
 
 describe Marketplace::ListingsController do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   before do
     SiteSetting.marketplace_enabled = true
@@ -110,13 +110,9 @@ describe Marketplace::ListingsController do
       )
       sign_in(seller)
 
-      post "/marketplace/listings.json",
-           params: create_params(custom_fields: { platform: "Steam" })
+      post "/marketplace/listings.json", params: create_params(custom_fields: { platform: "Steam" })
       expect(response.status).to eq(201)
-      expect(json_body["custom_fields"].first).to include(
-        "key" => "platform",
-        "value" => "Steam",
-      )
+      expect(json_body["custom_fields"].first).to include("key" => "platform", "value" => "Steam")
 
       post "/marketplace/listings.json",
            params:
@@ -379,8 +375,7 @@ describe Marketplace::ListingsController do
 
     it "allows the owner to update their own draft listing" do
       sign_in(seller)
-      put "/marketplace/listings/#{listing.id}.json",
-          params: create_params(title: "Updated title")
+      put "/marketplace/listings/#{listing.id}.json", params: create_params(title: "Updated title")
 
       expect(response.status).to eq(200)
       expect(json_body["title"]).to eq("Updated title")
@@ -511,11 +506,7 @@ describe Marketplace::ListingsController do
       }
       now = Time.current
       if status == :completed
-        attributes.merge!(
-          buyer_confirmed_at: now,
-          seller_confirmed_at: now,
-          completed_at: now,
-        )
+        attributes.merge!(buyer_confirmed_at: now, seller_confirmed_at: now, completed_at: now)
       elsif status == :cancelled
         attributes.merge!(cancelled_at: now, cancelled_by_id: buyer.id)
       end
@@ -545,12 +536,7 @@ describe Marketplace::ListingsController do
 
     it "keeps another buyer's pending transaction independently actionable after one completes" do
       listing = build_listing(stock_reserved: 2)
-      first =
-        build_transaction(
-          listing: listing,
-          buyer: buyer,
-          buyer_confirmed_at: 1.minute.ago,
-        )
+      first = build_transaction(listing: listing, buyer: buyer, buyer_confirmed_at: 1.minute.ago)
       second = build_transaction(listing: listing, buyer: other_buyer)
       sign_in(seller)
 
@@ -698,13 +684,7 @@ describe Marketplace::ListingsController do
 
       get_mine
 
-      expect(listing_ids).to contain_exactly(
-        draft.id,
-        active.id,
-        reserved.id,
-        sold.id,
-        archived.id,
-      )
+      expect(listing_ids).to contain_exactly(draft.id, active.id, reserved.id, sold.id, archived.id)
     end
 
     it "never returns another seller's listings (non-enumerable)" do

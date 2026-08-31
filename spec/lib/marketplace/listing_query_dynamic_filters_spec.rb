@@ -55,8 +55,7 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
     set_value(steam, platform, "steam")
     set_value(epic, platform, "epic")
 
-    records =
-      query(category_id: category.id, field_filters: { platform: "steam" })
+    records = query(category_id: category.id, field_filters: { platform: "steam" })
 
     expect(records).to contain_exactly(steam)
   end
@@ -68,8 +67,7 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
     set_value(matching, edition, "Collector 100% Edition")
     set_value(unrelated, edition, "Collector Edition")
 
-    records =
-      query(category_id: category.id, field_filters: { edition: "collector 100%" })
+    records = query(category_id: category.id, field_filters: { edition: "collector 100%" })
 
     expect(records).to contain_exactly(matching)
   end
@@ -81,12 +79,12 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
     set_value(covered, warranty, "true")
     set_value(uncovered, warranty, "false")
 
-    expect(
-      query(category_id: category.id, field_filters: { warranty: "true" }),
-    ).to contain_exactly(covered)
-    expect(
-      query(category_id: category.id, field_filters: { warranty: false }),
-    ).to contain_exactly(uncovered)
+    expect(query(category_id: category.id, field_filters: { warranty: "true" })).to contain_exactly(
+      covered,
+    )
+    expect(query(category_id: category.id, field_filters: { warranty: false })).to contain_exactly(
+      uncovered,
+    )
   end
 
   it "supports exact and min/max integer filters, including negative values" do
@@ -98,19 +96,11 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
     set_value(middle, score, "10")
     set_value(high, score, "25")
 
+    expect(query(category_id: category.id, field_filters: { score: "10" })).to contain_exactly(
+      middle,
+    )
     expect(
-      query(category_id: category.id, field_filters: { score: "10" }),
-    ).to contain_exactly(middle)
-    expect(
-      query(
-        category_id: category.id,
-        field_filters: {
-          score: {
-            min: "-5",
-            max: "10",
-          },
-        },
-      ),
+      query(category_id: category.id, field_filters: { score: { min: "-5", max: "10" } }),
     ).to contain_exactly(low, middle)
   end
 
@@ -137,13 +127,7 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
     set_value(wrong_warranty, warranty, "false")
 
     records =
-      query(
-        category_id: category.id,
-        field_filters: {
-          platform: "steam",
-          warranty: "true",
-        },
-      )
+      query(category_id: category.id, field_filters: { platform: "steam", warranty: "true" })
 
     expect(records).to contain_exactly(matching)
   end
@@ -160,12 +144,12 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
     disabled = define_field(key: "hidden", field_type: "text", enabled: false)
     expect(disabled).not_to be_enabled
 
-    expect do
-      query(category_id: category.id, field_filters: { unknown: "x" })
-    end.to raise_error(Discourse::InvalidParameters)
-    expect do
-      query(category_id: category.id, field_filters: { hidden: "x" })
-    end.to raise_error(Discourse::InvalidParameters)
+    expect do query(category_id: category.id, field_filters: { unknown: "x" }) end.to raise_error(
+      Discourse::InvalidParameters,
+    )
+    expect do query(category_id: category.id, field_filters: { hidden: "x" }) end.to raise_error(
+      Discourse::InvalidParameters,
+    )
   end
 
   it "rejects invalid select, boolean, and integer range values" do
@@ -184,15 +168,7 @@ describe Marketplace::ListingQuery, "dynamic structured filters" do
       query(category_id: category.id, field_filters: { warranty: "maybe" })
     end.to raise_error(Discourse::InvalidParameters)
     expect do
-      query(
-        category_id: category.id,
-        field_filters: {
-          score: {
-            min: "20",
-            max: "10",
-          },
-        },
-      )
+      query(category_id: category.id, field_filters: { score: { min: "20", max: "10" } })
     end.to raise_error(Discourse::InvalidParameters)
   end
 end

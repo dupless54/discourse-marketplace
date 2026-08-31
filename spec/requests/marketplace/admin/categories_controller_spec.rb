@@ -68,21 +68,14 @@ describe Marketplace::Admin::CategoriesController do
   end
 
   describe "POST /marketplace/admin/categories" do
-    let(:params) do
-      {
-        name: "Electronics",
-        slug: "electronics",
-        position: 3,
-        enabled: true,
-      }
-    end
+    let(:params) { { name: "Electronics", slug: "electronics", position: 3, enabled: true } }
 
     it "creates a category for an admin" do
       sign_in(admin)
 
-      expect do
-        post "/marketplace/admin/categories.json", params: params
-      end.to change { Marketplace::Category.count }.by(1)
+      expect do post "/marketplace/admin/categories.json", params: params end.to change {
+        Marketplace::Category.count
+      }.by(1)
 
       expect(response.status).to eq(201)
       expect(response.parsed_body["category"]).to include(
@@ -96,9 +89,9 @@ describe Marketplace::Admin::CategoriesController do
     it "does not let a non-admin create a category" do
       sign_in(user)
 
-      expect do
-        post "/marketplace/admin/categories.json", params: params
-      end.not_to change { Marketplace::Category.count }
+      expect do post "/marketplace/admin/categories.json", params: params end.not_to change {
+        Marketplace::Category.count
+      }
 
       expect(response.status).to eq(403)
     end
@@ -173,11 +166,9 @@ describe Marketplace::Admin::CategoriesController do
       category = Fabricate(:marketplace_category)
       field = Fabricate(:marketplace_category_field_definition, category: category)
 
-      expect do
-        delete "/marketplace/admin/categories/#{category.id}.json"
-      end.to change { Marketplace::Category.count }.by(-1).and(
-        change { Marketplace::CategoryFieldDefinition.count }.by(-1),
-      )
+      expect do delete "/marketplace/admin/categories/#{category.id}.json" end.to change {
+        Marketplace::Category.count
+      }.by(-1).and(change { Marketplace::CategoryFieldDefinition.count }.by(-1))
 
       expect(response.status).to eq(204)
       expect(Marketplace::CategoryFieldDefinition.exists?(field.id)).to eq(false)
@@ -188,9 +179,9 @@ describe Marketplace::Admin::CategoriesController do
       category = Fabricate(:marketplace_category)
       listing = Fabricate(:marketplace_listing, category: category)
 
-      expect do
-        delete "/marketplace/admin/categories/#{category.id}.json"
-      end.not_to change { Marketplace::Category.count }
+      expect do delete "/marketplace/admin/categories/#{category.id}.json" end.not_to change {
+        Marketplace::Category.count
+      }
 
       expect(response.status).to eq(409)
       expect(response.parsed_body["errors"]).to include(
@@ -204,9 +195,9 @@ describe Marketplace::Admin::CategoriesController do
       sign_in(user)
       category = Fabricate(:marketplace_category)
 
-      expect do
-        delete "/marketplace/admin/categories/#{category.id}.json"
-      end.not_to change { Marketplace::Category.count }
+      expect do delete "/marketplace/admin/categories/#{category.id}.json" end.not_to change {
+        Marketplace::Category.count
+      }
 
       expect(response.status).to eq(403)
       expect(category.reload).to be_present

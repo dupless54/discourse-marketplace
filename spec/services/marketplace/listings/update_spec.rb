@@ -2,13 +2,19 @@
 
 describe Marketplace::Listings::Update do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
-  fab!(:other_category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
+  fab!(:other_category, :marketplace_category)
 
   before { SiteSetting.marketplace_allowed_currencies = "USD|EUR" }
 
   let(:listing) do
-    Fabricate(:marketplace_listing, seller: seller, category: category, price_cents: 500, currency: "USD")
+    Fabricate(
+      :marketplace_listing,
+      seller: seller,
+      category: category,
+      price_cents: 500,
+      currency: "USD",
+    )
   end
   let(:guardian) { seller.guardian }
   let(:params) do
@@ -41,10 +47,7 @@ describe Marketplace::Listings::Update do
   it "cooks the new raw through Listing.cook, so an embedded image is lightbox-wrapped" do
     upload = Fabricate(:upload)
     result =
-      call_service(
-        guardian: guardian,
-        params: params.merge(raw: "![photo](#{upload.short_url})"),
-      )
+      call_service(guardian: guardian, params: params.merge(raw: "![photo](#{upload.short_url})"))
 
     expect(result).to be_success
     expect(result.listing.cooked).to include("lightbox-wrapper")
@@ -61,10 +64,7 @@ describe Marketplace::Listings::Update do
   it "ignores a client-supplied seller_id and status" do
     other_user = Fabricate(:user)
     result =
-      call_service(
-        guardian: guardian,
-        params: params.merge(seller_id: other_user.id, status: 30),
-      )
+      call_service(guardian: guardian, params: params.merge(seller_id: other_user.id, status: 30))
 
     expect(result).to be_success
     expect(result.listing.seller_id).to eq(seller.id)
@@ -82,7 +82,8 @@ describe Marketplace::Listings::Update do
   it "fails policy for a suspended user" do
     suspended_seller =
       Fabricate(:user, suspended_till: 1.year.from_now, suspended_at: Time.zone.now)
-    suspended_listing = Fabricate(:marketplace_listing, seller: suspended_seller, category: category)
+    suspended_listing =
+      Fabricate(:marketplace_listing, seller: suspended_seller, category: category)
     result =
       call_service(
         guardian: suspended_seller.guardian,
@@ -123,10 +124,7 @@ describe Marketplace::Listings::Update do
   it "fails model validation when switching to a disabled category" do
     disabled_category = Fabricate(:marketplace_category, enabled: false)
     result =
-      call_service(
-        guardian: guardian,
-        params: params.merge(category_id: disabled_category.id),
-      )
+      call_service(guardian: guardian, params: params.merge(category_id: disabled_category.id))
 
     expect(result).to be_failure
     expect(result.listing.errors[:category]).to be_present
@@ -135,10 +133,7 @@ describe Marketplace::Listings::Update do
   it "allows an unrelated update when the existing category was disabled later" do
     listing.category.update!(enabled: false)
     result =
-      call_service(
-        guardian: guardian,
-        params: params.merge(category_id: listing.category_id),
-      )
+      call_service(guardian: guardian, params: params.merge(category_id: listing.category_id))
 
     expect(result).to be_success
     expect(result.listing.title).to eq("Updated title")
@@ -175,7 +170,11 @@ describe Marketplace::Listings::Update do
           stock_reserved: 1,
           stock_sold: 1,
         )
-      Fabricate(:marketplace_transaction, listing: finite_listing, status: Marketplace::Transaction.statuses[:pending])
+      Fabricate(
+        :marketplace_transaction,
+        listing: finite_listing,
+        status: Marketplace::Transaction.statuses[:pending],
+      )
 
       result =
         call_service(
@@ -208,7 +207,11 @@ describe Marketplace::Listings::Update do
         call_service(
           guardian: guardian,
           params:
-            params.merge(listing_id: finite_listing.id, inventory_mode: "finite", stock_quantity: 3),
+            params.merge(
+              listing_id: finite_listing.id,
+              inventory_mode: "finite",
+              stock_quantity: 3,
+            ),
         )
 
       expect(result).to be_failure
@@ -224,7 +227,11 @@ describe Marketplace::Listings::Update do
           inventory_mode: Marketplace::Listing.inventory_modes[:finite],
           stock_quantity: 5,
         )
-      Fabricate(:marketplace_transaction, listing: finite_listing, status: Marketplace::Transaction.statuses[:pending])
+      Fabricate(
+        :marketplace_transaction,
+        listing: finite_listing,
+        status: Marketplace::Transaction.statuses[:pending],
+      )
 
       result =
         call_service(
@@ -240,7 +247,8 @@ describe Marketplace::Listings::Update do
   describe "expires_at" do
     it "sets an expiration on an existing listing" do
       expires_at = 1.week.from_now.change(usec: 0)
-      result = call_service(guardian: guardian, params: params.merge(expires_at: expires_at.iso8601))
+      result =
+        call_service(guardian: guardian, params: params.merge(expires_at: expires_at.iso8601))
 
       expect(result).to be_success
       expect(result.listing.expires_at).to eq(expires_at)

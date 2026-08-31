@@ -60,10 +60,12 @@ module Marketplace
     def normalized_choices(choices)
       choices = choices.to_unsafe_h.values if choices.respond_to?(:to_unsafe_h)
       if choices.is_a?(Array)
-        return choices.filter_map do |choice|
-          choice = choice.to_unsafe_h if choice.respond_to?(:to_unsafe_h)
-          choice.presence
-        end
+        return(
+          choices.filter_map do |choice|
+            choice = choice.to_unsafe_h if choice.respond_to?(:to_unsafe_h)
+            choice.presence
+          end
+        )
       end
 
       choices.presence || []

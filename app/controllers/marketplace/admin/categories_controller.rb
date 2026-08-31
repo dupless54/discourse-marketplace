@@ -47,11 +47,7 @@ module Marketplace
         ) do
           on_success do |category:|
             category.field_definitions.load
-            render_serialized(
-              category,
-              Marketplace::AdminCategorySerializer,
-              root: "category",
-            )
+            render_serialized(category, Marketplace::AdminCategorySerializer, root: "category")
           end
           on_failure { render(json: failed_json, status: :unprocessable_entity) }
           on_failed_contract do |contract|

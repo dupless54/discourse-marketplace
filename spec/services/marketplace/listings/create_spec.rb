@@ -2,7 +2,7 @@
 
 describe Marketplace::Listings::Create do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   before { SiteSetting.marketplace_allowed_currencies = "USD|EUR" }
 
@@ -36,10 +36,7 @@ describe Marketplace::Listings::Create do
   it "cooks raw through Listing.cook, so an embedded image is lightbox-wrapped" do
     upload = Fabricate(:upload)
     result =
-      call_service(
-        guardian: guardian,
-        params: params.merge(raw: "![photo](#{upload.short_url})"),
-      )
+      call_service(guardian: guardian, params: params.merge(raw: "![photo](#{upload.short_url})"))
 
     expect(result).to be_success
     expect(result.listing.cooked).to include("lightbox-wrapper")
@@ -48,10 +45,7 @@ describe Marketplace::Listings::Create do
   it "ignores a client-supplied seller_id and status" do
     other_user = Fabricate(:user)
     result =
-      call_service(
-        guardian: guardian,
-        params: params.merge(seller_id: other_user.id, status: 30),
-      )
+      call_service(guardian: guardian, params: params.merge(seller_id: other_user.id, status: 30))
 
     expect(result).to be_success
     expect(result.listing.seller_id).to eq(seller.id)
@@ -99,10 +93,7 @@ describe Marketplace::Listings::Create do
   it "fails model validation when the category is disabled" do
     disabled_category = Fabricate(:marketplace_category, enabled: false)
     result =
-      call_service(
-        guardian: guardian,
-        params: params.merge(category_id: disabled_category.id),
-      )
+      call_service(guardian: guardian, params: params.merge(category_id: disabled_category.id))
 
     expect(result).to be_failure
     expect(result.listing.errors[:category]).to be_present
@@ -191,7 +182,8 @@ describe Marketplace::Listings::Create do
 
     it "accepts an ISO8601 expiration timestamp" do
       expires_at = 1.week.from_now.change(usec: 0)
-      result = call_service(guardian: guardian, params: params.merge(expires_at: expires_at.iso8601))
+      result =
+        call_service(guardian: guardian, params: params.merge(expires_at: expires_at.iso8601))
 
       expect(result).to be_success
       expect(result.listing.expires_at).to eq(expires_at)

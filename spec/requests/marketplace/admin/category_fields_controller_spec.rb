@@ -3,7 +3,7 @@
 describe Marketplace::Admin::CategoryFieldsController do
   fab!(:admin)
   fab!(:user)
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   before { SiteSetting.marketplace_enabled = true }
 
@@ -17,10 +17,7 @@ describe Marketplace::Admin::CategoryFieldsController do
       position: 2,
       placeholder: "Choose fuel",
       help_text: "Choose the vehicle fuel type",
-      choices: [
-        { value: "petrol", label: "Petrol" },
-        { value: "diesel", label: "Diesel" },
-      ],
+      choices: [{ value: "petrol", label: "Petrol" }, { value: "diesel", label: "Diesel" }],
     }.merge(overrides)
   end
 
@@ -29,8 +26,7 @@ describe Marketplace::Admin::CategoryFieldsController do
       sign_in(admin)
 
       expect do
-        post "/marketplace/admin/categories/#{category.id}/fields.json",
-             params: field_params
+        post "/marketplace/admin/categories/#{category.id}/fields.json", params: field_params
       end.to change { Marketplace::CategoryFieldDefinition.count }.by(1)
 
       expect(response.status).to eq(201)
@@ -47,19 +43,14 @@ describe Marketplace::Admin::CategoryFieldsController do
       sign_in(user)
 
       expect do
-        post "/marketplace/admin/categories/#{category.id}/fields.json",
-             params: field_params
+        post "/marketplace/admin/categories/#{category.id}/fields.json", params: field_params
       end.not_to change { Marketplace::CategoryFieldDefinition.count }
       expect(response.status).to eq(403)
     end
 
     it "rejects invalid keys, types, duplicate keys, and invalid select choices" do
       sign_in(admin)
-      Fabricate(
-        :marketplace_category_field_definition,
-        category: category,
-        key: "existing_key",
-      )
+      Fabricate(:marketplace_category_field_definition, category: category, key: "existing_key")
 
       [
         field_params(key: "9unsafe"),

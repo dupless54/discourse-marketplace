@@ -5,7 +5,7 @@ describe Marketplace::OffersController do
   fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:other_buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:unrelated_user) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   before do
     SiteSetting.marketplace_enabled = true
@@ -43,11 +43,7 @@ describe Marketplace::OffersController do
       listing = active_listing
       sign_in(buyer)
 
-      post "/marketplace/offers.json",
-           params: {
-             listing_id: listing.id,
-             amount_cents: 8_500,
-           }
+      post "/marketplace/offers.json", params: { listing_id: listing.id, amount_cents: 8_500 }
 
       expect(response.status).to eq(200)
       offer = Marketplace::Offer.find(response.parsed_body.dig("offer", "id"))
@@ -219,7 +215,9 @@ describe Marketplace::OffersController do
 
       expect(response.status).to eq(200)
       expect(response.parsed_body.dig("transaction", "id")).to eq(first_id)
-      expect(Marketplace::Transaction.where(listing_id: listing.id, buyer_id: buyer.id).count).to eq(1)
+      expect(
+        Marketplace::Transaction.where(listing_id: listing.id, buyer_id: buyer.id).count,
+      ).to eq(1)
     end
   end
 

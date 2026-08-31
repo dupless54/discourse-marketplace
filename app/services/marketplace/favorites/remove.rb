@@ -18,7 +18,10 @@ module Marketplace
     # touches the authenticated user's own row and succeeds even when the
     # favorite (or listing) no longer exists.
     def remove_favorite(guardian:, params:)
-      Marketplace::Favorite.where(user_id: guardian.user.id, listing_id: params.listing_id).delete_all
+      Marketplace::Favorite.where(
+        user_id: guardian.user.id,
+        listing_id: params.listing_id,
+      ).delete_all
     end
   end
 end

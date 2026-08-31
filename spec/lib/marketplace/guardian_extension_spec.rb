@@ -4,8 +4,8 @@ describe Marketplace::GuardianExtension do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:unrelated_user) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:staff) { Fabricate(:admin) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:staff, :admin)
+  fab!(:category, :marketplace_category)
 
   def build_listing(status:, **overrides)
     Fabricate(
@@ -218,7 +218,9 @@ describe Marketplace::GuardianExtension do
     it "is false for a suspended participant" do
       suspended_buyer = suspended_user
       transaction = build_transaction(buyer: suspended_buyer)
-      expect(suspended_buyer.guardian.can_confirm_marketplace_transaction?(transaction)).to eq(false)
+      expect(suspended_buyer.guardian.can_confirm_marketplace_transaction?(transaction)).to eq(
+        false,
+      )
     end
 
     it "is false for staff who is not a participant" do
