@@ -161,6 +161,7 @@ en:
         search_button: "Search"
         load_more: "Load more"
         empty: "No listings found."
+        initial_load_error: "Some Marketplace data could not be loaded. Please wait a moment and try again."
         dynamic_filters: "Listing details"
         clear_filters: "Clear filters"
         filter_any: "Any"
