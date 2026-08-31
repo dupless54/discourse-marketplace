@@ -20,6 +20,7 @@ register_asset "stylesheets/common/marketplace-secondary-pages-v2.scss"
 register_asset "stylesheets/common/marketplace-form-v2.scss"
 register_asset "stylesheets/common/marketplace-2026.scss"
 register_asset "stylesheets/common/marketplace-mobile-2026.scss"
+register_asset "stylesheets/common/marketplace-layout-safety.scss"
 
 module ::Marketplace
   PLUGIN_NAME = "discourse-marketplace"
