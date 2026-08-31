@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-describe "Marketplace purchase flow", type: :system do
-  fab!(:seller) { Fabricate(:user) }
-  fab!(:current_user) { Fabricate(:user) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+describe "Marketplace purchase flow" do
+  fab!(:seller, :user)
+  fab!(:current_user, :user)
+  fab!(:category, :marketplace_category)
   fab!(:listing) do
     Fabricate(
       :marketplace_unlimited_listing,
