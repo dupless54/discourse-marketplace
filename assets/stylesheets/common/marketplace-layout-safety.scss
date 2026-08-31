@@ -1,11 +1,9 @@
 // Final layout hardening for Marketplace surfaces.
-// This file is intentionally loaded last so page-level overflow can never
-// escape into Discourse's document scroller while horizontal rails keep their
-// own local scrolling behavior.
-
+// Loaded last so page-level overflow stays inside Marketplace scroll rails.
 .marketplace-listing-card__favorite {
   flex: 0 0 auto;
   inline-size: auto;
+  max-inline-size: 100%;
   min-inline-size: 0;
   white-space: nowrap;
 }
@@ -30,31 +28,43 @@
     overflow-x: clip;
   }
 
+  // DHorizontalOverflowNav applies this class directly to its nav-pills <ul>.
+  // Let core own the horizontal scrolling instead of widening the page.
   .marketplace-nav {
     box-sizing: border-box;
+    width: 100%;
     inline-size: 100%;
+    max-width: 100%;
     max-inline-size: 100%;
+    min-width: 0;
     min-inline-size: 0;
-    margin-inline: 0;
-    padding-inline: 0;
-    overflow: hidden;
-  }
-
-  .marketplace-nav .horizontal-overflow-nav__container,
-  .marketplace-nav .horizontal-overflow-nav__scroll-container {
-    box-sizing: border-box;
-    inline-size: 100%;
-    max-inline-size: 100%;
-    min-inline-size: 0;
+    margin: 0;
+    padding: 0.2rem 0;
     overflow-x: auto;
     overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
   }
 
-  .marketplace-nav .nav-pills {
-    box-sizing: border-box;
-    inline-size: max-content;
-    max-inline-size: none;
-    min-inline-size: 100%;
+  .marketplace-nav::-webkit-scrollbar {
+    height: 0;
+  }
+
+  .marketplace-nav > li {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  // Auto-sized blocks are safer than width: 100% when a core container adds
+  // its own mobile gutter around the Marketplace outlet.
+  .marketplace-browse,
+  .marketplace-new,
+  .marketplace-listing-edit,
+  .marketplace-listing-form {
+    width: auto;
+    inline-size: auto;
+    max-width: 100%;
+    max-inline-size: 100%;
   }
 
   .marketplace-browse__filters,
@@ -65,7 +75,6 @@
   .marketplace-browse__category-strip,
   .marketplace-browse__featured-grid,
   .marketplace-browse__listing-list,
-  .marketplace-listing-form,
   .marketplace-listing-form__row,
   .marketplace-listing-form__structured-grid,
   .marketplace-listing-form__structured-fields,
@@ -78,8 +87,11 @@
   .marketplace-category-admin__field,
   .marketplace-category-admin__fields {
     box-sizing: border-box;
+    width: 100%;
     inline-size: 100%;
+    max-width: 100%;
     max-inline-size: 100%;
+    min-width: 0;
     min-inline-size: 0;
   }
 
@@ -88,6 +100,7 @@
   .marketplace-offer-center__tabs,
   .marketplace-transaction-center__tabs {
     margin-inline: 0;
+    padding-inline-end: 0;
   }
 
   .marketplace-browse__primary-filters > *,
@@ -97,7 +110,9 @@
   .marketplace-category-admin__new .control-group > *,
   .marketplace-category-admin__category-row > *,
   .marketplace-category-admin__field > * {
+    max-width: 100%;
     max-inline-size: 100%;
+    min-width: 0;
     min-inline-size: 0;
   }
 
@@ -108,8 +123,11 @@
   .marketplace-transaction-center :is(input, select, textarea),
   .marketplace-category-admin :is(input, select, textarea) {
     box-sizing: border-box;
+    width: 100%;
     inline-size: 100%;
+    max-width: 100%;
     max-inline-size: 100%;
+    min-width: 0;
     min-inline-size: 0;
   }
 
@@ -128,7 +146,9 @@
   .marketplace-listing-detail__description,
   .marketplace-listing-detail__specifications {
     box-sizing: border-box;
+    max-width: 100%;
     max-inline-size: 100%;
+    min-width: 0;
     min-inline-size: 0;
   }
 
@@ -147,8 +167,11 @@
   .marketplace-browse--compact-feed
     .marketplace-browse__listing-list
     .marketplace-listing-card {
+    width: 100%;
     inline-size: 100%;
+    max-width: 100%;
     max-inline-size: 100%;
+    min-width: 0;
     min-inline-size: 0;
     overflow: hidden;
   }
@@ -157,8 +180,11 @@
     .marketplace-browse__listing-list
     .marketplace-listing-card__actions {
     flex: 0 0 3rem;
+    width: 3rem;
     inline-size: 3rem;
+    max-width: 3rem;
     max-inline-size: 3rem;
+    min-width: 3rem;
     min-inline-size: 3rem;
     padding: 0.4rem;
   }
@@ -177,8 +203,11 @@
     flex: 0 0 2.5rem;
     align-items: center;
     justify-content: center;
+    width: 2.5rem;
     inline-size: 2.5rem;
+    height: 2.5rem;
     block-size: 2.5rem;
+    min-width: 2.5rem;
     min-inline-size: 2.5rem;
     padding: 0;
     border-radius: 50%;
@@ -189,7 +218,9 @@
     .marketplace-browse__listing-list
     .marketplace-listing-card__favorite
     .d-icon {
+    width: 1rem;
     inline-size: 1rem;
+    height: 1rem;
     block-size: 1rem;
   }
 }
