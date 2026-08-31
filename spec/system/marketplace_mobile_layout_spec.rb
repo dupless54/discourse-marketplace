@@ -7,7 +7,7 @@ RSpec.describe "Marketplace mobile layout" do
   fab!(:category) do
     Fabricate(
       :marketplace_category,
-      name: "Mobile category " + ("long segment " * 5),
+      name: ("Mobile category " + ("long segment " * 5)).strip,
       slug: "mobile-overflow-category",
     )
   end
@@ -18,7 +18,7 @@ RSpec.describe "Marketplace mobile layout" do
       :marketplace_unlimited_listing,
       seller: seller,
       category: category,
-      title: "Mobile overflow regression " + ("listing title segment " * 10),
+      title: ("Mobile overflow regression " + ("listing title segment " * 10)).strip,
       raw: long_description_token,
       cooked: "<p>#{long_description_token}</p>",
       status: Marketplace::Listing.statuses[:active],
