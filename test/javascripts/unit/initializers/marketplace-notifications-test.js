@@ -45,9 +45,7 @@ module("Unit | Initializer | marketplace-notifications", function (hooks) {
 
     assert.strictEqual(director.icon, "tag");
     assert.true(
-      director.linkHref.endsWith(
-        "/marketplace/listings/42?transaction_id=314"
-      ),
+      director.linkHref.endsWith("/marketplace/listings/42?transaction_id=314"),
       `linkHref (${director.linkHref}) points at the exact transaction`
     );
     assert.true(director.description.includes("Vintage Synthesizer"));

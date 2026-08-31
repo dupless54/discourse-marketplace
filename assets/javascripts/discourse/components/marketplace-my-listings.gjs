@@ -69,7 +69,9 @@ export default class MarketplaceMyListings extends Component {
         {{/if}}
       {{else}}
         <div class="marketplace-page__empty" role="status">
-          <p class="marketplace-my-listings__empty">{{i18n "marketplace.mine.empty"}}</p>
+          <p class="marketplace-my-listings__empty">{{i18n
+              "marketplace.mine.empty"
+            }}</p>
         </div>
       {{/if}}
     </main>

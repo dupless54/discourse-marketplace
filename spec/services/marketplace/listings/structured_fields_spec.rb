@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe "Marketplace listing structured fields" do
+describe Marketplace::Listing do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:category, :marketplace_category)
 

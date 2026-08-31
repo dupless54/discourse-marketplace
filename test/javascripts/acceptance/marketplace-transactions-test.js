@@ -144,10 +144,14 @@ acceptance("Marketplace | transaction center", function (needs) {
 
     assert.strictEqual(confirmRequests, 1);
     assert
-      .dom('[data-transaction-id="501"] .marketplace-transaction-center__status-badge')
+      .dom(
+        '[data-transaction-id="501"] .marketplace-transaction-center__status-badge'
+      )
       .hasClass("marketplace-transaction-center__status-badge--completed");
     assert
-      .dom('[data-transaction-id="501"] .marketplace-transaction-center__actions')
+      .dom(
+        '[data-transaction-id="501"] .marketplace-transaction-center__actions'
+      )
       .doesNotExist();
   });
 
@@ -166,13 +170,18 @@ acceptance("Marketplace | transaction center", function (needs) {
       .hasAttribute("aria-pressed", "true");
 
     await click(".marketplace-transaction-center__tab:first-child");
-    await select(".marketplace-transaction-center__filters select", "completed");
+    await select(
+      ".marketplace-transaction-center__filters select",
+      "completed"
+    );
 
     assert.strictEqual(requests.at(-1).role, "buyer");
     assert.strictEqual(requests.at(-1).status, "completed");
     assert.dom('[data-transaction-id="503"]').exists();
     assert
-      .dom('[data-transaction-id="503"] .marketplace-transaction-center__status-badge')
+      .dom(
+        '[data-transaction-id="503"] .marketplace-transaction-center__status-badge'
+      )
       .hasClass("marketplace-transaction-center__status-badge--completed");
   });
 

@@ -293,7 +293,10 @@ export default class MarketplaceOfferCenter extends Component {
                     price=item.askingPrice
                   }}</p>
                 {{#if (eq item.status "pending")}}
-                  <p>{{i18n "marketplace.offer.expires" date=item.expiresAt}}</p>
+                  <p>{{i18n
+                      "marketplace.offer.expires"
+                      date=item.expiresAt
+                    }}</p>
                 {{/if}}
                 <span class="marketplace-offer-card__status">{{i18n
                     (concat "marketplace.offer.status." item.status)

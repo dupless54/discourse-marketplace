@@ -251,7 +251,7 @@ describe Marketplace::Listings::Update do
         call_service(guardian: guardian, params: params.merge(expires_at: expires_at.iso8601))
 
       expect(result).to be_success
-      expect(result.listing.expires_at).to eq(expires_at)
+      expect(result.listing.expires_at).to eq_time(expires_at)
     end
 
     it "clears an existing expiration when expires_at is omitted" do

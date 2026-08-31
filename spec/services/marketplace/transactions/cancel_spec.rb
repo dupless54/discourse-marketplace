@@ -166,7 +166,7 @@ describe Marketplace::Transactions::Cancel do
       expect(result).to be_success
       cancelled = result.transaction
       expect(cancelled.status).to eq("cancelled")
-      expect(cancelled.buyer_confirmed_at).to eq(original_buyer_confirmed_at)
+      expect(cancelled.buyer_confirmed_at).to eq_time(original_buyer_confirmed_at)
       expect(cancelled.seller_confirmed_at).to be_nil
       expect(cancelled.completed_at).to be_nil
       expect(cancelled.cancelled_by_id).to eq(seller.id)
@@ -184,7 +184,7 @@ describe Marketplace::Transactions::Cancel do
 
       expect(second).to be_success
       expect(second.transaction.id).to eq(first.transaction.id)
-      expect(second.transaction.cancelled_at).to eq(first.transaction.cancelled_at)
+      expect(second.transaction.cancelled_at).to eq_time(first.transaction.cancelled_at)
       expect(second.transaction.cancelled_by_id).to eq(first.transaction.cancelled_by_id)
       expect(listing.reload.status).to eq("active")
       expect(Marketplace::Transaction.where(id: transaction.id).count).to eq(1)
@@ -199,7 +199,7 @@ describe Marketplace::Transactions::Cancel do
 
       expect(second).to be_success
       expect(second.transaction.cancelled_by_id).to eq(buyer.id)
-      expect(second.transaction.cancelled_at).to eq(first.transaction.cancelled_at)
+      expect(second.transaction.cancelled_at).to eq_time(first.transaction.cancelled_at)
       expect(listing.reload.status).to eq("active")
     end
 
@@ -212,7 +212,7 @@ describe Marketplace::Transactions::Cancel do
 
       expect(second).to be_success
       expect(second.transaction.cancelled_by_id).to eq(buyer.id)
-      expect(second.transaction.cancelled_at).to eq(first.transaction.cancelled_at)
+      expect(second.transaction.cancelled_at).to eq_time(first.transaction.cancelled_at)
     end
   end
 

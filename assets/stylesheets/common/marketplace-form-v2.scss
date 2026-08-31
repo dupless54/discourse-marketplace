@@ -1,7 +1,6 @@
 // Marketplace listing create/edit presentation.
 // Keep the existing form contract and submission behavior intact; this file is
 // only responsible for layout, hierarchy, and responsive overflow safety.
-
 .marketplace-new,
 .marketplace-listing-edit {
   width: 100%;
@@ -221,7 +220,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .marketplace-new,
   .marketplace-listing-edit {
     padding-inline: 0.7em;
@@ -261,7 +260,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .marketplace-listing-form {
     border-radius: var(--d-border-radius, 9px);
 

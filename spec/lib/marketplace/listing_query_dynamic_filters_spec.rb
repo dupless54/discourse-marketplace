@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe Marketplace::ListingQuery, "dynamic structured filters" do
+describe Marketplace::ListingQuery, "#results" do
   fab!(:category) { Fabricate(:marketplace_category, enabled: true) }
 
   before { SiteSetting.marketplace_allowed_currencies = "USD|EUR" }

@@ -236,7 +236,9 @@ export default class MarketplaceListingForm extends Component {
       {{/if}}
 
       <div class="marketplace-listing-form__field">
-        <label for="marketplace-listing-title">{{i18n "marketplace.form.title_label"}}</label>
+        <label for="marketplace-listing-title">{{i18n
+            "marketplace.form.title_label"
+          }}</label>
         <input
           id="marketplace-listing-title"
           type="text"
@@ -258,7 +260,9 @@ export default class MarketplaceListingForm extends Component {
         />
       </div>
 
-      <div class="marketplace-listing-form__field marketplace-listing-form__upload">
+      <div
+        class="marketplace-listing-form__field marketplace-listing-form__upload"
+      >
         <input
           {{didInsert this.uppyUpload.setup}}
           type="file"
@@ -289,7 +293,9 @@ export default class MarketplaceListingForm extends Component {
           class="marketplace-listing-form__category"
           {{on "change" this.updateCategoryId}}
         >
-          <option value="">{{i18n "marketplace.form.category_placeholder"}}</option>
+          <option value="">{{i18n
+              "marketplace.form.category_placeholder"
+            }}</option>
           {{#each @categories as |category|}}
             <option
               value={{category.id}}
@@ -373,7 +379,9 @@ export default class MarketplaceListingForm extends Component {
                 {{/if}}
 
                 {{#if field.help_text}}
-                  <span class="marketplace-listing-form__hint">{{field.help_text}}</span>
+                  <span
+                    class="marketplace-listing-form__hint"
+                  >{{field.help_text}}</span>
                 {{/if}}
               </div>
             {{/each}}
@@ -382,8 +390,12 @@ export default class MarketplaceListingForm extends Component {
       {{/if}}
 
       <div class="marketplace-listing-form__row">
-        <div class="marketplace-listing-form__field marketplace-listing-form__price-field">
-          <label for="marketplace-listing-price">{{i18n "marketplace.form.price_label"}}</label>
+        <div
+          class="marketplace-listing-form__field marketplace-listing-form__price-field"
+        >
+          <label for="marketplace-listing-price">{{i18n
+              "marketplace.form.price_label"
+            }}</label>
           <input
             id="marketplace-listing-price"
             type="number"
@@ -394,11 +406,16 @@ export default class MarketplaceListingForm extends Component {
           />
         </div>
 
-        <div class="marketplace-listing-form__field marketplace-listing-form__currency-field">
+        <div
+          class="marketplace-listing-form__field marketplace-listing-form__currency-field"
+        >
           <label for="marketplace-listing-currency">{{i18n
               "marketplace.form.currency_label"
             }}</label>
-          <select id="marketplace-listing-currency" {{on "change" this.updateCurrency}}>
+          <select
+            id="marketplace-listing-currency"
+            {{on "change" this.updateCurrency}}
+          >
             {{#each this.currencies as |currencyCode|}}
               <option
                 value={{currencyCode}}
@@ -434,7 +451,9 @@ export default class MarketplaceListingForm extends Component {
       </div>
 
       {{#if this.isFinite}}
-        <div class="marketplace-listing-form__field marketplace-listing-form__stock-field">
+        <div
+          class="marketplace-listing-form__field marketplace-listing-form__stock-field"
+        >
           <label for="marketplace-listing-stock">{{i18n
               "marketplace.form.stock_quantity_label"
             }}</label>
@@ -449,7 +468,9 @@ export default class MarketplaceListingForm extends Component {
         </div>
       {{/if}}
 
-      <div class="marketplace-listing-form__field marketplace-listing-form__expires-field">
+      <div
+        class="marketplace-listing-form__field marketplace-listing-form__expires-field"
+      >
         <label for="marketplace-listing-expires-at">{{i18n
             "marketplace.form.expires_at_label"
           }}</label>

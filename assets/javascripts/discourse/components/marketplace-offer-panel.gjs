@@ -262,14 +262,19 @@ export default class MarketplaceOfferPanel extends Component {
         {{#if this.offerItems.length}}
           <div class="marketplace-offer-panel__list">
             {{#each this.offerItems as |item|}}
-              <article class="marketplace-offer-panel__item" data-offer-id={{item.id}}>
+              <article
+                class="marketplace-offer-panel__item"
+                data-offer-id={{item.id}}
+              >
                 {{#if this.isSeller}}
                   <strong>{{i18n
                       "marketplace.offer.from_buyer"
                       username=item.buyerUsername
                     }}</strong>
                 {{/if}}
-                <span class="marketplace-offer-panel__price">{{item.amount}}</span>
+                <span
+                  class="marketplace-offer-panel__price"
+                >{{item.amount}}</span>
                 <span class="marketplace-offer-panel__status">{{i18n
                     (concat "marketplace.offer.status." item.status)
                   }}</span>

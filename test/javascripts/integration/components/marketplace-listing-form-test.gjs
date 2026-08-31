@@ -72,9 +72,7 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
 
   test("shows an upload control when creating a listing", async function (assert) {
     await render(
-      <template>
-        <MarketplaceListingForm @categories={{categories}} />
-      </template>
+      <template><MarketplaceListingForm @categories={{categories}} /></template>
     );
 
     assert
@@ -123,9 +121,7 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
 
   test("still supports a plain text-only description with no uploads", async function (assert) {
     await render(
-      <template>
-        <MarketplaceListingForm @categories={{categories}} />
-      </template>
+      <template><MarketplaceListingForm @categories={{categories}} /></template>
     );
 
     await fillIn("textarea", "Just a plain text description");
@@ -151,9 +147,7 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
     );
 
     await render(
-      <template>
-        <MarketplaceListingForm @categories={{categories}} />
-      </template>
+      <template><MarketplaceListingForm @categories={{categories}} /></template>
     );
 
     await this.container
@@ -176,14 +170,10 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
 
   test("defaults to single and hides the stock field, showing it once Stoklu/finite is selected", async function (assert) {
     await render(
-      <template>
-        <MarketplaceListingForm @categories={{categories}} />
-      </template>
+      <template><MarketplaceListingForm @categories={{categories}} /></template>
     );
 
-    assert
-      .dom(".marketplace-listing-form__inventory-mode")
-      .hasValue("single");
+    assert.dom(".marketplace-listing-form__inventory-mode").hasValue("single");
     assert.dom(".marketplace-listing-form__stock-field").doesNotExist();
 
     await fillIn(".marketplace-listing-form__inventory-mode", "finite");
@@ -217,12 +207,8 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
       </template>
     );
 
-    assert
-      .dom(".marketplace-listing-form__inventory-mode")
-      .hasValue("finite");
-    assert
-      .dom(".marketplace-listing-form__stock-field input")
-      .hasValue("8");
+    assert.dom(".marketplace-listing-form__inventory-mode").hasValue("finite");
+    assert.dom(".marketplace-listing-form__stock-field input").hasValue("8");
     assert
       .dom(".marketplace-listing-form__expires-field input")
       .hasValue(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
@@ -241,7 +227,9 @@ module("Integration | Component | MarketplaceListingForm", function (hooks) {
     assert.dom('[data-field-key="model"] input[type="text"]').exists();
     assert.dom('[data-field-key="notes"] textarea').exists();
     assert.dom('[data-field-key="mileage"] input[type="number"]').exists();
-    assert.dom('[data-field-key="trade_available"] input[type="checkbox"]').exists();
+    assert
+      .dom('[data-field-key="trade_available"] input[type="checkbox"]')
+      .exists();
     assert.dom('[data-field-key="fuel"] select').exists();
     assert.dom(".marketplace-listing-form__required").exists({ count: 3 });
   });

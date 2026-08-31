@@ -87,7 +87,9 @@ export default class MarketplaceSellerStorefront extends Component {
             {{i18n "marketplace.storefront.eyebrow"}}
           </span>
           <h1 class="marketplace-storefront__name">{{this.displayName}}</h1>
-          <span class="marketplace-storefront__username">@{{this.seller.username}}</span>
+          <span
+            class="marketplace-storefront__username"
+          >@{{this.seller.username}}</span>
         </div>
 
         <a

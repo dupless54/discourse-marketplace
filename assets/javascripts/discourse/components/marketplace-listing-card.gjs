@@ -151,8 +151,12 @@ export default class MarketplaceListingCard extends Component {
             >{{this.statusLabel}}</span>
           </span>
 
-          <span class="marketplace-listing-card__title">{{this.listing.title}}</span>
-          <span class="marketplace-listing-card__price">{{this.formattedPrice}}</span>
+          <span
+            class="marketplace-listing-card__title"
+          >{{this.listing.title}}</span>
+          <span
+            class="marketplace-listing-card__price"
+          >{{this.formattedPrice}}</span>
           {{#if this.availabilityLabel}}
             <span class="marketplace-listing-card__availability">
               {{this.availabilityLabel}}

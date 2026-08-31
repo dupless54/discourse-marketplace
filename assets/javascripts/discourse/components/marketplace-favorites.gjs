@@ -36,7 +36,9 @@ export default class MarketplaceFavorites extends Component {
   @action
   favoriteChanged(listingId, favorited) {
     if (!favorited) {
-      this.listings = this.listings.filter((listing) => listing.id !== listingId);
+      this.listings = this.listings.filter(
+        (listing) => listing.id !== listingId
+      );
     }
   }
 

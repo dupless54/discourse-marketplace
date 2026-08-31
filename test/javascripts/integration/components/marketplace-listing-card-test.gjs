@@ -34,13 +34,19 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
-    assert.dom(".marketplace-listing-card__image").exists("the thumbnail image is shown");
+    assert
+      .dom(".marketplace-listing-card__image")
+      .exists("the thumbnail image is shown");
     assert
       .dom(".marketplace-listing-card__title")
       .hasText("Vintage Synthesizer");
-    assert.dom(".marketplace-listing-card__message").exists("Message Seller is offered");
+    assert
+      .dom(".marketplace-listing-card__message")
+      .exists("Message Seller is offered");
     assert.dom(".marketplace-listing-card__buy").exists("Buy is offered");
     assert.dom(".marketplace-listing-card__edit").doesNotExist();
   });
@@ -56,7 +62,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
     assert
       .dom(".marketplace-listing-card__category-badge")
@@ -73,7 +81,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
     assert.dom(".marketplace-listing-card__category-badge").doesNotExist();
   });
@@ -89,7 +99,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
     assert.dom(".marketplace-listing-card__image").doesNotExist();
     assert.dom(".marketplace-listing-card__placeholder").exists();
@@ -105,7 +117,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id, username: this.currentUser.username },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
     assert
       .dom(".marketplace-listing-card__edit")
@@ -127,7 +141,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
     await click(".marketplace-listing-card__message");
 
     const openedWith =
@@ -151,11 +167,11 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
-    assert
-      .dom(".marketplace-listing-card__availability")
-      .hasText("3 left");
+    assert.dom(".marketplace-listing-card__availability").hasText("3 left");
     assert.dom(".marketplace-listing-card__buy").exists();
   });
 
@@ -173,9 +189,13 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
-    assert.dom(".marketplace-listing-card__availability").hasText("Out of stock");
+    assert
+      .dom(".marketplace-listing-card__availability")
+      .hasText("Out of stock");
     assert.dom(".marketplace-listing-card__buy").doesNotExist();
   });
 
@@ -192,9 +212,13 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
-    assert.dom(".marketplace-listing-card__availability").hasText("Unlimited stock");
+    assert
+      .dom(".marketplace-listing-card__availability")
+      .hasText("Unlimited stock");
     assert.dom(".marketplace-listing-card__buy").exists();
   });
 
@@ -211,7 +235,9 @@ module("Integration | Component | MarketplaceListingCard", function (hooks) {
       seller: { id: this.currentUser.id + 1, username: "seller_user" },
     };
 
-    await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+    await render(
+      <template><MarketplaceListingCard @listing={{this.listing}} /></template>
+    );
 
     assert.dom(".marketplace-listing-card__availability").hasText("Expired");
     assert.dom(".marketplace-listing-card__buy").doesNotExist();
@@ -233,7 +259,11 @@ module(
         seller: { id: 999, username: "seller_user" },
       };
 
-      await render(<template><MarketplaceListingCard @listing={{this.listing}} /></template>);
+      await render(
+        <template>
+          <MarketplaceListingCard @listing={{this.listing}} />
+        </template>
+      );
 
       assert.dom(".marketplace-listing-card__buy").doesNotExist();
       assert.dom(".marketplace-listing-card__message").doesNotExist();

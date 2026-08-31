@@ -134,7 +134,7 @@
   }
 }
 
-@media (max-width: 700px) {
+@media (width <= 700px) {
   .marketplace-offer-card {
     flex-direction: column;
   }

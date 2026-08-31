@@ -22,7 +22,9 @@ function formatPrice(cents, currency) {
 
 function relevantDate(transaction) {
   return (
-    transaction.completed_at || transaction.cancelled_at || transaction.created_at
+    transaction.completed_at ||
+    transaction.cancelled_at ||
+    transaction.created_at
   );
 }
 
@@ -186,10 +188,9 @@ export default class MarketplaceTransactionCenter extends Component {
   @action
   cancelTransaction(item) {
     this.runAction(item.id, async () => {
-      const result = await ajax(
-        `/marketplace/transactions/${item.id}/cancel`,
-        { type: "POST" }
-      );
+      const result = await ajax(`/marketplace/transactions/${item.id}/cancel`, {
+        type: "POST",
+      });
       this.replaceTransaction(result.transaction);
     });
   }
@@ -276,7 +277,9 @@ export default class MarketplaceTransactionCenter extends Component {
                       item.status
                     }}
                   >
-                    {{i18n (concat "marketplace.transaction.status." item.status)}}
+                    {{i18n
+                      (concat "marketplace.transaction.status." item.status)
+                    }}
                   </span>
                   <span class="marketplace-transaction-center__counterparty">
                     {{#if (eq item.role "buyer")}}

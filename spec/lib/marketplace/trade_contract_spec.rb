@@ -121,7 +121,7 @@ describe Marketplace::TradeContract do
       it "returns the exact completed_at" do
         transaction = build_completed
         info = described_class.completed_transaction_info(transaction.id)
-        expect(info.completed_at).to eq(transaction.completed_at)
+        expect(info.completed_at).to eq_time(transaction.completed_at)
       end
 
       it "does not expose status" do
@@ -178,7 +178,7 @@ describe Marketplace::TradeContract do
         transaction.completed_at = 1.year.from_now
 
         expect(info.buyer_id).to eq(buyer.id)
-        expect(info.completed_at).not_to eq(transaction.completed_at)
+        expect(info.completed_at).not_to eq_time(transaction.completed_at)
       end
 
       it "resolves repeated purchases on the same listing independently" do

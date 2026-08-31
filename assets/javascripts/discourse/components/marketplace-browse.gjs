@@ -26,7 +26,10 @@ export default class MarketplaceBrowse extends Component {
     return [
       { value: "newest", label: i18n("marketplace.browse.sort_newest") },
       { value: "price_asc", label: i18n("marketplace.browse.sort_price_asc") },
-      { value: "price_desc", label: i18n("marketplace.browse.sort_price_desc") },
+      {
+        value: "price_desc",
+        label: i18n("marketplace.browse.sort_price_desc"),
+      },
     ];
   }
 
@@ -74,10 +77,14 @@ export default class MarketplaceBrowse extends Component {
       if (field.type === "integer") {
         const parts = [];
         if (field.minValue !== "") {
-          parts.push(`${i18n("marketplace.browse.integer_min")} ${field.minValue}`);
+          parts.push(
+            `${i18n("marketplace.browse.integer_min")} ${field.minValue}`
+          );
         }
         if (field.maxValue !== "") {
-          parts.push(`${i18n("marketplace.browse.integer_max")} ${field.maxValue}`);
+          parts.push(
+            `${i18n("marketplace.browse.integer_max")} ${field.maxValue}`
+          );
         }
         if (parts.length) {
           chips.push({
@@ -180,7 +187,8 @@ export default class MarketplaceBrowse extends Component {
     if (this.loading) {
       return;
     }
-    this.categoryId = Number(this.categoryId) === category.id ? "" : category.id;
+    this.categoryId =
+      Number(this.categoryId) === category.id ? "" : category.id;
     this.fieldFilters = {};
     this.fetchListings(1);
   }
@@ -203,7 +211,10 @@ export default class MarketplaceBrowse extends Component {
   }
 
   @action updateStructuredFilter(field, event) {
-    this.fieldFilters = { ...this.fieldFilters, [field.key]: event.target.value };
+    this.fieldFilters = {
+      ...this.fieldFilters,
+      [field.key]: event.target.value,
+    };
   }
 
   @action updateIntegerStructuredFilter(field, bound, event) {
@@ -262,7 +273,9 @@ export default class MarketplaceBrowse extends Component {
   }
 
   <template>
-    <main class="marketplace-browse marketplace-browse--showcase marketplace-browse--compact-feed marketplace-page">
+    <main
+      class="marketplace-browse marketplace-browse--showcase marketplace-browse--compact-feed marketplace-page"
+    >
       <header class="marketplace-browse__header">
         <div class="marketplace-browse__title-wrap">
           <span class="marketplace-browse__title-icon">{{dIcon "tag"}}</span>
@@ -275,7 +288,9 @@ export default class MarketplaceBrowse extends Component {
       <form class="marketplace-browse__filters" {{on "submit" this.search}}>
         <div class="marketplace-browse__primary-filters">
           <label class="marketplace-browse__search-shell">
-            <span class="marketplace-browse__search-icon">{{dIcon "magnifying-glass"}}</span>
+            <span class="marketplace-browse__search-icon">{{dIcon
+                "magnifying-glass"
+              }}</span>
             <input
               type="text"
               class="marketplace-browse__search"
@@ -295,7 +310,10 @@ export default class MarketplaceBrowse extends Component {
           >
             <option value="">{{i18n "marketplace.browse.category_all"}}</option>
             {{#each @categories as |category|}}
-              <option value={{category.id}} selected={{eq category.id this.categoryId}}>
+              <option
+                value={{category.id}}
+                selected={{eq category.id this.categoryId}}
+              >
                 {{category.name}}
               </option>
             {{/each}}
@@ -308,7 +326,10 @@ export default class MarketplaceBrowse extends Component {
             {{on "change" this.updateSort}}
           >
             {{#each this.sorts as |sortOption|}}
-              <option value={{sortOption.value}} selected={{eq sortOption.value this.sort}}>
+              <option
+                value={{sortOption.value}}
+                selected={{eq sortOption.value this.sort}}
+              >
                 {{sortOption.label}}
               </option>
             {{/each}}
@@ -375,8 +396,13 @@ export default class MarketplaceBrowse extends Component {
 
             <div class="marketplace-browse__dynamic-filter-grid">
               {{#each this.structuredFiltersForForm as |field|}}
-                <div class="marketplace-browse__dynamic-filter" data-filter-key={{field.key}}>
-                  <span class="marketplace-browse__dynamic-filter-label">{{field.label}}</span>
+                <div
+                  class="marketplace-browse__dynamic-filter"
+                  data-filter-key={{field.key}}
+                >
+                  <span
+                    class="marketplace-browse__dynamic-filter-label"
+                  >{{field.label}}</span>
 
                   {{#if (eq field.type "integer")}}
                     <div class="marketplace-browse__integer-range">
@@ -387,7 +413,10 @@ export default class MarketplaceBrowse extends Component {
                           step="1"
                           value={{field.minValue}}
                           disabled={{this.loading}}
-                          {{on "input" (fn this.updateIntegerStructuredFilter field "min")}}
+                          {{on
+                            "input"
+                            (fn this.updateIntegerStructuredFilter field "min")
+                          }}
                         />
                       </label>
                       <label>
@@ -397,7 +426,10 @@ export default class MarketplaceBrowse extends Component {
                           step="1"
                           value={{field.maxValue}}
                           disabled={{this.loading}}
-                          {{on "input" (fn this.updateIntegerStructuredFilter field "max")}}
+                          {{on
+                            "input"
+                            (fn this.updateIntegerStructuredFilter field "max")
+                          }}
                         />
                       </label>
                     </div>
@@ -407,9 +439,14 @@ export default class MarketplaceBrowse extends Component {
                       disabled={{this.loading}}
                       {{on "change" (fn this.updateStructuredFilter field)}}
                     >
-                      <option value="">{{i18n "marketplace.browse.filter_any"}}</option>
+                      <option value="">{{i18n
+                          "marketplace.browse.filter_any"
+                        }}</option>
                       {{#each field.choices as |choice|}}
-                        <option value={{choice.value}} selected={{eq choice.value field.value}}>
+                        <option
+                          value={{choice.value}}
+                          selected={{eq choice.value field.value}}
+                        >
                           {{choice.label}}
                         </option>
                       {{/each}}
@@ -420,7 +457,9 @@ export default class MarketplaceBrowse extends Component {
                       disabled={{this.loading}}
                       {{on "change" (fn this.updateStructuredFilter field)}}
                     >
-                      <option value="">{{i18n "marketplace.browse.filter_any"}}</option>
+                      <option value="">{{i18n
+                          "marketplace.browse.filter_any"
+                        }}</option>
                       <option value="true" selected={{eq field.value "true"}}>
                         {{i18n "marketplace.listing.boolean_yes"}}
                       </option>
@@ -434,7 +473,9 @@ export default class MarketplaceBrowse extends Component {
                       aria-label={{field.label}}
                       value={{field.value}}
                       disabled={{this.loading}}
-                      placeholder={{i18n "marketplace.browse.text_filter_placeholder"}}
+                      placeholder={{i18n
+                        "marketplace.browse.text_filter_placeholder"
+                      }}
                       {{on "input" (fn this.updateStructuredFilter field)}}
                     />
                   {{/if}}
@@ -471,10 +512,14 @@ export default class MarketplaceBrowse extends Component {
                 disabled={{this.loading}}
                 {{on "click" (fn this.selectCategory category)}}
               >
-                <span class="marketplace-browse__category-card-icon">{{dIcon "tag"}}</span>
+                <span class="marketplace-browse__category-card-icon">{{dIcon
+                    "tag"
+                  }}</span>
                 <span class="marketplace-browse__category-card-copy">
                   <strong>{{category.name}}</strong>
-                  <small>{{i18n "marketplace.browse.category_browse_hint"}}</small>
+                  <small>{{i18n
+                      "marketplace.browse.category_browse_hint"
+                    }}</small>
                 </span>
               </button>
             {{/each}}
@@ -507,7 +552,9 @@ export default class MarketplaceBrowse extends Component {
         {{/if}}
       {{else}}
         <div class="marketplace-page__empty" role="status">
-          <p class="marketplace-browse__empty">{{i18n "marketplace.browse.empty"}}</p>
+          <p class="marketplace-browse__empty">{{i18n
+              "marketplace.browse.empty"
+            }}</p>
         </div>
       {{/if}}
     </main>

@@ -90,9 +90,9 @@ describe Marketplace::Transactions::Confirm do
       expect(completed.seller_confirmed_at).to be_present
       expect(completed.status).to eq("completed")
       expect(completed.completed_at).to be_present
-      expect(completed.buyer_confirmed_at).to eq(completed.completed_at)
+      expect(completed.buyer_confirmed_at).to eq_time(completed.completed_at)
       expect(listing.reload.status).to eq("sold")
-      expect(listing.closed_at).to eq(completed.completed_at)
+      expect(listing.closed_at).to eq_time(completed.completed_at)
     end
 
     it "completes the transaction and sells the listing when the seller confirms after the buyer" do
@@ -106,9 +106,9 @@ describe Marketplace::Transactions::Confirm do
       expect(completed.seller_confirmed_at).to be_present
       expect(completed.status).to eq("completed")
       expect(completed.completed_at).to be_present
-      expect(completed.seller_confirmed_at).to eq(completed.completed_at)
+      expect(completed.seller_confirmed_at).to eq_time(completed.completed_at)
       expect(listing.reload.status).to eq("sold")
-      expect(listing.closed_at).to eq(completed.completed_at)
+      expect(listing.closed_at).to eq_time(completed.completed_at)
     end
   end
 
@@ -192,7 +192,7 @@ describe Marketplace::Transactions::Confirm do
 
       expect(second).to be_success
       expect(second.transaction.id).to eq(first.transaction.id)
-      expect(second.transaction.buyer_confirmed_at).to eq(first.transaction.buyer_confirmed_at)
+      expect(second.transaction.buyer_confirmed_at).to eq_time(first.transaction.buyer_confirmed_at)
       expect(Marketplace::Transaction.where(id: transaction.id).count).to eq(1)
       expect(listing.reload.status).to eq("reserved")
     end
@@ -205,7 +205,9 @@ describe Marketplace::Transactions::Confirm do
       second = call_service(guardian: seller.guardian, transaction_id: transaction.id)
 
       expect(second).to be_success
-      expect(second.transaction.seller_confirmed_at).to eq(first.transaction.seller_confirmed_at)
+      expect(second.transaction.seller_confirmed_at).to eq_time(
+        first.transaction.seller_confirmed_at,
+      )
       expect(listing.reload.status).to eq("reserved")
     end
   end
@@ -230,7 +232,7 @@ describe Marketplace::Transactions::Confirm do
 
       expect(result).to be_success
       expect(result.transaction.id).to eq(transaction.id)
-      expect(result.transaction.buyer_confirmed_at).to eq(original_buyer_confirmed_at)
+      expect(result.transaction.buyer_confirmed_at).to eq_time(original_buyer_confirmed_at)
     end
 
     it "lets an authorized seller retry a completed transaction successfully" do
@@ -489,13 +491,15 @@ describe Marketplace::Transactions::Confirm do
       listing = build_listing
       transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
 
-      expect(DiscourseEvent).to receive(:trigger).with(
+      allow(DiscourseEvent).to receive(:trigger)
+
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(DiscourseEvent).to have_received(:trigger).with(
         :marketplace_transaction_completed,
         transaction.id,
         continue_on_error: true,
       )
-
-      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
     end
   end
 
