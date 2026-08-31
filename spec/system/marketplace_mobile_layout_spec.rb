@@ -41,7 +41,12 @@ RSpec.describe "Marketplace mobile layout" do
     Fabricate(:marketplace_favorite, user: current_user, listing: seller_listing)
   end
   fab!(:offer) do
-    Fabricate(:marketplace_offer, listing: seller_listing, buyer: current_user, proposed_by: current_user)
+    Fabricate(
+      :marketplace_offer,
+      listing: seller_listing,
+      buyer: current_user,
+      proposed_by: current_user,
+    )
   end
   fab!(:transaction_listing) do
     Fabricate(
