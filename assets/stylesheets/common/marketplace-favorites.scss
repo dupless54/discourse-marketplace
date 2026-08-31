@@ -45,5 +45,8 @@
 }
 
 .marketplace-listing-card__favorite {
-  flex-basis: 100% !important;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  white-space: nowrap;
 }
