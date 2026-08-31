@@ -65,7 +65,11 @@ describe "Marketplace mobile layout" do
     )
   end
 
-  before { SiteSetting.marketplace_enabled = true }
+  before do
+    SiteSetting.marketplace_enabled = true
+    SiteSetting.hide_user_profiles_from_public = false
+    SiteSetting.hide_new_user_profiles = false
+  end
 
   def page_horizontal_overflow
     page.evaluate_script(
