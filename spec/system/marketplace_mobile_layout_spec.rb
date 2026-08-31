@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe "Marketplace mobile layout" do
+describe "Marketplace mobile layout" do
   fab!(:seller, :user)
   fab!(:current_user, :user)
   fab!(:admin, :admin)
@@ -69,28 +69,10 @@ RSpec.describe "Marketplace mobile layout" do
 
   before { SiteSetting.marketplace_enabled = true }
 
-  def element_width(selector)
+  def page_horizontal_overflow
     page.evaluate_script(
-      "Math.round(document.querySelector(#{selector.inspect})?.getBoundingClientRect().width || 0)",
+      "document.documentElement.scrollWidth - document.documentElement.clientWidth",
     )
-  end
-
-  def expect_no_page_horizontal_overflow
-    overflow =
-      page.evaluate_script(
-        "document.documentElement.scrollWidth - document.documentElement.clientWidth",
-      )
-    metrics = {
-      client: page.evaluate_script("document.documentElement.clientWidth"),
-      inner: page.evaluate_script("window.innerWidth"),
-      wrap: element_width(".wrap"),
-      wrapper: element_width("#main-outlet-wrapper"),
-      outlet: element_width("#main-outlet"),
-      shell: element_width(".marketplace-nav-shell"),
-      nav: element_width(".marketplace-nav"),
-    }
-
-    expect(overflow).to be <= 1, "Horizontal overflow #{overflow}px; #{metrics.inspect}"
   end
 
   it "keeps every user-facing Marketplace route inside a phone viewport" do
@@ -113,7 +95,7 @@ RSpec.describe "Marketplace mobile layout" do
 
         expect(page).to have_css("html.mobile-view")
         expect(page).to have_css(selector)
-        expect_no_page_horizontal_overflow
+        expect(page_horizontal_overflow).to be <= 1
       end
 
       expect(page).to have_css(".marketplace-transaction-center__card")
@@ -131,7 +113,7 @@ RSpec.describe "Marketplace mobile layout" do
       expect(page).to have_css(".marketplace-listing-detail__panel")
       expect(page).to have_css(".marketplace-listing-detail__description")
       expect(page).to have_button(I18n.t("js.marketplace.listing.buy_button"))
-      expect_no_page_horizontal_overflow
+      expect(page_horizontal_overflow).to be <= 1
     end
   end
 
@@ -146,7 +128,7 @@ RSpec.describe "Marketplace mobile layout" do
       expect(page).to have_field("marketplace-listing-description")
       expect(page).to have_select("marketplace-listing-category")
       expect(page).to have_button(I18n.t("js.marketplace.form.submit_create"))
-      expect_no_page_horizontal_overflow
+      expect(page_horizontal_overflow).to be <= 1
     end
   end
 
@@ -159,7 +141,7 @@ RSpec.describe "Marketplace mobile layout" do
       expect(page).to have_css("html.mobile-view")
       expect(page).to have_css(".marketplace-category-admin")
       expect(page).to have_css(".marketplace-category-admin__category")
-      expect_no_page_horizontal_overflow
+      expect(page_horizontal_overflow).to be <= 1
     end
   end
 end
