@@ -37,9 +37,7 @@ describe "Marketplace mobile layout" do
       published_at: 2.hours.ago,
     )
   end
-  fab!(:favorite) do
-    Fabricate(:marketplace_favorite, user: current_user, listing: seller_listing)
-  end
+  fab!(:favorite) { Fabricate(:marketplace_favorite, user: current_user, listing: seller_listing) }
   fab!(:offer) do
     Fabricate(
       :marketplace_offer,
@@ -80,14 +78,14 @@ describe "Marketplace mobile layout" do
 
     resize_window(width: 400, height: 844) do
       routes = [
-        ["/marketplace", ".marketplace-browse"],
+        %w[/marketplace .marketplace-browse],
         ["/marketplace/listings/#{seller_listing.id}", ".marketplace-listing-detail"],
-        ["/marketplace/new", ".marketplace-listing-form"],
-        ["/marketplace/mine", ".marketplace-my-listings"],
-        ["/marketplace/favorites", ".marketplace-favorites"],
+        %w[/marketplace/new .marketplace-listing-form],
+        %w[/marketplace/mine .marketplace-my-listings],
+        %w[/marketplace/favorites .marketplace-favorites],
         ["/marketplace/sellers/#{seller.username}", ".marketplace-storefront"],
-        ["/marketplace/offers", ".marketplace-offer-center"],
-        ["/marketplace/transactions", ".marketplace-transaction-center"],
+        %w[/marketplace/offers .marketplace-offer-center],
+        %w[/marketplace/transactions .marketplace-transaction-center],
       ]
 
       routes.each do |path, selector|
