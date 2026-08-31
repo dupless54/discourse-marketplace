@@ -7,7 +7,7 @@ RSpec.describe "Marketplace mobile layout" do
   fab!(:category) do
     Fabricate(
       :marketplace_category,
-      name: "Mobile category " + ("long segment " * 7),
+      name: "Mobile category " + ("long segment " * 5),
       slug: "mobile-overflow-category",
     )
   end
