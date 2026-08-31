@@ -1,0 +1,287 @@
+// Final layout hardening for Marketplace surfaces.
+// Loaded last so page-level overflow stays inside Marketplace scroll rails.
+.marketplace-listing-card__favorite {
+  flex: 0 0 auto;
+  inline-size: auto;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+.marketplace-nav-shell,
+.marketplace-nav-shell > .horizontal-overflow-nav {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.marketplace-nav-shell {
+  overflow: hidden;
+}
+
+@media (width <= 800px) {
+  .marketplace-browse,
+  .marketplace-my-listings,
+  .marketplace-favorites,
+  .marketplace-offer-center,
+  .marketplace-transaction-center,
+  .marketplace-storefront,
+  .marketplace-new,
+  .marketplace-listing-edit,
+  .marketplace-listing-detail,
+  .marketplace-listing-favorite-bar,
+  .marketplace-offer-panel,
+  .marketplace-category-admin {
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    overflow-x: clip;
+  }
+
+  // Listing create/edit contains a programmatically-triggered native file
+  // input. Give that hidden control a deterministic origin/size and make the
+  // page wrapper a real overflow container so native intrinsic widths cannot
+  // increase the document scroll width on narrow screens.
+  .marketplace-new,
+  .marketplace-listing-edit {
+    overflow-x: hidden;
+  }
+
+  .marketplace-listing-form__upload {
+    position: relative;
+  }
+
+  .marketplace-listing-form__upload-input.hidden-upload-field {
+    inset: 0 auto auto 0;
+    width: 1px;
+    inline-size: 1px;
+    height: 1px;
+    block-size: 1px;
+    max-width: 1px;
+    max-inline-size: 1px;
+    margin: 0;
+    padding: 0;
+  }
+
+  // DHorizontalOverflowNav applies this class directly to its nav-pills <ul>.
+  // Let core own the horizontal scrolling instead of widening the page.
+  .marketplace-nav {
+    box-sizing: border-box;
+    width: 100%;
+    inline-size: 100%;
+    max-width: 100%;
+    max-inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0.2rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .marketplace-nav::-webkit-scrollbar {
+    height: 0;
+  }
+
+  .marketplace-nav > li {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  // Auto-sized blocks are safer than width: 100% when a core container adds
+  // its own mobile gutter around the Marketplace outlet.
+  .marketplace-browse,
+  .marketplace-new,
+  .marketplace-listing-edit,
+  .marketplace-listing-form {
+    width: auto;
+    inline-size: auto;
+    max-width: 100%;
+    max-inline-size: 100%;
+  }
+
+  .marketplace-browse__filters,
+  .marketplace-browse__primary-filters,
+  .marketplace-browse__dynamic-filters,
+  .marketplace-browse__dynamic-filter-grid,
+  .marketplace-browse__filter-chips,
+  .marketplace-browse__category-strip,
+  .marketplace-browse__featured-grid,
+  .marketplace-browse__listing-list,
+  .marketplace-listing-form__row,
+  .marketplace-listing-form__structured-grid,
+  .marketplace-listing-form__structured-fields,
+  .marketplace-listing-form__upload,
+  .marketplace-offer-center__tabs,
+  .marketplace-transaction-center__tabs,
+  .marketplace-category-admin__new,
+  .marketplace-category-admin__category,
+  .marketplace-category-admin__category-row,
+  .marketplace-category-admin__field,
+  .marketplace-category-admin__fields {
+    box-sizing: border-box;
+    width: 100%;
+    inline-size: 100%;
+    max-width: 100%;
+    max-inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+  }
+
+  .marketplace-browse__filter-chips,
+  .marketplace-browse__category-strip,
+  .marketplace-offer-center__tabs,
+  .marketplace-transaction-center__tabs {
+    margin-inline: 0;
+    padding-inline-end: 0;
+  }
+
+  .marketplace-browse__primary-filters > *,
+  .marketplace-browse__dynamic-filter-grid > *,
+  .marketplace-listing-form__row > *,
+  .marketplace-listing-form__structured-grid > *,
+  .marketplace-category-admin__new .control-group > *,
+  .marketplace-category-admin__category-row > *,
+  .marketplace-category-admin__field > * {
+    max-width: 100%;
+    max-inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+  }
+
+  .marketplace-browse :is(input, select, textarea),
+  .marketplace-listing-form :is(input:not([type="file"]), select, textarea),
+  .marketplace-offer-panel :is(input, select, textarea),
+  .marketplace-offer-center :is(input, select, textarea),
+  .marketplace-transaction-center :is(input, select, textarea),
+  .marketplace-category-admin :is(input, select, textarea) {
+    box-sizing: border-box;
+    width: 100%;
+    inline-size: 100%;
+    max-width: 100%;
+    max-inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+  }
+
+  .marketplace-listing-card,
+  .marketplace-listing-card__media-link,
+  .marketplace-listing-card__body,
+  .marketplace-listing-card__actions,
+  .marketplace-offer-card,
+  .marketplace-transaction-center__card,
+  .marketplace-transaction-center__card-link,
+  .marketplace-transaction-center__body,
+  .marketplace-storefront__hero,
+  .marketplace-listing-detail__layout,
+  .marketplace-listing-detail__content,
+  .marketplace-listing-detail__panel,
+  .marketplace-listing-detail__description,
+  .marketplace-listing-detail__specifications {
+    box-sizing: border-box;
+    max-width: 100%;
+    max-inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+  }
+
+  .marketplace-listing-card__title,
+  .marketplace-listing-card__seller,
+  .marketplace-listing-card__seller-username,
+  .marketplace-listing-detail__title,
+  .marketplace-listing-detail__body,
+  .marketplace-category-admin label,
+  .marketplace-category-admin h3,
+  .marketplace-category-admin h4 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .marketplace-browse--compact-feed
+    .marketplace-browse__listing-list
+    .marketplace-listing-card {
+    width: 100%;
+    inline-size: 100%;
+    max-width: 100%;
+    max-inline-size: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+    overflow: hidden;
+  }
+
+  .marketplace-browse--compact-feed
+    .marketplace-browse__listing-list
+    .marketplace-listing-card__actions {
+    flex: 0 0 3rem;
+    width: 3rem;
+    inline-size: 3rem;
+    max-width: 3rem;
+    max-inline-size: 3rem;
+    min-width: 3rem;
+    min-inline-size: 3rem;
+    padding: 0.4rem;
+  }
+
+  .marketplace-browse--compact-feed
+    .marketplace-browse__listing-list
+    .marketplace-listing-card__actions
+    > *:not(.marketplace-listing-card__favorite) {
+    display: none;
+  }
+
+  .marketplace-browse--compact-feed
+    .marketplace-browse__listing-list
+    .marketplace-listing-card__favorite {
+    display: inline-flex;
+    flex: 0 0 2.5rem;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    inline-size: 2.5rem;
+    height: 2.5rem;
+    block-size: 2.5rem;
+    min-width: 2.5rem;
+    min-inline-size: 2.5rem;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0;
+  }
+
+  .marketplace-browse--compact-feed
+    .marketplace-browse__listing-list
+    .marketplace-listing-card__favorite
+    .d-icon {
+    width: 1rem;
+    inline-size: 1rem;
+    height: 1rem;
+    block-size: 1rem;
+  }
+}
+
+@media (width <= 430px) {
+  .marketplace-browse__section-heading {
+    gap: 0.65rem;
+  }
+
+  .marketplace-browse__section-heading h2 {
+    min-inline-size: 0;
+  }
+
+  .marketplace-browse__section-link {
+    flex: 0 0 auto;
+    max-inline-size: 45%;
+    white-space: normal;
+    text-align: end;
+  }
+
+  .marketplace-listing-form,
+  .marketplace-category-admin__new,
+  .marketplace-category-admin__category,
+  .marketplace-category-admin__field {
+    overflow-wrap: anywhere;
+  }
+}
