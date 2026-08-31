@@ -161,6 +161,7 @@ tr_TR:
         search_button: "Ara"
         load_more: "Daha fazla yükle"
         empty: "İlan bulunamadı."
+        initial_load_error: "Pazar Yeri verilerinin bir kısmı yüklenemedi. Lütfen kısa bir süre bekleyip tekrar deneyin."
         dynamic_filters: "İlan özellikleri"
         clear_filters: "Filtreleri temizle"
         filter_any: "Fark etmez"
