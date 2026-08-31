@@ -37,7 +37,9 @@ RSpec.describe "Marketplace mobile layout" do
       published_at: 2.hours.ago,
     )
   end
-  fab!(:favorite) { Fabricate(:marketplace_favorite, user: current_user, listing: seller_listing) }
+  fab!(:favorite) do
+    Fabricate(:marketplace_favorite, user: current_user, listing: seller_listing)
+  end
   fab!(:offer) do
     Fabricate(
       :marketplace_offer,
@@ -67,13 +69,28 @@ RSpec.describe "Marketplace mobile layout" do
 
   before { SiteSetting.marketplace_enabled = true }
 
+  def element_width(selector)
+    page.evaluate_script(
+      "Math.round(document.querySelector(#{selector.inspect})?.getBoundingClientRect().width || 0)",
+    )
+  end
+
   def expect_no_page_horizontal_overflow
     overflow =
       page.evaluate_script(
         "document.documentElement.scrollWidth - document.documentElement.clientWidth",
       )
+    metrics = {
+      client: page.evaluate_script("document.documentElement.clientWidth"),
+      inner: page.evaluate_script("window.innerWidth"),
+      wrap: element_width(".wrap"),
+      wrapper: element_width("#main-outlet-wrapper"),
+      outlet: element_width("#main-outlet"),
+      shell: element_width(".marketplace-nav-shell"),
+      nav: element_width(".marketplace-nav"),
+    }
 
-    expect(overflow).to be <= 1
+    expect(overflow).to be <= 1, "Horizontal overflow #{overflow}px; #{metrics.inspect}"
   end
 
   it "keeps every user-facing Marketplace route inside a phone viewport" do
