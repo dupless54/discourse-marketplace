@@ -1,24 +1,26 @@
 # frozen_string_literal: true
 
 RSpec.describe "Marketplace mobile layout" do
-  LONG_TITLE = "Mobile overflow regression " + ("listing title segment " * 10)
-  LONG_CATEGORY_NAME = "Mobile category " + ("long segment " * 7)
-  LONG_DESCRIPTION_TOKEN = "marketplaceoverflow" * 30
-
   fab!(:seller, :user)
   fab!(:current_user, :user)
   fab!(:admin, :admin)
   fab!(:category) do
-    Fabricate(:marketplace_category, name: LONG_CATEGORY_NAME, slug: "mobile-overflow-category")
+    Fabricate(
+      :marketplace_category,
+      name: "Mobile category " + ("long segment " * 7),
+      slug: "mobile-overflow-category",
+    )
   end
   fab!(:seller_listing) do
+    long_description_token = "marketplaceoverflow" * 30
+
     Fabricate(
       :marketplace_unlimited_listing,
       seller: seller,
       category: category,
-      title: LONG_TITLE,
-      raw: LONG_DESCRIPTION_TOKEN,
-      cooked: "<p>#{LONG_DESCRIPTION_TOKEN}</p>",
+      title: "Mobile overflow regression " + ("listing title segment " * 10),
+      raw: long_description_token,
+      cooked: "<p>#{long_description_token}</p>",
       status: Marketplace::Listing.statuses[:active],
       published_at: 1.hour.ago,
       price_cents: 12_500,
@@ -105,7 +107,7 @@ RSpec.describe "Marketplace mobile layout" do
       visit "/marketplace/listings/#{seller_listing.id}"
 
       expect(page).to have_css("html.mobile-view")
-      expect(page).to have_css(".marketplace-listing-detail__title", text: LONG_TITLE)
+      expect(page).to have_css(".marketplace-listing-detail__title", text: seller_listing.title)
       expect(page).to have_css(".marketplace-listing-detail__panel")
       expect(page).to have_css(".marketplace-listing-detail__description")
       expect(page).to have_button(I18n.t("js.marketplace.listing.buy_button"))
@@ -123,7 +125,7 @@ RSpec.describe "Marketplace mobile layout" do
       expect(page).to have_field("marketplace-listing-title")
       expect(page).to have_field("marketplace-listing-description")
       expect(page).to have_select("marketplace-listing-category")
-      expect(page).to have_button(I18n.t("js.marketplace.form.create_button"))
+      expect(page).to have_button(I18n.t("js.marketplace.form.submit_create"))
       expect_no_page_horizontal_overflow
     end
   end
