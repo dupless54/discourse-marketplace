@@ -115,17 +115,20 @@ jobs:
       - name: Apply official Prettier fixes
         run: pnpm lint:prettier:fix
 
+      - name: Stabilize Prettier output
+        run: pnpm lint:prettier:fix
+
       - name: Apply Syntax Tree formatting
         run: bundle exec stree write Gemfile $(git ls-files '*.rb') $(git ls-files '*.rake') $(git ls-files '*.thor')
 
       - name: Validate JavaScript lint
         run: pnpm lint:js --max-warnings 0
 
-      - name: Validate Stylelint
-        run: pnpm lint:css
-
       - name: Validate Prettier
         run: pnpm lint:prettier
+
+      - name: Validate Stylelint
+        run: pnpm lint:css
 
       - name: Validate types
         run: pnpm lint:types
