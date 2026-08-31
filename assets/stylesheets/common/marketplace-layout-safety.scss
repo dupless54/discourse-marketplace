@@ -129,7 +129,7 @@
   }
 
   .marketplace-browse :is(input, select, textarea),
-  .marketplace-listing-form :is(input, select, textarea),
+  .marketplace-listing-form :is(input:not([type="file"]), select, textarea),
   .marketplace-offer-panel :is(input, select, textarea),
   .marketplace-offer-center :is(input, select, textarea),
   .marketplace-transaction-center :is(input, select, textarea),
