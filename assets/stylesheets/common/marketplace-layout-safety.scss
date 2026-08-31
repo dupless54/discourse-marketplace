@@ -8,6 +8,18 @@
   white-space: nowrap;
 }
 
+.marketplace-nav-shell,
+.marketplace-nav-shell > .horizontal-overflow-nav {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.marketplace-nav-shell {
+  overflow: hidden;
+}
+
 @media (width <= 800px) {
   .marketplace-browse,
   .marketplace-my-listings,
