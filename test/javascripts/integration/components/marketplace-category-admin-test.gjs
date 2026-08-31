@@ -39,12 +39,18 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
       },
     ];
 
-    await render(<template>
-      <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
-    </template>);
+    await render(
+      <template>
+        <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
+      </template>
+    );
 
-    assert.dom(".marketplace-category-admin__new-name").exists("the create form is rendered");
-    assert.dom("[data-category-id]").exists({ count: 2 }, "all categories are rendered");
+    assert
+      .dom(".marketplace-category-admin__new-name")
+      .exists("the create form is rendered");
+    assert
+      .dom("[data-category-id]")
+      .exists({ count: 2 }, "all categories are rendered");
     assert
       .dom('[data-category-id="1"] .marketplace-category-admin__row-enabled')
       .isChecked("the enabled category is checked");
@@ -62,7 +68,9 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
     assert
       .dom('[data-field-id="10"] input[readonly]')
       .hasValue("mileage", "the stable field key is visible but immutable");
-    assert.dom('[data-category-id="1"] .marketplace-category-admin__add-field').exists();
+    assert
+      .dom('[data-category-id="1"] .marketplace-category-admin__add-field')
+      .exists();
   });
 
   test("adds a select field through the existing category admin", async function (assert) {
@@ -91,9 +99,11 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
       })
     );
 
-    await render(<template>
-      <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
-    </template>);
+    await render(
+      <template>
+        <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
+      </template>
+    );
     await fillIn(".marketplace-category-admin__new-field-key", "fuel");
     await fillIn(".marketplace-category-admin__new-field-label", "Fuel");
     await fillIn(".marketplace-category-admin__new-field-type", "select");
@@ -105,9 +115,9 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
 
     assert.dom('[data-field-id="20"]').exists();
     assert.dom('[data-field-id="20"] input[readonly]').hasValue("fuel");
-    assert.dom('[data-field-id="20"] .marketplace-category-admin__field-choices').hasValue(
-      "diesel | Diesel"
-    );
+    assert
+      .dom('[data-field-id="20"] .marketplace-category-admin__field-choices')
+      .hasValue("diesel | Diesel");
   });
 
   test("edits, disables, and reorders a field", async function (assert) {
@@ -147,9 +157,11 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
       })
     );
 
-    await render(<template>
-      <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
-    </template>);
+    await render(
+      <template>
+        <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
+      </template>
+    );
     await fillIn(".marketplace-category-admin__field-label", "Odometer");
     await fillIn(".marketplace-category-admin__field-position", "4");
     await click(".marketplace-category-admin__field-required");
@@ -175,10 +187,12 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
     ];
     pretender.delete("/marketplace/admin/categories/1", () => response({}));
 
-    await render(<template>
-      <DialogHolder />
-      <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
-    </template>);
+    await render(
+      <template>
+        <DialogHolder />
+        <MarketplaceCategoryAdmin @initialCategories={{this.categories}} />
+      </template>
+    );
 
     await click(".marketplace-category-admin__delete-category");
 
@@ -188,6 +202,8 @@ module("Integration | Component | MarketplaceCategoryAdmin", function (hooks) {
 
     await click(".dialog-footer .btn-primary");
 
-    assert.dom('[data-category-id="1"]').doesNotExist("the deleted category is removed");
+    assert
+      .dom('[data-category-id="1"]')
+      .doesNotExist("the deleted category is removed");
   });
 });

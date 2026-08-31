@@ -1,3 +1,1 @@
-export default <template>
-  {{outlet}}
-</template>
+export default <template>{{outlet}}</template>

@@ -8,20 +8,11 @@ module Marketplace
     belongs_to :actor, class_name: "User", optional: true
 
     enum :event_type,
-         {
-           proposed: 0,
-           countered: 10,
-           accepted: 20,
-           rejected: 30,
-           withdrawn: 40,
-           expired: 50,
-         },
+         { proposed: 0, countered: 10, accepted: 20, rejected: 30, withdrawn: 40, expired: 50 },
          scopes: false
 
     validates :offer, :event_type, presence: true
-    validates :amount_cents,
-              numericality: { only_integer: true, greater_than: 0 },
-              allow_nil: true
+    validates :amount_cents, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
     validates :currency, length: { is: 3 }, allow_nil: true
     validate :actor_is_participant
     validate :human_events_require_actor

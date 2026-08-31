@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 describe Marketplace::Notifier do
-  fab!(:seller) { Fabricate(:user) }
-  fab!(:buyer) { Fabricate(:user) }
-  fab!(:staff) { Fabricate(:admin) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:seller, :user)
+  fab!(:buyer, :user)
+  fab!(:staff, :admin)
+  fab!(:category, :marketplace_category)
   fab!(:listing) do
     Fabricate(
       :marketplace_listing,
@@ -60,9 +60,9 @@ describe Marketplace::Notifier do
       described_class.notify_transaction_created(second.id)
 
       transaction_ids =
-        custom_notifications_for(seller).order(:id).map do |notification|
-          JSON.parse(notification.data)["transaction_id"]
-        end
+        custom_notifications_for(seller)
+          .order(:id)
+          .map { |notification| JSON.parse(notification.data)["transaction_id"] }
       expect(transaction_ids).to eq([first.id, second.id])
     end
   end
@@ -100,9 +100,9 @@ describe Marketplace::Notifier do
           completed_at: Time.current,
         )
 
-      expect {
-        described_class.notify_transaction_first_confirmed(transaction.id)
-      }.not_to change { Notification.count }
+      expect { described_class.notify_transaction_first_confirmed(transaction.id) }.not_to change {
+        Notification.count
+      }
     end
   end
 
@@ -146,7 +146,11 @@ describe Marketplace::Notifier do
 
     it "notifies only the buyer when the seller cancelled" do
       transaction =
-        build_transaction(status: :cancelled, cancelled_at: Time.current, cancelled_by_id: seller.id)
+        build_transaction(
+          status: :cancelled,
+          cancelled_at: Time.current,
+          cancelled_by_id: seller.id,
+        )
 
       described_class.notify_transaction_cancelled(transaction.id)
 

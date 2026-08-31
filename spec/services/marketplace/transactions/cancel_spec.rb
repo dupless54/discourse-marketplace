@@ -4,8 +4,8 @@ describe Marketplace::Transactions::Cancel do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:unrelated_user) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:staff) { Fabricate(:admin) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:staff, :admin)
+  fab!(:category, :marketplace_category)
 
   def build_listing(status: :reserved, **overrides)
     Fabricate(
@@ -166,7 +166,7 @@ describe Marketplace::Transactions::Cancel do
       expect(result).to be_success
       cancelled = result.transaction
       expect(cancelled.status).to eq("cancelled")
-      expect(cancelled.buyer_confirmed_at).to eq(original_buyer_confirmed_at)
+      expect(cancelled.buyer_confirmed_at).to eq_time(original_buyer_confirmed_at)
       expect(cancelled.seller_confirmed_at).to be_nil
       expect(cancelled.completed_at).to be_nil
       expect(cancelled.cancelled_by_id).to eq(seller.id)
@@ -184,7 +184,7 @@ describe Marketplace::Transactions::Cancel do
 
       expect(second).to be_success
       expect(second.transaction.id).to eq(first.transaction.id)
-      expect(second.transaction.cancelled_at).to eq(first.transaction.cancelled_at)
+      expect(second.transaction.cancelled_at).to eq_time(first.transaction.cancelled_at)
       expect(second.transaction.cancelled_by_id).to eq(first.transaction.cancelled_by_id)
       expect(listing.reload.status).to eq("active")
       expect(Marketplace::Transaction.where(id: transaction.id).count).to eq(1)
@@ -199,7 +199,7 @@ describe Marketplace::Transactions::Cancel do
 
       expect(second).to be_success
       expect(second.transaction.cancelled_by_id).to eq(buyer.id)
-      expect(second.transaction.cancelled_at).to eq(first.transaction.cancelled_at)
+      expect(second.transaction.cancelled_at).to eq_time(first.transaction.cancelled_at)
       expect(listing.reload.status).to eq("active")
     end
 
@@ -212,7 +212,7 @@ describe Marketplace::Transactions::Cancel do
 
       expect(second).to be_success
       expect(second.transaction.cancelled_by_id).to eq(buyer.id)
-      expect(second.transaction.cancelled_at).to eq(first.transaction.cancelled_at)
+      expect(second.transaction.cancelled_at).to eq_time(first.transaction.cancelled_at)
     end
   end
 
@@ -288,18 +288,18 @@ describe Marketplace::Transactions::Cancel do
       listing = build_listing(status: :active)
       transaction = build_transaction(listing: listing)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
     end
 
     it "raises TransactionInvariantViolation for a pending transaction whose listing is sold" do
       listing = build_listing(status: :sold)
       transaction = build_transaction(listing: listing)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
     end
 
     it "raises TransactionInvariantViolation and rolls back when the reserved->active CAS affects zero rows" do
@@ -312,9 +312,9 @@ describe Marketplace::Transactions::Cancel do
         status: Marketplace::Listing.statuses[:reserved],
       ).and_return(Marketplace::Listing.none)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
 
       reloaded = transaction.reload
       expect(reloaded.status).to eq("pending")
@@ -424,7 +424,13 @@ describe Marketplace::Transactions::Cancel do
   end
 
   describe "finite stock" do
-    def build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0, status: :active, **overrides)
+    def build_finite_listing(
+      stock_quantity: 2,
+      stock_reserved: 1,
+      stock_sold: 0,
+      status: :active,
+      **overrides
+    )
       Fabricate(
         :marketplace_listing,
         seller: seller,
@@ -490,9 +496,9 @@ describe Marketplace::Transactions::Cancel do
       listing = build_finite_listing(stock_quantity: 2, stock_reserved: 0, stock_sold: 0)
       transaction = build_transaction(listing: listing)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
     end
 
     it "raises TransactionInvariantViolation and rolls back when the release CAS affects zero rows" do
@@ -505,9 +511,9 @@ describe Marketplace::Transactions::Cancel do
         inventory_mode: Marketplace::Listing.inventory_modes[:finite],
       ).and_return(Marketplace::Listing.none)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
       reloaded = transaction.reload
       expect(reloaded.status).to eq("pending")
       expect(reloaded.cancelled_at).to be_nil

@@ -7,9 +7,7 @@ module Marketplace
     def index
       categories = Marketplace::Category.browsable.includes(:field_definitions)
 
-      render_json_dump(
-        categories: serialize_data(categories, Marketplace::CategorySerializer),
-      )
+      render_json_dump(categories: serialize_data(categories, Marketplace::CategorySerializer))
     end
   end
 end

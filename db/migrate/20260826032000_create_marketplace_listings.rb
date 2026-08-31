@@ -32,8 +32,8 @@ class CreateMarketplaceListings < ActiveRecord::Migration[8.0]
     SQL
 
     add_foreign_key :marketplace_listings,
-                     :marketplace_categories,
-                     column: :category_id,
-                     on_delete: :restrict
+                    :marketplace_categories,
+                    column: :category_id,
+                    on_delete: :restrict
   end
 end

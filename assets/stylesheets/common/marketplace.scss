@@ -2,7 +2,6 @@
 // (var(--primary), var(--secondary), var(--tertiary), etc.) rather than any
 // hardcoded colors, so it follows the site's light/dark scheme automatically
 // -- the same mechanism every other Discourse plugin stylesheet relies on.
-
 .marketplace-browse,
 .marketplace-my-listings,
 .marketplace-listing-detail,
@@ -21,7 +20,6 @@
 }
 
 // --- Shared internal nav (marketplace-nav.gjs) --------------------------
-
 .marketplace-nav {
   margin-bottom: 1em;
 
@@ -62,7 +60,6 @@
 }
 
 // --- Shared empty states (Browse, My Listings, Transaction Center) ------
-
 .marketplace-browse__empty,
 .marketplace-my-listings__empty,
 .marketplace-transaction-center__empty {
@@ -72,7 +69,6 @@
 }
 
 // --- Shared listing-card grid (Browse + My Listings) ------------------
-
 .marketplace-listings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -230,7 +226,6 @@
 }
 
 // --- Listing detail visual hierarchy -----------------------------------
-
 .marketplace-listing-detail__layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
@@ -421,7 +416,7 @@
   margin-top: 1em;
 }
 
-@media (max-width: 700px) {
+@media (width <= 700px) {
   .marketplace-listing-detail__layout {
     grid-template-columns: 1fr;
   }
@@ -453,7 +448,6 @@
 }
 
 // --- Transaction Center ---------------------------------------------------
-
 .marketplace-transaction-center__tabs {
   display: flex;
   flex-wrap: wrap;
@@ -606,7 +600,6 @@
 }
 
 // --- New/Edit listing form ----------------------------------------------
-
 .marketplace-listing-form {
   display: flex;
   flex-direction: column;
@@ -706,7 +699,7 @@
   color: var(--danger);
 }
 
-@media (max-width: 500px) {
+@media (width <= 500px) {
   .marketplace-listing-form__row,
   .marketplace-listing-form__structured-grid {
     flex-direction: column;
@@ -715,7 +708,6 @@
 }
 
 // --- Category field administration -------------------------------------
-
 .marketplace-category-admin__new,
 .marketplace-category-admin__category {
   margin-bottom: 1.5em;

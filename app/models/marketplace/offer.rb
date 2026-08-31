@@ -9,14 +9,9 @@ module Marketplace
     belongs_to :seller, class_name: "User"
     belongs_to :proposed_by, class_name: "User"
     belongs_to :responded_by, class_name: "User", optional: true
-    belongs_to :accepted_transaction,
-               class_name: "Marketplace::Transaction",
-               optional: true
+    belongs_to :accepted_transaction, class_name: "Marketplace::Transaction", optional: true
 
-    has_many :events,
-             class_name: "Marketplace::OfferEvent",
-             dependent: :destroy,
-             inverse_of: :offer
+    has_many :events, class_name: "Marketplace::OfferEvent", dependent: :destroy, inverse_of: :offer
 
     enum :status,
          { pending: 0, accepted: 10, rejected: 20, withdrawn: 30, expired: 40 },
@@ -89,8 +84,7 @@ module Marketplace
       return if accepted_transaction.blank?
 
       if accepted_transaction.listing_id != listing_id ||
-           accepted_transaction.buyer_id != buyer_id ||
-           accepted_transaction.seller_id != seller_id
+           accepted_transaction.buyer_id != buyer_id || accepted_transaction.seller_id != seller_id
         errors.add(:accepted_transaction_id, "must match the offer participants and listing")
       end
     end

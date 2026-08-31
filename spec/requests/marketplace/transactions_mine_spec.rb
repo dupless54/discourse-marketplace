@@ -5,7 +5,7 @@ describe "GET /marketplace/transactions/mine" do
   fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:other_buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:other_seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   before do
     SiteSetting.marketplace_enabled = true
@@ -231,7 +231,8 @@ describe "GET /marketplace/transactions/mine" do
     end
 
     it "never substitutes the listing's current price/title once a snapshot exists" do
-      listing = build_listing(title: "Ürün A", price_cents: 10_000, currency: "USD", status: :reserved)
+      listing =
+        build_listing(title: "Ürün A", price_cents: 10_000, currency: "USD", status: :reserved)
       build_transaction(buyer: buyer, listing: listing)
       listing.update!(title: "Ürün B", price_cents: 15_000)
       sign_in(buyer)

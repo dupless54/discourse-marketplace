@@ -59,8 +59,10 @@ const EMPTY_LISTINGS = {
   pagination: { page: 1, per_page: 20, has_more: false },
 };
 
-const scoreMin = '[data-filter-key="score"] .marketplace-browse__integer-range label:first-child input';
-const scoreMax = '[data-filter-key="score"] .marketplace-browse__integer-range label:last-child input';
+const scoreMin =
+  '[data-filter-key="score"] .marketplace-browse__integer-range label:first-child input';
+const scoreMax =
+  '[data-filter-key="score"] .marketplace-browse__integer-range label:last-child input';
 
 acceptance("Marketplace | dynamic filters", function (needs) {
   let listingRequests;

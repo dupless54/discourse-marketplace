@@ -26,17 +26,26 @@ class CreateMarketplaceOffers < ActiveRecord::Migration[8.0]
 
     add_index :marketplace_offers,
               %i[buyer_id status updated_at id],
-              order: { updated_at: :desc, id: :desc },
+              order: {
+                updated_at: :desc,
+                id: :desc,
+              },
               name: "idx_marketplace_offers_buyer_status_updated"
 
     add_index :marketplace_offers,
               %i[seller_id status updated_at id],
-              order: { updated_at: :desc, id: :desc },
+              order: {
+                updated_at: :desc,
+                id: :desc,
+              },
               name: "idx_marketplace_offers_seller_status_updated"
 
     add_index :marketplace_offers,
               %i[listing_id status updated_at id],
-              order: { updated_at: :desc, id: :desc },
+              order: {
+                updated_at: :desc,
+                id: :desc,
+              },
               name: "idx_marketplace_offers_listing_status_updated"
 
     add_index :marketplace_offers,

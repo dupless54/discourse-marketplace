@@ -20,18 +20,14 @@ module Marketplace
 
     validates :title, presence: true, length: { in: 3..255 }
     validates :raw, presence: true
-    validates :price_cents,
-              numericality: {
-                only_integer: true,
-                greater_than_or_equal_to: 0,
-              }
+    validates :price_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
     validates :currency,
               presence: true,
               format: {
                 with: /\A[A-Z]{3}\z/,
               },
               inclusion: {
-                in: -> (_) { SiteSetting.marketplace_allowed_currencies.split("|") },
+                in: ->(_) { SiteSetting.marketplace_allowed_currencies.split("|") },
               }
     validates :stock_quantity,
               presence: true,
@@ -41,16 +37,8 @@ module Marketplace
               },
               if: -> { finite? }
     validates :stock_quantity, absence: true, unless: -> { finite? }
-    validates :stock_reserved,
-              numericality: {
-                only_integer: true,
-                greater_than_or_equal_to: 0,
-              }
-    validates :stock_sold,
-              numericality: {
-                only_integer: true,
-                greater_than_or_equal_to: 0,
-              }
+    validates :stock_reserved, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+    validates :stock_sold, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
     validate :category_must_be_enabled, if: -> { new_record? || will_save_change_to_category_id? }
     validate :stock_reserved_and_sold_within_quantity, if: -> { finite? }
     validate :inventory_mode_immutable_after_transactions,
@@ -121,24 +109,26 @@ module Marketplace
       cooked = PrettyText.cook(raw)
       fragment = Nokogiri::HTML5.fragment(cooked)
 
-      fragment.css("img").each do |img|
-        next if img.ancestors("a").any?
-        next if img["class"].to_s.split(" ").include?("emoji")
+      fragment
+        .css("img")
+        .each do |img|
+          next if img.ancestors("a").any?
+          next if img["class"].to_s.split(" ").include?("emoji")
 
-        src = img["src"]
-        next if src.blank?
+          src = img["src"]
+          next if src.blank?
 
-        wrapper = Nokogiri::XML::Node.new("div", fragment)
-        wrapper["class"] = "lightbox-wrapper"
-        img.add_next_sibling(wrapper)
-        wrapper.add_child(img)
+          wrapper = Nokogiri::XML::Node.new("div", fragment)
+          wrapper["class"] = "lightbox-wrapper"
+          img.add_next_sibling(wrapper)
+          wrapper.add_child(img)
 
-        link = Nokogiri::XML::Node.new("a", fragment)
-        link["class"] = "lightbox"
-        link["href"] = src
-        img.add_next_sibling(link)
-        link.add_child(img)
-      end
+          link = Nokogiri::XML::Node.new("a", fragment)
+          link["class"] = "lightbox"
+          link["href"] = src
+          img.add_next_sibling(link)
+          link.add_child(img)
+        end
 
       fragment.to_html
     end
@@ -157,10 +147,11 @@ module Marketplace
     def thumbnail_url
       return @thumbnail_url if defined?(@thumbnail_url)
 
-      @thumbnail_url = begin
-        image = Nokogiri::HTML5.fragment(cooked).at_css("img:not(.emoji):not(.avatar)")
-        image&.attr("src").presence
-      end
+      @thumbnail_url =
+        begin
+          image = Nokogiri::HTML5.fragment(cooked).at_css("img:not(.emoji):not(.avatar)")
+          image&.attr("src").presence
+        end
     end
 
     def validate_structured_field_values(payload, definitions:)

@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 describe Marketplace::Transaction do
-  fab!(:seller) { Fabricate(:user) }
-  fab!(:buyer) { Fabricate(:user) }
-  fab!(:staff) { Fabricate(:admin) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:seller, :user)
+  fab!(:buyer, :user)
+  fab!(:staff, :admin)
+  fab!(:category, :marketplace_category)
   fab!(:listing) do
     Fabricate(
       :marketplace_listing,
@@ -15,7 +15,13 @@ describe Marketplace::Transaction do
   end
 
   def build_transaction(**overrides)
-    Fabricate.build(:marketplace_transaction, listing: listing, buyer: buyer, seller: seller, **overrides)
+    Fabricate.build(
+      :marketplace_transaction,
+      listing: listing,
+      buyer: buyer,
+      seller: seller,
+      **overrides,
+    )
   end
 
   def persist_valid_pending
@@ -277,9 +283,12 @@ describe Marketplace::Transaction do
   describe "pending-only partial unique index on (listing_id, buyer_id)" do
     it "has the exact expected columns and predicate" do
       index =
-        Marketplace::Transaction.connection.indexes(:marketplace_transactions).find do |candidate|
-          candidate.name == "idx_marketplace_transactions_listing_buyer_pending"
-        end
+        Marketplace::Transaction
+          .connection
+          .indexes(:marketplace_transactions)
+          .find do |candidate|
+            candidate.name == "idx_marketplace_transactions_listing_buyer_pending"
+          end
 
       expect(index).to be_present
       expect(index.unique).to eq(true)
@@ -289,9 +298,12 @@ describe Marketplace::Transaction do
 
     it "indexes the participant collection's deterministic order" do
       index =
-        Marketplace::Transaction.connection.indexes(:marketplace_transactions).find do |candidate|
-          candidate.name == "idx_marketplace_transactions_listing_status_created"
-        end
+        Marketplace::Transaction
+          .connection
+          .indexes(:marketplace_transactions)
+          .find do |candidate|
+            candidate.name == "idx_marketplace_transactions_listing_status_created"
+          end
 
       expect(index).to be_present
       expect(index.columns).to eq(%w[listing_id status created_at id])

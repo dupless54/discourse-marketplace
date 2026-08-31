@@ -21,9 +21,13 @@ module Marketplace
       return nil if id.nil?
 
       transaction =
-        Marketplace::Transaction
-          .select(:id, :listing_id, :buyer_id, :seller_id, :completed_at)
-          .find_by(id: id, status: Marketplace::Transaction.statuses[:completed])
+        Marketplace::Transaction.select(
+          :id,
+          :listing_id,
+          :buyer_id,
+          :seller_id,
+          :completed_at,
+        ).find_by(id: id, status: Marketplace::Transaction.statuses[:completed])
       return nil if transaction.blank?
 
       TransactionInfo.new(

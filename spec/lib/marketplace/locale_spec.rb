@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe "Marketplace locale files" do
+describe Marketplace do
   def flatten_keys(hash, prefix = nil)
     hash.flat_map do |key, value|
       full_key = prefix ? "#{prefix}.#{key}" : key.to_s

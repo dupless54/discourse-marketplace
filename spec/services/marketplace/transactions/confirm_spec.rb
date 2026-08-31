@@ -4,8 +4,8 @@ describe Marketplace::Transactions::Confirm do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:buyer) { Fabricate(:user, trust_level: TrustLevel[1]) }
   fab!(:unrelated_user) { Fabricate(:user, trust_level: TrustLevel[1]) }
-  fab!(:staff) { Fabricate(:admin) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:staff, :admin)
+  fab!(:category, :marketplace_category)
 
   def build_listing(status: :reserved, **overrides)
     Fabricate(
@@ -90,9 +90,9 @@ describe Marketplace::Transactions::Confirm do
       expect(completed.seller_confirmed_at).to be_present
       expect(completed.status).to eq("completed")
       expect(completed.completed_at).to be_present
-      expect(completed.buyer_confirmed_at).to eq(completed.completed_at)
+      expect(completed.buyer_confirmed_at).to eq_time(completed.completed_at)
       expect(listing.reload.status).to eq("sold")
-      expect(listing.closed_at).to eq(completed.completed_at)
+      expect(listing.closed_at).to eq_time(completed.completed_at)
     end
 
     it "completes the transaction and sells the listing when the seller confirms after the buyer" do
@@ -106,9 +106,9 @@ describe Marketplace::Transactions::Confirm do
       expect(completed.seller_confirmed_at).to be_present
       expect(completed.status).to eq("completed")
       expect(completed.completed_at).to be_present
-      expect(completed.seller_confirmed_at).to eq(completed.completed_at)
+      expect(completed.seller_confirmed_at).to eq_time(completed.completed_at)
       expect(listing.reload.status).to eq("sold")
-      expect(listing.closed_at).to eq(completed.completed_at)
+      expect(listing.closed_at).to eq_time(completed.completed_at)
     end
   end
 
@@ -192,7 +192,7 @@ describe Marketplace::Transactions::Confirm do
 
       expect(second).to be_success
       expect(second.transaction.id).to eq(first.transaction.id)
-      expect(second.transaction.buyer_confirmed_at).to eq(first.transaction.buyer_confirmed_at)
+      expect(second.transaction.buyer_confirmed_at).to eq_time(first.transaction.buyer_confirmed_at)
       expect(Marketplace::Transaction.where(id: transaction.id).count).to eq(1)
       expect(listing.reload.status).to eq("reserved")
     end
@@ -205,7 +205,9 @@ describe Marketplace::Transactions::Confirm do
       second = call_service(guardian: seller.guardian, transaction_id: transaction.id)
 
       expect(second).to be_success
-      expect(second.transaction.seller_confirmed_at).to eq(first.transaction.seller_confirmed_at)
+      expect(second.transaction.seller_confirmed_at).to eq_time(
+        first.transaction.seller_confirmed_at,
+      )
       expect(listing.reload.status).to eq("reserved")
     end
   end
@@ -230,7 +232,7 @@ describe Marketplace::Transactions::Confirm do
 
       expect(result).to be_success
       expect(result.transaction.id).to eq(transaction.id)
-      expect(result.transaction.buyer_confirmed_at).to eq(original_buyer_confirmed_at)
+      expect(result.transaction.buyer_confirmed_at).to eq_time(original_buyer_confirmed_at)
     end
 
     it "lets an authorized seller retry a completed transaction successfully" do
@@ -257,7 +259,11 @@ describe Marketplace::Transactions::Confirm do
   describe "cancelled" do
     it "fails a confirm attempt on a cancelled transaction with the stable marker and no mutation" do
       transaction =
-        build_transaction(status: :cancelled, cancelled_at: Time.current, cancelled_by_id: seller.id)
+        build_transaction(
+          status: :cancelled,
+          cancelled_at: Time.current,
+          cancelled_by_id: seller.id,
+        )
 
       result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
 
@@ -273,18 +279,18 @@ describe Marketplace::Transactions::Confirm do
       listing = build_listing(status: :active)
       transaction = build_transaction(listing: listing)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
     end
 
     it "raises TransactionInvariantViolation for a pending transaction whose listing is sold" do
       listing = build_listing(status: :sold)
       transaction = build_transaction(listing: listing)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
     end
 
     it "raises TransactionInvariantViolation and rolls back when the final reserve->sold CAS affects zero rows" do
@@ -297,9 +303,9 @@ describe Marketplace::Transactions::Confirm do
         status: Marketplace::Listing.statuses[:reserved],
       ).and_return(Marketplace::Listing.none)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
 
       reloaded = transaction.reload
       expect(reloaded.status).to eq("pending")
@@ -407,7 +413,11 @@ describe Marketplace::Transactions::Confirm do
       DiscourseEvent.on(:marketplace_transaction_completed, &handler)
 
       transaction =
-        build_transaction(status: :cancelled, cancelled_at: Time.current, cancelled_by_id: seller.id)
+        build_transaction(
+          status: :cancelled,
+          cancelled_at: Time.current,
+          cancelled_by_id: seller.id,
+        )
 
       result = call_service(guardian: buyer.guardian, transaction_id: transaction.id)
 
@@ -431,9 +441,9 @@ describe Marketplace::Transactions::Confirm do
         status: Marketplace::Listing.statuses[:reserved],
       ).and_return(Marketplace::Listing.none)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
 
       expect(events).to be_empty
     ensure
@@ -481,13 +491,15 @@ describe Marketplace::Transactions::Confirm do
       listing = build_listing
       transaction = build_transaction(listing: listing, seller_confirmed_at: 1.minute.ago)
 
-      expect(DiscourseEvent).to receive(:trigger).with(
+      allow(DiscourseEvent).to receive(:trigger)
+
+      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+
+      expect(DiscourseEvent).to have_received(:trigger).with(
         :marketplace_transaction_completed,
         transaction.id,
         continue_on_error: true,
       )
-
-      call_service(guardian: buyer.guardian, transaction_id: transaction.id)
     end
   end
 
@@ -605,7 +617,13 @@ describe Marketplace::Transactions::Confirm do
   end
 
   describe "finite stock" do
-    def build_finite_listing(stock_quantity: 2, stock_reserved: 1, stock_sold: 0, status: :active, **overrides)
+    def build_finite_listing(
+      stock_quantity: 2,
+      stock_reserved: 1,
+      stock_sold: 0,
+      status: :active,
+      **overrides
+    )
       Fabricate(
         :marketplace_listing,
         seller: seller,
@@ -665,9 +683,9 @@ describe Marketplace::Transactions::Confirm do
       listing = build_finite_listing(stock_quantity: 2, stock_reserved: 0, stock_sold: 0)
       transaction = build_transaction(listing: listing)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
     end
 
     it "raises TransactionInvariantViolation and rolls back when the consume CAS affects zero rows" do
@@ -680,9 +698,9 @@ describe Marketplace::Transactions::Confirm do
         inventory_mode: Marketplace::Listing.inventory_modes[:finite],
       ).and_return(Marketplace::Listing.none)
 
-      expect { call_service(guardian: buyer.guardian, transaction_id: transaction.id) }.to raise_error(
-        Marketplace::TransactionInvariantViolation,
-      )
+      expect {
+        call_service(guardian: buyer.guardian, transaction_id: transaction.id)
+      }.to raise_error(Marketplace::TransactionInvariantViolation)
       reloaded = transaction.reload
       expect(reloaded.status).to eq("pending")
       expect(listing.reload.stock_reserved).to eq(1)
@@ -721,8 +739,13 @@ describe Marketplace::Transactions::Confirm do
       call_service(guardian: buyer.guardian, transaction_id: first_transaction.id)
 
       second_transaction =
-        build_transaction(listing: listing, buyer: unrelated_user, seller_confirmed_at: 1.minute.ago)
-      result = call_service(guardian: unrelated_user.guardian, transaction_id: second_transaction.id)
+        build_transaction(
+          listing: listing,
+          buyer: unrelated_user,
+          seller_confirmed_at: 1.minute.ago,
+        )
+      result =
+        call_service(guardian: unrelated_user.guardian, transaction_id: second_transaction.id)
 
       expect(result).to be_success
       expect(listing.reload.stock_sold).to eq(2)

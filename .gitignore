@@ -1,1 +1,5 @@
 .claude/settings.local.json
+node_modules
+/gems
+/auto_generated
+.eslintcache

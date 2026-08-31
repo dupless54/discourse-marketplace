@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 describe Marketplace::TradeContract do
-  fab!(:seller) { Fabricate(:user) }
-  fab!(:buyer) { Fabricate(:user) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:seller, :user)
+  fab!(:buyer, :user)
+  fab!(:category, :marketplace_category)
   fab!(:listing) do
     Fabricate(
       :marketplace_listing,
@@ -121,7 +121,7 @@ describe Marketplace::TradeContract do
       it "returns the exact completed_at" do
         transaction = build_completed
         info = described_class.completed_transaction_info(transaction.id)
-        expect(info.completed_at).to eq(transaction.completed_at)
+        expect(info.completed_at).to eq_time(transaction.completed_at)
       end
 
       it "does not expose status" do
@@ -178,7 +178,7 @@ describe Marketplace::TradeContract do
         transaction.completed_at = 1.year.from_now
 
         expect(info.buyer_id).to eq(buyer.id)
-        expect(info.completed_at).not_to eq(transaction.completed_at)
+        expect(info.completed_at).not_to eq_time(transaction.completed_at)
       end
 
       it "resolves repeated purchases on the same listing independently" do
@@ -199,7 +199,9 @@ describe Marketplace::TradeContract do
 
   describe "public surface" do
     it "exposes exactly one public lookup method" do
-      expect(described_class.singleton_methods(false)).to contain_exactly(:completed_transaction_info)
+      expect(described_class.singleton_methods(false)).to contain_exactly(
+        :completed_transaction_info,
+      )
     end
 
     it "does not expose a generic find/transaction_info API" do

@@ -34,7 +34,9 @@ end
 
 Fabricator(:marketplace_listing_field_value, class_name: "Marketplace::ListingFieldValue") do
   listing { Fabricate(:marketplace_listing) }
-  field_definition { |attrs| Fabricate(:marketplace_category_field_definition, category: attrs[:listing].category) }
+  field_definition do |attrs|
+    Fabricate(:marketplace_category_field_definition, category: attrs[:listing].category)
+  end
   value "Value"
 end
 
@@ -48,12 +50,7 @@ Fabricator(:marketplace_unlimited_listing, from: :marketplace_listing) do
 end
 
 Fabricator(:marketplace_transaction, class_name: "Marketplace::Transaction") do
-  listing do
-    Fabricate(
-      :marketplace_listing,
-      status: Marketplace::Listing.statuses[:reserved],
-    )
-  end
+  listing { Fabricate(:marketplace_listing, status: Marketplace::Listing.statuses[:reserved]) }
 
   buyer { Fabricate(:user) }
   seller { |attrs| attrs[:listing].seller }
@@ -66,12 +63,7 @@ Fabricator(:marketplace_favorite, class_name: "Marketplace::Favorite") do
 end
 
 Fabricator(:marketplace_offer, class_name: "Marketplace::Offer") do
-  listing do
-    Fabricate(
-      :marketplace_listing,
-      status: Marketplace::Listing.statuses[:active],
-    )
-  end
+  listing { Fabricate(:marketplace_listing, status: Marketplace::Listing.statuses[:active]) }
   buyer { Fabricate(:user) }
   seller { |attrs| attrs[:listing].seller }
   proposed_by { |attrs| attrs[:buyer] }

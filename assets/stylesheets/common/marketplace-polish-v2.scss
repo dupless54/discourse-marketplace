@@ -1,7 +1,6 @@
 // Marketplace V2 presentation layer.
 // Keep all colors theme-driven so Crimson Channels and other Discourse themes
 // remain authoritative for light/dark surfaces and accents.
-
 .marketplace-browse,
 .marketplace-listing-detail,
 .marketplace-my-listings,
@@ -501,7 +500,7 @@
   }
 }
 
-@media (max-width: 1050px) {
+@media (width <= 1050px) {
   .marketplace-browse--compact-feed {
     .marketplace-browse__primary-filters {
       grid-template-columns: minmax(0, 1fr) minmax(150px, 0.45fr);
@@ -548,7 +547,7 @@
   }
 }
 
-@media (max-width: 860px) {
+@media (width <= 860px) {
   .marketplace-listing-detail {
     .marketplace-listing-detail__layout {
       display: flex;
@@ -571,7 +570,7 @@
   }
 }
 
-@media (max-width: 700px) {
+@media (width <= 700px) {
   .marketplace-browse--compact-feed {
     padding-inline: 0.7em;
 
@@ -689,7 +688,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .marketplace-browse--compact-feed {
     .marketplace-browse__listing-list .marketplace-listing-card__media-link {
       grid-template-columns: 5.8em minmax(0, 1fr);

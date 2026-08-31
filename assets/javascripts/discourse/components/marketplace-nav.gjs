@@ -16,7 +16,11 @@ export default class MarketplaceNav extends Component {
       @ariaLabel={{i18n "marketplace.nav.aria_label"}}
       class="marketplace-nav"
     >
-      <DNavItem @route="marketplace.index" @label="marketplace.title" @icon="tag" />
+      <DNavItem
+        @route="marketplace.index"
+        @label="marketplace.title"
+        @icon="tag"
+      />
       {{#if this.currentUser}}
         <DNavItem
           @route="marketplace.new"

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe Marketplace::CategoryFieldDefinition do
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   def build_field(overrides = {})
     Fabricate.build(
@@ -32,10 +32,7 @@ describe Marketplace::CategoryFieldDefinition do
 
   it "requires bounded, stable select choices" do
     select =
-      build_field(
-        field_type: "select",
-        choices: [{ "value" => "diesel", "label" => "Diesel" }],
-      )
+      build_field(field_type: "select", choices: [{ "value" => "diesel", "label" => "Diesel" }])
     expect(select).to be_valid
 
     expect(build_field(field_type: "select", choices: [])).not_to be_valid
@@ -80,12 +77,8 @@ describe Marketplace::CategoryFieldDefinition do
 
     expect(field.update(field_type: "text", choices: [])).to eq(false)
     field.reload
-    expect(
-      field.update(choices: [{ "value" => "electric", "label" => "Electric" }]),
-    ).to eq(false)
-    expect(
-      field.update(choices: [{ "value" => "diesel", "label" => "Dizel" }]),
-    ).to eq(true)
+    expect(field.update(choices: [{ "value" => "electric", "label" => "Electric" }])).to eq(false)
+    expect(field.update(choices: [{ "value" => "diesel", "label" => "Dizel" }])).to eq(true)
   end
 
   it "limits the number of fields in one category" do

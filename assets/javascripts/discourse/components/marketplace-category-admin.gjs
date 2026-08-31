@@ -27,7 +27,9 @@ function blankField() {
 }
 
 function choicesToText(choices = []) {
-  return choices.map((choice) => `${choice.value} | ${choice.label}`).join("\n");
+  return choices
+    .map((choice) => `${choice.value} | ${choice.label}`)
+    .join("\n");
 }
 
 function textToChoices(text) {
@@ -194,15 +196,18 @@ export default class MarketplaceCategoryAdmin extends Component {
     this.savingId = category.id;
     this.errorMessage = null;
     try {
-      const result = await ajax(`/marketplace/admin/categories/${category.id}`, {
-        type: "PUT",
-        data: {
-          name: category.name,
-          slug: category.slug,
-          position: category.position,
-          enabled: category.enabled,
-        },
-      });
+      const result = await ajax(
+        `/marketplace/admin/categories/${category.id}`,
+        {
+          type: "PUT",
+          data: {
+            name: category.name,
+            slug: category.slug,
+            position: category.position,
+            enabled: category.enabled,
+          },
+        }
+      );
       this.categories = this.categories
         .map((item) =>
           item.id === result.category.id
@@ -423,52 +428,85 @@ export default class MarketplaceCategoryAdmin extends Component {
                     value={{field.key}}
                     readonly
                   /></label>
-                <label>{{i18n "marketplace.admin.categories.fields.label"}}<input
+                <label>{{i18n
+                    "marketplace.admin.categories.fields.label"
+                  }}<input
                     type="text"
                     maxlength="100"
                     class="marketplace-category-admin__field-label"
                     value={{field.label}}
-                    {{on "input" (fn this.updateField category.id field.id "label")}}
+                    {{on
+                      "input"
+                      (fn this.updateField category.id field.id "label")
+                    }}
                   /></label>
-                <label>{{i18n "marketplace.admin.categories.fields.type"}}<select
+                <label>{{i18n
+                    "marketplace.admin.categories.fields.type"
+                  }}<select
                     class="marketplace-category-admin__field-type"
-                    {{on "change" (fn this.updateField category.id field.id "type")}}
+                    {{on
+                      "change"
+                      (fn this.updateField category.id field.id "type")
+                    }}
                   >{{#each this.fieldTypes as |type|}}<option
                         value={{type}}
                         selected={{eq type field.type}}
                       >{{i18n
-                          (concat "marketplace.admin.categories.fields.types." type)
+                          (concat
+                            "marketplace.admin.categories.fields.types." type
+                          )
                         }}</option>{{/each}}</select></label>
                 <label>{{i18n "marketplace.admin.categories.position"}}<input
                     type="number"
                     min="0"
                     class="marketplace-category-admin__field-position"
                     value={{field.position}}
-                    {{on "input" (fn this.updateField category.id field.id "position")}}
+                    {{on
+                      "input"
+                      (fn this.updateField category.id field.id "position")
+                    }}
                   /></label>
                 <label class="marketplace-category-admin__check"><input
                     type="checkbox"
                     class="marketplace-category-admin__field-required"
                     checked={{field.required}}
-                    {{on "change" (fn this.updateField category.id field.id "required")}}
-                  />{{i18n "marketplace.admin.categories.fields.required"}}</label>
+                    {{on
+                      "change"
+                      (fn this.updateField category.id field.id "required")
+                    }}
+                  />{{i18n
+                    "marketplace.admin.categories.fields.required"
+                  }}</label>
                 <label class="marketplace-category-admin__check"><input
                     type="checkbox"
                     class="marketplace-category-admin__field-enabled"
                     checked={{field.enabled}}
-                    {{on "change" (fn this.updateField category.id field.id "enabled")}}
+                    {{on
+                      "change"
+                      (fn this.updateField category.id field.id "enabled")
+                    }}
                   />{{i18n "marketplace.admin.categories.enabled"}}</label>
-                <label>{{i18n "marketplace.admin.categories.fields.placeholder"}}<input
+                <label>{{i18n
+                    "marketplace.admin.categories.fields.placeholder"
+                  }}<input
                     type="text"
                     maxlength="150"
                     value={{field.placeholder}}
-                    {{on "input" (fn this.updateField category.id field.id "placeholder")}}
+                    {{on
+                      "input"
+                      (fn this.updateField category.id field.id "placeholder")
+                    }}
                   /></label>
-                <label>{{i18n "marketplace.admin.categories.fields.help_text"}}<input
+                <label>{{i18n
+                    "marketplace.admin.categories.fields.help_text"
+                  }}<input
                     type="text"
                     maxlength="500"
                     value={{field.help_text}}
-                    {{on "input" (fn this.updateField category.id field.id "help_text")}}
+                    {{on
+                      "input"
+                      (fn this.updateField category.id field.id "help_text")
+                    }}
                   /></label>
                 {{#if (eq field.type "select")}}
                   <label class="marketplace-category-admin__choices">{{i18n
@@ -477,7 +515,10 @@ export default class MarketplaceCategoryAdmin extends Component {
                       class="marketplace-category-admin__field-choices"
                       rows="3"
                       value={{field.choicesText}}
-                      {{on "input" (fn this.updateField category.id field.id "choicesText")}}
+                      {{on
+                        "input"
+                        (fn this.updateField category.id field.id "choicesText")
+                      }}
                     ></textarea></label>
                 {{/if}}
                 <DButton
@@ -494,7 +535,9 @@ export default class MarketplaceCategoryAdmin extends Component {
                 }}</p>
             {{/each}}
 
-            <div class="marketplace-category-admin__field marketplace-category-admin__field--new">
+            <div
+              class="marketplace-category-admin__field marketplace-category-admin__field--new"
+            >
               <h5>{{i18n "marketplace.admin.categories.fields.add"}}</h5>
               <label>{{i18n "marketplace.admin.categories.fields.key"}}<input
                   type="text"
@@ -517,7 +560,9 @@ export default class MarketplaceCategoryAdmin extends Component {
                       value={{type}}
                       selected={{eq type category.newField.type}}
                     >{{i18n
-                        (concat "marketplace.admin.categories.fields.types." type)
+                        (concat
+                          "marketplace.admin.categories.fields.types." type
+                        )
                       }}</option>{{/each}}</select></label>
               <label>{{i18n "marketplace.admin.categories.position"}}<input
                   type="number"
@@ -528,24 +573,39 @@ export default class MarketplaceCategoryAdmin extends Component {
               <label class="marketplace-category-admin__check"><input
                   type="checkbox"
                   checked={{category.newField.required}}
-                  {{on "change" (fn this.updateNewField category.id "required")}}
-                />{{i18n "marketplace.admin.categories.fields.required"}}</label>
+                  {{on
+                    "change"
+                    (fn this.updateNewField category.id "required")
+                  }}
+                />{{i18n
+                  "marketplace.admin.categories.fields.required"
+                }}</label>
               <label class="marketplace-category-admin__check"><input
                   type="checkbox"
                   checked={{category.newField.enabled}}
                   {{on "change" (fn this.updateNewField category.id "enabled")}}
                 />{{i18n "marketplace.admin.categories.enabled"}}</label>
-              <label>{{i18n "marketplace.admin.categories.fields.placeholder"}}<input
+              <label>{{i18n
+                  "marketplace.admin.categories.fields.placeholder"
+                }}<input
                   type="text"
                   maxlength="150"
                   value={{category.newField.placeholder}}
-                  {{on "input" (fn this.updateNewField category.id "placeholder")}}
+                  {{on
+                    "input"
+                    (fn this.updateNewField category.id "placeholder")
+                  }}
                 /></label>
-              <label>{{i18n "marketplace.admin.categories.fields.help_text"}}<input
+              <label>{{i18n
+                  "marketplace.admin.categories.fields.help_text"
+                }}<input
                   type="text"
                   maxlength="500"
                   value={{category.newField.help_text}}
-                  {{on "input" (fn this.updateNewField category.id "help_text")}}
+                  {{on
+                    "input"
+                    (fn this.updateNewField category.id "help_text")
+                  }}
                 /></label>
               {{#if (eq category.newField.type "select")}}
                 <label class="marketplace-category-admin__choices">{{i18n
@@ -554,7 +614,10 @@ export default class MarketplaceCategoryAdmin extends Component {
                     class="marketplace-category-admin__new-field-choices"
                     rows="3"
                     value={{category.newField.choicesText}}
-                    {{on "input" (fn this.updateNewField category.id "choicesText")}}
+                    {{on
+                      "input"
+                      (fn this.updateNewField category.id "choicesText")
+                    }}
                   ></textarea></label>
               {{/if}}
               <DButton

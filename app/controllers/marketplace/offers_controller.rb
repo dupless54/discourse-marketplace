@@ -11,10 +11,7 @@ module Marketplace
     STATUSES = %w[pending accepted rejected withdrawn expired]
 
     rescue_from Marketplace::TransactionInvariantViolation do
-      render(
-        json: failed_json.merge(error_type: "listing_unavailable"),
-        status: :conflict,
-      )
+      render(json: failed_json.merge(error_type: "listing_unavailable"), status: :conflict)
     end
 
     def mine
@@ -22,9 +19,9 @@ module Marketplace
       raise Discourse::InvalidParameters.new(:role) if !ROLES.include?(role)
 
       scope =
-        Marketplace::Offer
-          .includes(:buyer, :seller, :listing, :accepted_transaction)
-          .where(role == "buyer" ? { buyer_id: current_user.id } : { seller_id: current_user.id })
+        Marketplace::Offer.includes(:buyer, :seller, :listing, :accepted_transaction).where(
+          role == "buyer" ? { buyer_id: current_user.id } : { seller_id: current_user.id },
+        )
 
       scope = apply_status_filter(scope, params[:status]) if params[:status].present?
       render_offer_page(scope)
@@ -36,9 +33,9 @@ module Marketplace
       raise Discourse::NotFound if !guardian.can_see_marketplace_listing?(listing)
 
       scope =
-        Marketplace::Offer
-          .includes(:buyer, :seller, :listing, :accepted_transaction)
-          .where(listing_id: listing.id)
+        Marketplace::Offer.includes(:buyer, :seller, :listing, :accepted_transaction).where(
+          listing_id: listing.id,
+        )
 
       if current_user.id != listing.seller_id && !guardian.is_staff?
         scope = scope.where(buyer_id: current_user.id)
@@ -49,9 +46,9 @@ module Marketplace
 
     def show
       offer =
-        Marketplace::Offer
-          .includes(:buyer, :seller, :listing, :accepted_transaction)
-          .find_by(id: params[:id])
+        Marketplace::Offer.includes(:buyer, :seller, :listing, :accepted_transaction).find_by(
+          id: params[:id],
+        )
       raise Discourse::NotFound if offer.blank?
       raise Discourse::NotFound if !guardian.can_see_marketplace_offer?(offer)
 
@@ -104,9 +101,7 @@ module Marketplace
     private
 
     def run_offer_mutation(service_class, policy_name)
-      service_class.call(
-        service_params.deep_merge(params: { offer_id: params[:id] }),
-      ) do |result|
+      service_class.call(service_params.deep_merge(params: { offer_id: params[:id] })) do |result|
         on_success do |offer:|
           render_serialized(offer, Marketplace::OfferSerializer, root: "offer")
         end
@@ -158,9 +153,10 @@ module Marketplace
       when "pending"
         scope.where(status: Marketplace::Offer.statuses[:pending]).where("expires_at > ?", now)
       when "expired"
-        scope.where(status: Marketplace::Offer.statuses[:pending]).where("expires_at <= ?", now).or(
-          scope.where(status: Marketplace::Offer.statuses[:expired]),
-        )
+        scope
+          .where(status: Marketplace::Offer.statuses[:pending])
+          .where("expires_at <= ?", now)
+          .or(scope.where(status: Marketplace::Offer.statuses[:expired]))
       else
         scope.where(status: Marketplace::Offer.statuses.fetch(status))
       end
@@ -168,11 +164,10 @@ module Marketplace
 
     def render_offer_page(scope)
       page = positive_integer_param(params[:page], :page, default: 1)
-      per_page =
-        [
-          positive_integer_param(params[:per_page], :per_page, default: DEFAULT_PER_PAGE),
-          MAX_PER_PAGE,
-        ].min
+      per_page = [
+        positive_integer_param(params[:per_page], :per_page, default: DEFAULT_PER_PAGE),
+        MAX_PER_PAGE,
+      ].min
 
       records =
         scope

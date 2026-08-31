@@ -92,26 +92,27 @@ module Marketplace
       end
 
       values = []
+      invalid_choice = false
       choices.each do |choice|
         if !choice.is_a?(Hash) || choice.keys.map(&:to_s).sort != %w[label value]
           errors.add(:choices, :invalid)
-          return
+          invalid_choice = true
+          break
         end
 
         value = choice["value"] || choice[:value]
         label = choice["label"] || choice[:label]
-        if !value.is_a?(String) ||
-             !value.match?(CHOICE_VALUE_FORMAT) ||
-             value.length > MAX_CHOICE_VALUE_LENGTH ||
-             !label.is_a?(String) ||
-             label.blank? ||
+        if !value.is_a?(String) || !value.match?(CHOICE_VALUE_FORMAT) ||
+             value.length > MAX_CHOICE_VALUE_LENGTH || !label.is_a?(String) || label.blank? ||
              label.length > MAX_CHOICE_LABEL_LENGTH
           errors.add(:choices, :invalid)
-          return
+          invalid_choice = true
+          break
         end
 
         values << value
       end
+      return if invalid_choice
 
       errors.add(:choices, :taken) if values.uniq.length != values.length
     end

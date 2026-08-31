@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 describe Marketplace::Listing do
-  fab!(:category) { Fabricate(:marketplace_category) }
-  fab!(:seller) { Fabricate(:user) }
+  fab!(:category, :marketplace_category)
+  fab!(:seller, :user)
 
   before { SiteSetting.marketplace_allowed_currencies = "USD|EUR" }
 
@@ -136,12 +136,14 @@ describe Marketplace::Listing do
     end
 
     it "is the remaining count for finite" do
-      listing = build_listing(inventory_mode: :finite, stock_quantity: 5, stock_reserved: 2, stock_sold: 1)
+      listing =
+        build_listing(inventory_mode: :finite, stock_quantity: 5, stock_reserved: 2, stock_sold: 1)
       expect(listing.stock_available).to eq(2)
     end
 
     it "never goes below zero" do
-      listing = build_listing(inventory_mode: :finite, stock_quantity: 2, stock_reserved: 1, stock_sold: 1)
+      listing =
+        build_listing(inventory_mode: :finite, stock_quantity: 2, stock_reserved: 1, stock_sold: 1)
       expect(listing.stock_available).to eq(0)
     end
   end
@@ -159,7 +161,8 @@ describe Marketplace::Listing do
     end
 
     it "is true for an active single listing" do
-      listing = build_listing(status: Marketplace::Listing.statuses[:active], inventory_mode: :single)
+      listing =
+        build_listing(status: Marketplace::Listing.statuses[:active], inventory_mode: :single)
       expect(listing.purchasable?).to eq(true)
     end
 
@@ -225,7 +228,9 @@ describe Marketplace::Listing do
 
       listing.update!(raw: "See the new photo: #{new_upload.short_url}")
 
-      expect(UploadReference.where(target: listing).pluck(:upload_id)).to contain_exactly(new_upload.id)
+      expect(UploadReference.where(target: listing).pluck(:upload_id)).to contain_exactly(
+        new_upload.id,
+      )
     end
 
     it "has no upload references when raw mentions no uploads" do
@@ -240,7 +245,8 @@ describe Marketplace::Listing do
     it "returns the src of the first non-emoji image in cooked" do
       listing =
         build_listing(
-          cooked: '<p>Check it out</p><img src="/uploads/default/original/1X/photo.png" width="100" height="80">',
+          cooked:
+            '<p>Check it out</p><img src="/uploads/default/original/1X/photo.png" width="100" height="80">',
         )
 
       expect(listing.thumbnail_url).to eq("/uploads/default/original/1X/photo.png")

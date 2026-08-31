@@ -1,7 +1,6 @@
 // 2026 Discourse-aligned Marketplace UI safety layer.
 // Loaded after the feature-specific stylesheets so it can normalize the
 // complete Marketplace surface without duplicating each component's design.
-
 .marketplace-page,
 .marketplace-browse,
 .marketplace-listing-detail,
@@ -180,7 +179,7 @@
   }
 }
 
-@media (max-width: 700px) {
+@media (width <= 700px) {
   .marketplace-page__header,
   .marketplace-browse__header,
   .marketplace-listing-form__header {

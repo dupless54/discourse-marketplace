@@ -1,7 +1,6 @@
 // Marketplace V2 secondary surfaces.
 // Presentation-only: keep Discourse/theme variables authoritative and reuse the
 // existing listing/offer/transaction semantics without introducing new state.
-
 .marketplace-my-listings,
 .marketplace-favorites,
 .marketplace-offer-center,
@@ -478,7 +477,11 @@
     padding: clamp(1em, 2vw, 1.4em);
     border: 1px solid var(--primary-low);
     border-radius: var(--d-border-radius-large, 12px);
-    background: linear-gradient(135deg, var(--tertiary-low), var(--primary-very-low));
+    background: linear-gradient(
+      135deg,
+      var(--tertiary-low),
+      var(--primary-very-low)
+    );
     box-shadow: var(--shadow-card);
   }
 
@@ -546,7 +549,7 @@
   }
 }
 
-@media (max-width: 980px) {
+@media (width <= 980px) {
   .marketplace-my-listings .marketplace-listing-card,
   .marketplace-favorites .marketplace-listing-card,
   .marketplace-storefront .marketplace-listing-card {
@@ -592,7 +595,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .marketplace-my-listings,
   .marketplace-favorites,
   .marketplace-offer-center,
@@ -634,7 +637,8 @@
   }
 
   .marketplace-offer-card .marketplace-offer-card__actions,
-  .marketplace-transaction-center__card .marketplace-transaction-center__actions {
+  .marketplace-transaction-center__card
+    .marketplace-transaction-center__actions {
     justify-content: flex-start;
   }
 
@@ -696,7 +700,7 @@
   }
 }
 
-@media (max-width: 520px) {
+@media (width <= 520px) {
   .marketplace-offer-card .marketplace-offer-card__main,
   .marketplace-transaction-center__card .marketplace-transaction-center__body {
     grid-template-columns: 1fr;
@@ -715,19 +719,23 @@
   }
 
   .marketplace-offer-card .marketplace-offer-card__actions,
-  .marketplace-transaction-center__card .marketplace-transaction-center__actions {
+  .marketplace-transaction-center__card
+    .marketplace-transaction-center__actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
   }
 
   .marketplace-offer-card .marketplace-offer-card__actions .btn,
-  .marketplace-transaction-center__card .marketplace-transaction-center__actions .btn {
+  .marketplace-transaction-center__card
+    .marketplace-transaction-center__actions
+    .btn {
     width: 100%;
     justify-content: center;
   }
 
-  .marketplace-transaction-center__card .marketplace-transaction-center__card-link {
+  .marketplace-transaction-center__card
+    .marketplace-transaction-center__card-link {
     grid-template-columns: 5.5em minmax(0, 1fr);
   }
 

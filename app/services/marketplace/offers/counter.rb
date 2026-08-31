@@ -9,9 +9,7 @@ module Marketplace
       attribute :amount_cents, :integer
 
       validates :offer_id, presence: true, numericality: { only_integer: true, greater_than: 0 }
-      validates :amount_cents,
-                presence: true,
-                numericality: { only_integer: true, greater_than: 0 }
+      validates :amount_cents, presence: true, numericality: { only_integer: true, greater_than: 0 }
     end
 
     model :offer
@@ -47,7 +45,9 @@ module Marketplace
 
     def validate_amount(params:, offer:)
       context.fail!(offer_amount_unchanged: true) if params.amount_cents == offer.amount_cents
-      context.fail!(offer_above_asking_price: true) if params.amount_cents > offer.listing.price_cents
+      if params.amount_cents > offer.listing.price_cents
+        context.fail!(offer_above_asking_price: true)
+      end
     end
 
     def apply_counter(params:, guardian:, offer:)

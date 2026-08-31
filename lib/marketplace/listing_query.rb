@@ -45,7 +45,10 @@ module Marketplace
         .joins(:category)
         .where(marketplace_listings: { status: Marketplace::Listing.statuses[:active] })
         .where(marketplace_categories: { enabled: true })
-        .where("marketplace_listings.expires_at IS NULL OR marketplace_listings.expires_at > ?", Time.current)
+        .where(
+          "marketplace_listings.expires_at IS NULL OR marketplace_listings.expires_at > ?",
+          Time.current,
+        )
         .where(
           "marketplace_listings.inventory_mode <> :finite OR (" \
             "marketplace_listings.stock_quantity IS NOT NULL AND " \
@@ -74,7 +77,9 @@ module Marketplace
 
       filters = normalize_structured_filters(raw_filters)
       return scope if filters.empty?
-      raise Discourse::InvalidParameters.new(:field_filters) if filters.length > MAX_STRUCTURED_FILTERS
+      if filters.length > MAX_STRUCTURED_FILTERS
+        raise Discourse::InvalidParameters.new(:field_filters)
+      end
 
       definitions =
         Marketplace::CategoryFieldDefinition
@@ -191,7 +196,13 @@ module Marketplace
       return scope if value.blank?
 
       maximum =
-        definition.field_type == "textarea" ? Marketplace::Listing::MAX_TEXTAREA_LENGTH : Marketplace::Listing::MAX_TEXT_LENGTH
+        (
+          if definition.field_type == "textarea"
+            Marketplace::Listing::MAX_TEXTAREA_LENGTH
+          else
+            Marketplace::Listing::MAX_TEXT_LENGTH
+          end
+        )
       raise Discourse::InvalidParameters.new(:field_filters) if value.length > maximum
 
       term = "%#{ActiveRecord::Base.sanitize_sql_like(value)}%"
@@ -240,7 +251,9 @@ module Marketplace
       end
 
       normalized_range = range.transform_keys(&:to_s)
-      raise Discourse::InvalidParameters.new(:field_filters) if (normalized_range.keys - %w[min max]).present?
+      if (normalized_range.keys - %w[min max]).present?
+        raise Discourse::InvalidParameters.new(:field_filters)
+      end
 
       min = signed_integer(normalized_range["min"], :field_filters, allow_blank: true)
       max = signed_integer(normalized_range["max"], :field_filters, allow_blank: true)
@@ -258,9 +271,9 @@ module Marketplace
     end
 
     def exact_structured_value_ids(definition, value)
-      Marketplace::ListingFieldValue
-        .where(field_definition_id: definition.id, value: value)
-        .select(:listing_id)
+      Marketplace::ListingFieldValue.where(field_definition_id: definition.id, value: value).select(
+        :listing_id,
+      )
     end
 
     def scalar_structured_filter(value)
@@ -310,7 +323,9 @@ module Marketplace
       raise Discourse::InvalidParameters.new(key) if !str.match?(/\A-?\d+\z/)
 
       integer = Integer(str, 10)
-      raise Discourse::InvalidParameters.new(key) if !Marketplace::Listing::INTEGER_RANGE.cover?(integer)
+      if !Marketplace::Listing::INTEGER_RANGE.cover?(integer)
+        raise Discourse::InvalidParameters.new(key)
+      end
 
       integer
     end

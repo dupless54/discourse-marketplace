@@ -53,10 +53,7 @@ module Marketplace
       end
 
       def render_contract_errors(contract)
-        render(
-          json: failed_json.merge(errors: contract.errors.full_messages),
-          status: :bad_request,
-        )
+        render(json: failed_json.merge(errors: contract.errors.full_messages), status: :bad_request)
       end
 
       def render_model_errors(model)

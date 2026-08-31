@@ -239,10 +239,14 @@ export default class MarketplaceListingDetail extends Component {
       const result = await ajax(
         `/marketplace/listings/${this.listing.id}/transactions?page=${nextPage}&per_page=${this.transactionsPagination.per_page}`
       );
-      const ids = new Set(this.transactions.map((transaction) => transaction.id));
+      const ids = new Set(
+        this.transactions.map((transaction) => transaction.id)
+      );
       this.transactions = [
         ...this.transactions,
-        ...result.transactions.filter((transaction) => !ids.has(transaction.id)),
+        ...result.transactions.filter(
+          (transaction) => !ids.has(transaction.id)
+        ),
       ];
       this.transactionsPagination = result.pagination;
     });
@@ -251,10 +255,13 @@ export default class MarketplaceListingDetail extends Component {
   @action
   publish() {
     this.runAction(async () => {
-      const result = await ajax(`/marketplace/listings/${this.listing.id}/status`, {
-        type: "PUT",
-        data: { status: "active" },
-      });
+      const result = await ajax(
+        `/marketplace/listings/${this.listing.id}/status`,
+        {
+          type: "PUT",
+          data: { status: "active" },
+        }
+      );
       this.listing = result.listing;
     });
   }
@@ -262,10 +269,13 @@ export default class MarketplaceListingDetail extends Component {
   @action
   archive() {
     this.runAction(async () => {
-      const result = await ajax(`/marketplace/listings/${this.listing.id}/status`, {
-        type: "PUT",
-        data: { status: "archived" },
-      });
+      const result = await ajax(
+        `/marketplace/listings/${this.listing.id}/status`,
+        {
+          type: "PUT",
+          data: { status: "archived" },
+        }
+      );
       this.listing = result.listing;
     });
   }
@@ -340,8 +350,12 @@ export default class MarketplaceListingDetail extends Component {
               </span>
             {{/if}}
           </div>
-          <h1 class="marketplace-listing-detail__title">{{this.listing.title}}</h1>
-          <span class="marketplace-listing-detail__price">{{this.formattedPrice}}</span>
+          <h1
+            class="marketplace-listing-detail__title"
+          >{{this.listing.title}}</h1>
+          <span
+            class="marketplace-listing-detail__price"
+          >{{this.formattedPrice}}</span>
           {{#if this.availabilityLabel}}
             <span class="marketplace-listing-detail__availability">
               {{this.availabilityLabel}}
@@ -424,7 +438,9 @@ export default class MarketplaceListingDetail extends Component {
                         username=transaction.buyer.username
                       }}</p>
                     <p>{{i18n
-                        (concat "marketplace.transaction.status." transaction.status)
+                        (concat
+                          "marketplace.transaction.status." transaction.status
+                        )
                       }}</p>
 
                     {{#if
@@ -477,7 +493,9 @@ export default class MarketplaceListingDetail extends Component {
                         username=transaction.buyer.username
                       }}</p>
                     <p>{{i18n
-                        (concat "marketplace.transaction.status." transaction.status)
+                        (concat
+                          "marketplace.transaction.status." transaction.status
+                        )
                       }}</p>
 
                     <PluginOutlet
@@ -508,7 +526,9 @@ export default class MarketplaceListingDetail extends Component {
               data-transaction-id={{this.transaction.id}}
             >
               <p>{{i18n
-                  (concat "marketplace.transaction.status." this.transaction.status)
+                  (concat
+                    "marketplace.transaction.status." this.transaction.status
+                  )
                 }}</p>
 
               {{#if this.canConfirm}}

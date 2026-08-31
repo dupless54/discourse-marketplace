@@ -51,7 +51,10 @@ module Marketplace
 
     def render_favorites
       page = positive_integer_param(params[:page], :page, default: 1)
-      per_page = [positive_integer_param(params[:per_page], :per_page, default: DEFAULT_PER_PAGE), MAX_PER_PAGE].min
+      per_page = [
+        positive_integer_param(params[:per_page], :per_page, default: DEFAULT_PER_PAGE),
+        MAX_PER_PAGE,
+      ].min
 
       scope =
         Marketplace::Favorite
@@ -83,11 +86,17 @@ module Marketplace
       has_more = favorites.size > per_page
       favorites = favorites.first(per_page)
       listings = favorites.map(&:listing)
-      listings.each { |listing| listing.instance_variable_set(:@marketplace_favorited_by_viewer, true) }
+      listings.each do |listing|
+        listing.instance_variable_set(:@marketplace_favorited_by_viewer, true)
+      end
 
       render_json_dump(
         listings: serialize_data(listings, Marketplace::ListingBrowseSerializer),
-        pagination: { page: page, per_page: per_page, has_more: has_more },
+        pagination: {
+          page: page,
+          per_page: per_page,
+          has_more: has_more,
+        },
       )
     end
 

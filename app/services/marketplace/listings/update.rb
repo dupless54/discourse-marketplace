@@ -14,7 +14,7 @@ module Marketplace
       attribute :inventory_mode, :string, default: "single"
       attribute :stock_quantity, :integer
       attribute :expires_at, :datetime
-      attribute :custom_fields, default: {}
+      attribute :custom_fields, default: -> { {} }
 
       validates :listing_id, presence: true
       validates :title, presence: true
@@ -83,7 +83,8 @@ module Marketplace
       )
 
       definitions = category.field_definitions.enabled.ordered.to_a
-      normalized_values = listing.validate_structured_field_values(params.custom_fields, definitions: definitions)
+      normalized_values =
+        listing.validate_structured_field_values(params.custom_fields, definitions: definitions)
       context[:category_changed] = category_changed
       context[:field_definitions] = definitions
       context[:normalized_field_values] = normalized_values || {}
@@ -95,12 +96,7 @@ module Marketplace
       listing
     end
 
-    def save_field_values(
-      listing:,
-      field_definitions:,
-      normalized_field_values:,
-      category_changed:
-    )
+    def save_field_values(listing:, field_definitions:, normalized_field_values:, category_changed:)
       listing.replace_enabled_field_values!(
         normalized_field_values,
         definitions: field_definitions,

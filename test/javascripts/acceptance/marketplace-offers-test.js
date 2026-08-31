@@ -89,8 +89,12 @@ acceptance("Marketplace | offers | buyer", function (needs) {
   needs.settings({ marketplace_enabled: true });
   needs.pretender((server, helper) => {
     stubListing(server, helper);
-    server.get("/marketplace/listings/42/offers", () => helper.response(EMPTY_OFFERS));
-    server.post("/marketplace/offers", () => helper.response({ offer: offer() }));
+    server.get("/marketplace/listings/42/offers", () =>
+      helper.response(EMPTY_OFFERS)
+    );
+    server.post("/marketplace/offers", () =>
+      helper.response({ offer: offer() })
+    );
   });
 
   test("creates an offer from the listing without a page reload", async function (assert) {
@@ -114,7 +118,10 @@ acceptance("Marketplace | offers | seller", function (needs) {
   needs.pretender((server, helper) => {
     stubListing(server, helper);
     server.get("/marketplace/listings/42/offers", () =>
-      helper.response({ offers: [offer()], pagination: EMPTY_OFFERS.pagination })
+      helper.response({
+        offers: [offer()],
+        pagination: EMPTY_OFFERS.pagination,
+      })
     );
     server.post("/marketplace/offers/88/counter", () =>
       helper.response({

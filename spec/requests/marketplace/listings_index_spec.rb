@@ -2,7 +2,7 @@
 
 describe "GET /marketplace/listings" do
   fab!(:category) { Fabricate(:marketplace_category, enabled: true) }
-  fab!(:seller) { Fabricate(:user) }
+  fab!(:seller, :user)
 
   before do
     SiteSetting.marketplace_enabled = true

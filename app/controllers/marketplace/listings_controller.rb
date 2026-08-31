@@ -24,15 +24,14 @@ module Marketplace
 
     def mine
       page = positive_integer_param(params[:page], :page, default: 1)
-      per_page =
-        [
-          positive_integer_param(
-            params[:per_page],
-            :per_page,
-            default: Marketplace::ListingQuery::DEFAULT_PER_PAGE,
-          ),
-          Marketplace::ListingQuery::MAX_PER_PAGE,
-        ].min
+      per_page = [
+        positive_integer_param(
+          params[:per_page],
+          :per_page,
+          default: Marketplace::ListingQuery::DEFAULT_PER_PAGE,
+        ),
+        Marketplace::ListingQuery::MAX_PER_PAGE,
+      ].min
 
       scope =
         Marketplace::Listing
@@ -130,9 +129,7 @@ module Marketplace
       raise Discourse::NotFound if listing.blank?
 
       scope =
-        Marketplace::Transaction
-          .includes(:buyer, :seller, :listing)
-          .where(listing_id: listing.id)
+        Marketplace::Transaction.includes(:buyer, :seller, :listing).where(listing_id: listing.id)
 
       scope =
         if listing.seller_id == current_user.id
@@ -146,26 +143,27 @@ module Marketplace
         record = scope.find_by(id: transaction_id)
         raise Discourse::NotFound if record.blank?
 
-        return render_json_dump(
-                 transactions: serialize_data([record], Marketplace::TransactionSerializer),
-                 pagination: {
-                   page: 1,
-                   per_page: 1,
-                   has_more: false,
-                 },
-               )
+        return(
+          render_json_dump(
+            transactions: serialize_data([record], Marketplace::TransactionSerializer),
+            pagination: {
+              page: 1,
+              per_page: 1,
+              has_more: false,
+            },
+          )
+        )
       end
 
       page = positive_integer_param(params[:page], :page, default: 1)
-      per_page =
-        [
-          positive_integer_param(
-            params[:per_page],
-            :per_page,
-            default: TRANSACTIONS_DEFAULT_PER_PAGE,
-          ),
-          TRANSACTIONS_MAX_PER_PAGE,
-        ].min
+      per_page = [
+        positive_integer_param(
+          params[:per_page],
+          :per_page,
+          default: TRANSACTIONS_DEFAULT_PER_PAGE,
+        ),
+        TRANSACTIONS_MAX_PER_PAGE,
+      ].min
 
       records =
         scope
@@ -188,12 +186,7 @@ module Marketplace
 
     def update_status
       Marketplace::Listings::TransitionStatus.call(
-        service_params.deep_merge(
-          params: {
-            listing_id: params[:id],
-            status: params[:status],
-          },
-        ),
+        service_params.deep_merge(params: { listing_id: params[:id], status: params[:status] }),
       ) do |result|
         on_success do |listing:|
           mark_favorites!([listing])

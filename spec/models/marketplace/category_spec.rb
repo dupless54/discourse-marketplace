@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe Marketplace::Category do
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   it "requires a unique slug" do
     dup = Fabricate.build(:marketplace_category, slug: category.slug)
@@ -35,7 +35,8 @@ describe Marketplace::Category do
       first = Fabricate(:marketplace_category, position: 1)
       second = Fabricate(:marketplace_category, position: 2)
 
-      expect(Marketplace::Category.browsable.index(first)).to be < Marketplace::Category.browsable.index(second)
+      expect(Marketplace::Category.browsable.index(first)).to be <
+        Marketplace::Category.browsable.index(second)
     end
   end
 end

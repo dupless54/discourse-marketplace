@@ -13,7 +13,7 @@ module Marketplace
       attribute :inventory_mode, :string, default: "single"
       attribute :stock_quantity, :integer
       attribute :expires_at, :datetime
-      attribute :custom_fields, default: {}
+      attribute :custom_fields, default: -> { {} }
 
       validates :title, presence: true
       validates :raw, presence: true
@@ -54,22 +54,24 @@ module Marketplace
     end
 
     def build_listing(guardian:, params:, category:)
-      listing = Marketplace::Listing.new(
-        seller_id: guardian.user.id,
-        title: params.title,
-        raw: params.raw,
-        cooked: Marketplace::Listing.cook(params.raw),
-        category_id: category.id,
-        price_cents: params.price_cents,
-        currency: params.currency,
-        status: Marketplace::Listing.statuses[:draft],
-        inventory_mode: Marketplace::Listing.inventory_modes[params.inventory_mode],
-        stock_quantity: params.inventory_mode == "finite" ? params.stock_quantity : nil,
-        expires_at: params.expires_at,
-      )
+      listing =
+        Marketplace::Listing.new(
+          seller_id: guardian.user.id,
+          title: params.title,
+          raw: params.raw,
+          cooked: Marketplace::Listing.cook(params.raw),
+          category_id: category.id,
+          price_cents: params.price_cents,
+          currency: params.currency,
+          status: Marketplace::Listing.statuses[:draft],
+          inventory_mode: Marketplace::Listing.inventory_modes[params.inventory_mode],
+          stock_quantity: params.inventory_mode == "finite" ? params.stock_quantity : nil,
+          expires_at: params.expires_at,
+        )
 
       definitions = category.field_definitions.enabled.ordered.to_a
-      normalized_values = listing.validate_structured_field_values(params.custom_fields, definitions: definitions)
+      normalized_values =
+        listing.validate_structured_field_values(params.custom_fields, definitions: definitions)
       context[:field_definitions] = definitions
       context[:normalized_field_values] = normalized_values || {}
       listing

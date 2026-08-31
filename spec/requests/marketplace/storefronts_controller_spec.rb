@@ -3,7 +3,7 @@
 RSpec.describe Marketplace::StorefrontsController do
   fab!(:seller) { Fabricate(:user, trust_level: TrustLevel[2]) }
   fab!(:other_seller) { Fabricate(:user, trust_level: TrustLevel[2]) }
-  fab!(:category) { Fabricate(:marketplace_category) }
+  fab!(:category, :marketplace_category)
 
   before do
     SiteSetting.marketplace_enabled = true
@@ -49,8 +49,15 @@ RSpec.describe Marketplace::StorefrontsController do
       expect(response.status).to eq(200), "#{response.body}\n#{response.headers.to_h.inspect}"
       expect(response.parsed_body.dig("seller", "id")).to eq(seller.id)
       expect(response.parsed_body.dig("seller", "username")).to eq(seller.username)
-      expect(response.parsed_body.fetch("seller")).not_to include("email", "trust_level", "admin", "moderator")
-      expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([visible.id])
+      expect(response.parsed_body.fetch("seller")).not_to include(
+        "email",
+        "trust_level",
+        "admin",
+        "moderator",
+      )
+      expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq(
+        [visible.id],
+      )
     end
 
     it "paginates the seller's visible listings deterministically" do
@@ -60,7 +67,9 @@ RSpec.describe Marketplace::StorefrontsController do
       get_storefront(seller.username, params: { page: 1, per_page: 1 })
 
       expect(response.status).to eq(200), response.body
-      expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([newer.id])
+      expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq(
+        [newer.id],
+      )
       expect(response.parsed_body.fetch("pagination")).to eq(
         "page" => 1,
         "per_page" => 1,
@@ -70,7 +79,9 @@ RSpec.describe Marketplace::StorefrontsController do
       get_storefront(seller.username, params: { page: 2, per_page: 1 })
 
       expect(response.status).to eq(200), response.body
-      expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq([older.id])
+      expect(response.parsed_body.fetch("listings").map { |listing| listing["id"] }).to eq(
+        [older.id],
+      )
       expect(response.parsed_body.dig("pagination", "has_more")).to eq(false)
     end
 

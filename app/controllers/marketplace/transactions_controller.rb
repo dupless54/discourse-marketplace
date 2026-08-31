@@ -11,10 +11,7 @@ module Marketplace
     MINE_STATUSES = %w[pending completed cancelled]
 
     rescue_from Marketplace::TransactionInvariantViolation do
-      render(
-        json: failed_json.merge(error_type: "transaction_state_conflict"),
-        status: :conflict,
-      )
+      render(json: failed_json.merge(error_type: "transaction_state_conflict"), status: :conflict)
     end
 
     # The current user's own Transaction Center feed: every row is scoped
@@ -27,9 +24,9 @@ module Marketplace
       raise Discourse::InvalidParameters.new(:role) if !MINE_ROLES.include?(role)
 
       scope =
-        Marketplace::Transaction
-          .includes(:buyer, :seller, :listing)
-          .where(role == "buyer" ? { buyer_id: current_user.id } : { seller_id: current_user.id })
+        Marketplace::Transaction.includes(:buyer, :seller, :listing).where(
+          role == "buyer" ? { buyer_id: current_user.id } : { seller_id: current_user.id },
+        )
 
       if params[:status].present?
         raise Discourse::InvalidParameters.new(:status) if !MINE_STATUSES.include?(params[:status])
@@ -38,11 +35,10 @@ module Marketplace
       end
 
       page = positive_integer_param(params[:page], :page, default: 1)
-      per_page =
-        [
-          positive_integer_param(params[:per_page], :per_page, default: MINE_DEFAULT_PER_PAGE),
-          MINE_MAX_PER_PAGE,
-        ].min
+      per_page = [
+        positive_integer_param(params[:per_page], :per_page, default: MINE_DEFAULT_PER_PAGE),
+        MINE_MAX_PER_PAGE,
+      ].min
 
       records =
         scope
@@ -73,10 +69,7 @@ module Marketplace
         on_failed_contract { render(json: failed_json, status: :unprocessable_entity) }
         on_failure do
           if result[:listing_unavailable]
-            render(
-              json: failed_json.merge(error_type: "listing_unavailable"),
-              status: :conflict,
-            )
+            render(json: failed_json.merge(error_type: "listing_unavailable"), status: :conflict)
           else
             render(json: failed_json, status: :unprocessable_entity)
           end

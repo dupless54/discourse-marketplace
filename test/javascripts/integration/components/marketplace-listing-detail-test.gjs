@@ -105,9 +105,7 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
     assert
       .dom(".marketplace-listing-detail__description-heading")
       .hasText("Listing Description");
-    assert
-      .dom(".marketplace-listing-detail__category")
-      .hasText("Electronics");
+    assert.dom(".marketplace-listing-detail__category").hasText("Electronics");
   });
 
   test("renders no hero image or category badge when the listing has neither", async function (assert) {
@@ -192,7 +190,9 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
     assert
       .dom(".marketplace-listing-detail__specifications-heading")
       .hasText("Listing Details");
-    assert.dom(".marketplace-listing-detail__specification").exists({ count: 4 });
+    assert
+      .dom(".marketplace-listing-detail__specification")
+      .exists({ count: 4 });
     assert.dom('[data-field-key="fuel"] dd').hasText("Diesel");
     assert.dom('[data-field-key="trade_available"] dd').hasText("Yes");
     assert.dom('[data-field-key="instant_delivery"] dd').hasText("No");
@@ -247,7 +247,9 @@ module("Integration | Component | MarketplaceListingDetail", function (hooks) {
 
     assert
       .dom(".marketplace-listing-detail__message-seller")
-      .doesNotExist("the seller never sees Message Seller on their own listing");
+      .doesNotExist(
+        "the seller never sees Message Seller on their own listing"
+      );
   });
 
   test("shows remaining stock and offers Buy for an in-stock finite listing", async function (assert) {
